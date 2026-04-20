@@ -1,0 +1,87 @@
+import sqlite3
+import os
+from datetime import datetime
+
+class DatabaseManager:
+    def __init__(self, db_path="data/bionews.db"):
+        self.db_path = db_path
+        # Asegurar que la carpeta data existe
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.init_db()
+
+    def get_connection(self):
+        return sqlite3.connect(self.db_path)
+
+    def init_db(self):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            # Tabla para noticias
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS noticias (
+                    link TEXT PRIMARY KEY,
+                    titulo TEXT,
+                    fecha TEXT,
+                    imagen TEXT,
+                    fuente TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
+            # Tabla para informacion legal (dashboard principal)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS legal (
+                    link TEXT PRIMARY KEY,
+                    nombre TEXT,
+                    fecha TEXT,
+                    estado TEXT,
+                    tipo TEXT,
+                    fuente TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
+            conn.commit()
+
+    def save_news(self, news_list):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            inserted_count = 0
+            for item in news_list:
+                try:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO noticias 
+                        (link, titulo, fecha, imagen, fuente, fecha_scraping)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        item['link'], 
+                        item['titulo'], 
+                        item['fecha'], 
+                        item['imagen'], 
+                        item['fuente'],
+                        datetime.now()
+                    ))
+                    if cursor.rowcount > 0:
+                        inserted_count += 1
+                except Exception as e:
+                    print(f"Error al guardar noticia: {e}")
+            conn.commit()
+            return inserted_count
+
+    def get_latest_news(self, limit=50):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            # Ordenamos por la columna 'fecha' (formato YYYY-MM-DD) y luego por scraping
+            cursor.execute("""
+                SELECT * FROM noticias 
+                ORDER BY fecha DESC, fecha_scraping DESC 
+                LIMIT ?
+            """, (limit,))
+            return cursor.fetchall()
+
+    def clean_old_data(self, days=10):
+        # Implementacion opcional para tu regla de borrar lo antiguo
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                DELETE FROM noticias 
+                WHERE julianday('now') - julianday(fecha_scraping) > ?
+            """, (days,))
+            conn.commit()
