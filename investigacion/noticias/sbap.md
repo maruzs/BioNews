@@ -1,8 +1,17 @@
 # LINK
 https://sbap.gob.cl/sala-de-prensa/noticias-y-comunicados
-# ANALISIS GENERAL
-* Pagina estatica con HTML
-# Primer apartado (Ultimas noticias)
+# ANALISIS
+Pagina estatica cargada por HTML
+Scroll largo
+Apartado de noticias del dia
+Apartado otras noticias (previas)
+## INFO A OBTENER
+Imagen
+Fecha
+Nombre
+Link al detalle
+# ESTRUCTURA PAGINA E INFORMACION
+## Noticias del dia
 ```html
 <div id="ContentplaceholderMain_C035_Col00" class="sf_colsIn noticias-prensa" data-sf-element="Container" data-placeholder-label="noticias-prensa">
 <div class="row row-big">
@@ -56,7 +65,7 @@ https://sbap.gob.cl/sala-de-prensa/noticias-y-comunicados
 </div>
 ```
 
-# Segundo apartado (Otras Noticias, son varias col-md-4)
+## Otras noticias
 ```html
 <div id="ContentplaceholderMain_C044_Col00" class="sf_colsIn mas-noticias" data-sf-element="Container" data-placeholder-label="mas-noticias">
 <h3 class="title-4">Otras noticias</h3>
