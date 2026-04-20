@@ -32,6 +32,7 @@ async def main(page: ft.Page):
     )
 
     # Quitamos await de add: devuelve None
+    
     page.add(
         ft.Row([
             rail,
