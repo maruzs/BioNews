@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 def parse_fecha(fecha_str):
     meses = {
@@ -7,24 +8,24 @@ def parse_fecha(fecha_str):
         "abr": "04", "oct": "10", "sept": "09", "dic": "12"
     }
     
-    # Limpieza basica
-    fecha_str = fecha_str.lower().replace(".", "").replace("de", "").replace(",", "").strip()
+    # Limpieza profunda para formatos como "15 de abril de 2026"
+    fecha_str = fecha_str.lower().replace(".", "").replace(",", "").replace(" de ", " ").strip()
     
     try:
-        # Caso SEA / Diario Oficial: 17/04/2026 o 20-04-2026
-        match_simple = re.search(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", fecha_str)
-        if match_simple:
-            d, m, a = match_simple.groups()
+        # Formato Numerico: 20-04-2026
+        match_num = re.search(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", fecha_str)
+        if match_num:
+            d, m, a = match_num.groups()
             return f"{a}-{m.zfill(2)}-{d.zfill(2)}"
 
-        # Caso MMA/SBAP: 20 abril 2026
-        match_texto = re.search(r"(\d+)\s+([a-z]+)\s+(\d{4})", fecha_str)
-        if match_texto:
-            d, m, a = match_texto.groups()
+        # Formato Texto: 15 abril 2026
+        match_txt = re.search(r"(\d+)\s+([a-z]+)\s+(\d{4})", fecha_str)
+        if match_txt:
+            d, m, a = match_txt.groups()
             mes_num = meses.get(m, "01")
             return f"{a}-{mes_num}-{d.zfill(2)}"
             
     except:
         pass
         
-    return "2026-04-20"
+    return datetime.now().strftime("%Y-%m-%d")

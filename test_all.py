@@ -2,6 +2,9 @@ from src.scrapers.mma import MMAScraper
 from src.scrapers.sbap import SBAPScraper
 from src.scrapers.diario_oficial import DiarioOficialScraper
 from src.scrapers.sea import SEAScraper 
+from src.scrapers.sernageomin import SernageominScraper
+from src.scrapers.tribunal2 import TribunalScraper
+#from src.scrapers.sinia import SINIAScraper
 from src.database.manager import DatabaseManager
 
 def run_sync():
@@ -12,7 +15,10 @@ def run_sync():
         MMAScraper(),
         SBAPScraper(),
         DiarioOficialScraper(),
-        SEAScraper()
+        SEAScraper(),
+        SernageominScraper(),
+        TribunalScraper(),
+        #SINIAScraper()
     ]
     
     total_nuevos = 0
