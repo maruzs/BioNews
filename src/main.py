@@ -2,14 +2,14 @@ import flet as ft
 from ui.dashboard import view_dashboard
 from ui.news import view_news
 
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title = "BioNews - Monitoreo Ambiental"
     page.padding = 0
     page.spacing = 0
     
     container_principal = ft.Container(expand=True, padding=20)
 
-    def cambiar_pestana(e):
+    async def cambiar_pestana(e):
         index = e.control.selected_index
         if index == 0:
             container_principal.content = view_dashboard()
@@ -17,7 +17,7 @@ def main(page: ft.Page):
             container_principal.content = view_news()
         elif index == 2:
             container_principal.content = ft.Text("Seccion por Pagina - Pendiente")
-        page.update()
+        page.update() # Quitamos await: es sincrono en 0.84.0
 
     rail = ft.NavigationRail(
         selected_index=0,
@@ -31,6 +31,7 @@ def main(page: ft.Page):
         on_change=cambiar_pestana
     )
 
+    # Quitamos await de add: devuelve None
     page.add(
         ft.Row([
             rail,
@@ -43,5 +44,4 @@ def main(page: ft.Page):
     page.update()
 
 if __name__ == "__main__":
-    # ft.app es obsoleto, usamos ft.run
     ft.run(main)

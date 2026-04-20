@@ -5,10 +5,14 @@ from src.scrapers.sea import SEAScraper
 from src.scrapers.sernageomin import SernageominScraper
 from src.scrapers.tribunal2 import TribunalScraper
 #from src.scrapers.sinia import SINIAScraper
+from src.scrapers.sea_legal import SEALegalScraper
 from src.database.manager import DatabaseManager
 
 def run_sync():
     db = DatabaseManager()
+    sea_legal = SEALegalScraper()
+    proyectos = sea_legal.get_legal_data()
+    db.save_legal(proyectos)
     
     # Lista de scrapers a ejecutar
     scrapers = [

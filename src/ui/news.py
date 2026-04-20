@@ -7,21 +7,19 @@ def view_news():
     noticias_db = db.get_latest_news(limit=50) 
     grid_noticias = ft.ResponsiveRow()
 
-    # Imagen por defecto si el scraper no encuentra una
-    IMG_DEFAULT = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=400&h=200&fit=crop"
+    # Imagen ecologica por defecto
+    IMG_DEFAULT = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop"
 
     if not noticias_db:
         return ft.Column([ft.Text("Sin datos en DB", size=16, italic=True)])
 
     for row in noticias_db:
         link, titulo, fecha, imagen, fuente, _ = row
-        
-        # Validacion de imagen vacia o nula
-        img_url = imagen if (imagen and imagen.strip()) else IMG_DEFAULT
+        img_url = imagen if (imagen and len(imagen) > 10) else IMG_DEFAULT
 
-        # Funcion corregida para evitar el error de corrutina
-        def open_url(e, url=link):
-            e.page.launch_url(url)
+        # El click SI debe ser awaitable
+        async def open_url(e, url_to_open=link):
+            await e.page.launch_url(url_to_open)
 
         grid_noticias.controls.append(
             ft.Card(
@@ -33,7 +31,6 @@ def view_news():
                             border_radius=10, 
                             height=150, 
                             fit="cover",
-                            # Si la imagen falla al cargar, mostramos el placeholder
                             error_content=ft.Icon(ft.Icons.IMAGE_NOT_SUPPORTED)
                         ),
                         ft.Text(fuente, size=12, color=COLOR_PRIMARIO, weight="bold"),

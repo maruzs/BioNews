@@ -85,3 +85,36 @@ class DatabaseManager:
                 WHERE julianday('now') - julianday(fecha_scraping) > ?
             """, (days,))
             conn.commit()
+
+    def save_legal(self, legal_list):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            inserted_count = 0
+            for item in legal_list:
+                try:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO legal 
+                        (link, nombre, fecha, estado, tipo, fuente, fecha_scraping)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        item['link'], 
+                        item['nombre'], 
+                        item['fecha'], 
+                        item['estado'], 
+                        item['tipo'], 
+                        item['fuente'],
+                        datetime.now()
+                    ))
+                    if cursor.rowcount > 0:
+                        inserted_count += 1
+                except Exception as e:
+                    print(f"Error al guardar dato legal: {e}")
+            conn.commit()
+            return inserted_count
+
+    def get_all_legal(self, limit=50):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            # Ordenamos por fecha de actualizacion
+            cursor.execute("SELECT * FROM legal ORDER BY fecha DESC LIMIT ?", (limit,))
+            return cursor.fetchall()
