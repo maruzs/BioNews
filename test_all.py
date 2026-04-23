@@ -14,7 +14,7 @@ def run_sync():
     # 1. Sincronizacion de datos legales (Dashboard Principal)
     print("--- INICIANDO SCRAPING LEGAL ---")
     legales = [
-        #SEALegalScraper(),
+        SEALegalScraper(),
         #SNIFAScraper()
     ]
     

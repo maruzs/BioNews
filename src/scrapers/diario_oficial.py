@@ -7,7 +7,7 @@ class DiarioOficialScraper:
         self.url = "https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php"
         self.engine = ScrapingEngine()
         # Se agregan palabras clave de prueba como hacienda, mineria y transporte
-        self.keywords = ["medioambiente", "ecologia", "seremi", "superintendencia", "mma", "sea", "sma", "biodiversidad", "sustentable", "hacienda", "mineria", "transporte"]
+        self.keywords = ["medioambiente", "ecologia", "seremi", "superintendencia", "mma", "sea", "sma", "biodiversidad", "sustentable"]
 
     def get_latest_news(self):
         print(f"Iniciando scraping en Diario Oficial: {self.url}")

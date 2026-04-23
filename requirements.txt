@@ -2,6 +2,7 @@ anyio==4.13.0
 beautifulsoup4==4.14.3
 certifi==2026.2.25
 charset-normalizer==3.4.7
+dotenv==0.9.9
 flet==0.84.0
 flet-desktop==0.84.0
 greenlet==3.4.0
@@ -13,6 +14,7 @@ msgpack==1.1.2
 oauthlib==3.3.1
 playwright==1.58.0
 pyee==13.0.1
+python-dotenv==1.2.2
 repath==0.9.0
 requests==2.33.1
 six==1.17.0
