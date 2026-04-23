@@ -59,7 +59,8 @@ class SEALegalScraper:
         legal_list = []
         for item in data:
             try:
-                link = f"https://pertinencia.sea.gob.cl/proceso/pertinencias/obtener/{item.get('correlativeId')}"
+                #link = f"https://pertinencia.sea.gob.cl/proceso/pertinencias/obtener/{item.get('correlativeId')}"
+                link = f"https://pertinencia.sea.gob.cl/api/public/expediente/{item.get('correlativeId')}"
                 legal_list.append({
                     "nombre": item.get("name"),
                     "fecha": parse_fecha(item.get("presentationDate")),

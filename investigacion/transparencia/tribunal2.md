@@ -1,6 +1,7 @@
 # LINK
 https://2ta.lexsoft.cl/2ta/search?proc=4
 # ANALISIS
+Es dinamica
 Recibe un json con paginacion, pero si intenta cambiar la url da el siguiente error
 
 JBWEB000065: HTTP Status 405 - Request method 'GET' not supported

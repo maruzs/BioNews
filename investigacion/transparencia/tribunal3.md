@@ -1,9 +1,9 @@
 # LINK
 https://causas.3ta.cl/
 # ANALISIS
-Dinamica, carga un mapa que no quiero que cargue (hay un boton para eso)
+Dinamica
 ## INFO A OBTENER
-Numero de reclamacion, fecha, tribunal y caratula
+Numero de reclamacion, fecha, tribunal, caratula y link al detalle
 # ESTRUCTURA PAGINA E INFORMACION
 La informacion esta dentro del nav y primer div, son li class en un scroll infinito, las mas nuevas siempre van primero, hay que descargar las 15 primeras y de ahi en adelante descargar siempre lo que sea mas nuevo (comparando con el mas nuevo anterior)
 ```html
