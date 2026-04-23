@@ -73,3 +73,31 @@ https://snifa.sma.gob.cl/Sancionatorio
 mas info en snifa.md
 ## Tribunales ambientales (Noticias, Causas y expediente electronico)
 https://tribunalambiental.cl/
+
+
+# Estructura
+BioNews/
+├── analisis/               # Documentacion y reportes de investigacion (ya existente)
+├── assets/                 # Iconos, logos e imagenes de la app
+├── data/                   # Almacenamiento de la base de datos SQLite
+├── src/                    # Codigo fuente principal
+│   ├── main.py             # Punto de entrada (inicializa la app Flet)
+│   ├── config.py           # Configuracion global (URLs, tiempos de espera, colores)
+│   ├── database/           # Gestion de persistencia
+│   │   ├── __init__.py
+│   │   └── manager.py      # Operaciones CRUD para noticias y casos legales
+│   ├── scrapers/           # Motores de extraccion (Playwright + BS4)
+│   │   ├── __init__.py
+│   │   ├── engine.py       # Logica base y manejo de navegadores headless
+│   │   ├── sea.py          # Scraper especifico para SEA
+│   │   └── snifa.py        # Scraper especifico para SNIFA
+│   ├── ui/                 # Componentes de la interfaz de usuario
+│   │   ├── __init__.py
+│   │   ├── dashboard.py    # Vista de la tabla principal
+│   │   ├── news.py         # Vista de tarjetas de noticias
+│   │   ├── settings.py     # Vista de configuracion por pagina
+│   │   └── styles.py       # Definicion de colores "ecologicos" y temas
+│   └── utils/              # Funciones auxiliares (formateo de fechas, logs)
+├── .gitignore              # Archivos a ignorar (venv, __pycache__, .db)
+├── requirements.txt        # Dependencias del proyecto
+└── README.md               # Instrucciones de instalacion y uso

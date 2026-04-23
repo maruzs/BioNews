@@ -118,3 +118,14 @@ class DatabaseManager:
             # Ordenamos por fecha de actualizacion
             cursor.execute("SELECT * FROM legal ORDER BY fecha DESC LIMIT ?", (limit,))
             return cursor.fetchall()
+
+    def get_last_by_source(self, fuente):
+        """
+        Obtiene el registro mas reciente de una fuente especifica
+        para evitar colisiones entre scrapers.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM legal WHERE fuente = ? ORDER BY fecha_scraping DESC LIMIT 1"
+            cursor.execute(query, (fuente,))
+            return cursor.fetchone()

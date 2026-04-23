@@ -1,6 +1,6 @@
-from .engine import ScrapingEngine
+from ..src.scrapers.engine import ScrapingEngine
 from datetime import datetime
-from ..utils.date_parser import parse_fecha
+from ..src.utils.date_parser import parse_fecha
 
 class SINIAScraper:
     def __init__(self):
