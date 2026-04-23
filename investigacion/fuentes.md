@@ -11,20 +11,20 @@
 **https://www.sea.gob.cl/**
 **https://seia.sea.gob.cl/pertinencia/buscarPertinencia.php**
 [] Expedientes de evaluación ambiental.
-[] Consultas de pertinencia
-[] Todas las noticias en sección de noticias
+[X] Consultas de pertinencia
+[]X Todas las noticias en sección de noticias
 
 # Superintendencia de Medio Ambiente (SMA)
 **https://portal.sma.gob.cl/**
-[] Todas las noticias en sección de noticias
+[X] Todas las noticias en sección de noticias
 
 # Ministerio de Medio Ambiente
 **https://mma.gob.cl/**
-[] Todas las noticias en sección de noticias
+[X] Todas las noticias en sección de noticias
 
 # Diario Oficial
 **https://www.diariooficial.interior.gob.cl/**
-[] Normativa dictada por Ministerio de Medio Ambiente, Minería, Energía, Agricultura, Obras Públicas, y Salud
+[X] Normativa dictada por Ministerio de Medio Ambiente, Minería, Energía, Agricultura, Obras Públicas, y Salud
 
 # Tribunales Ambientales (son 3) y Corte Suprema
 **https://tribunalambiental.cl/**
