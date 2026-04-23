@@ -1,17 +1,18 @@
 import traceback
+import re
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from datetime import datetime
 from ..utils.date_parser import parse_fecha
 from ..database.manager import DatabaseManager
 
-class SnifaScraper:
+class SnifaIngresoScraper:
     def __init__(self):
         self.url_base = "https://snifa.sma.gob.cl"
-        self.url_home = f"{self.url_base}/Sancionatorio"
+        self.url_home = f"{self.url_base}/RequerimientoIngreso"
         self.db = DatabaseManager()
         
-        # Ahora solo pasamos los nombres (sin tildes), el codigo buscara su ID en vivo
+        # Categorias de interes segun la investigacion
         self.categorias = [
             "Agroindustrias",
             "Energia",
@@ -23,7 +24,7 @@ class SnifaScraper:
         ]
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en SNIFA (Sancionatorios)")
+        print("Iniciando scraping legal en SNIFA (Requerimientos de Ingreso)")
         all_legal_data = []
 
         with sync_playwright() as p:
@@ -35,66 +36,69 @@ class SnifaScraper:
 
             try:
                 for cat_nombre in self.categorias:
-                    print(f"\n--- Consultando categoria: {cat_nombre} ---")
+                    print(f"--- Consultando categoria: {cat_nombre} ---")
                     
                     try:
-                        # 1. Cargar pagina limpia
+                        # 1. Cargar pagina limpia (equivale a reiniciar busqueda)
                         page.goto(self.url_home, wait_until="networkidle", timeout=60000)
                         page.wait_for_selector("#categoria", state="visible", timeout=15000)
                         
-                        # 2. Buscar el valor (value) de la categoria dinamicamente
+                        # 2. Buscar el value de la categoria dinamicamente para evitar errores de ID
                         options = page.locator("#categoria option").all()
                         target_val = None
                         search_text = cat_nombre.lower()
                         
                         for opt in options:
-                            # Obtenemos texto de la opcion y quitamos tildes para comparar seguro
                             opt_text = opt.inner_text().lower().replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
                             if search_text in opt_text:
                                 target_val = opt.get_attribute("value")
                                 break
                         
                         if not target_val:
-                            print(f"No se encontro la opcion en el dropdown para: {cat_nombre}")
+                            print(f"No se encontro el ID para: {cat_nombre}")
                             continue
                             
-                        # 3. Seleccionamos usando el valor real que extrajimos
+                        # 3. Seleccionar y buscar
                         page.select_option("#categoria", value=target_val)
                         
-                        # 4. Click y ESPERAR LA REDIRECCION
                         boton_buscar = page.locator("button:has-text('Buscar')").first
                         with page.expect_navigation(wait_until="domcontentloaded", timeout=30000):
                             boton_buscar.click()
                         
-                        # 5. En /Resultado, esperamos la tabla
+                        # 4. Esperar tabla de resultados
                         page.wait_for_selector("table tbody tr", state="visible", timeout=30000)
                         
                         soup = BeautifulSoup(page.content(), "html.parser")
                         rows = soup.select("table tbody tr")
                         
                         if not rows:
-                            print(f"No se encontraron filas para {cat_nombre}")
                             continue
-                            
-                        print(f"Detectadas {len(rows)} filas en la pagina.")
 
-                        # 6. Parsear
-                        datos_categoria = self._parse_html_data(rows[:15], cat_nombre)
+                        # 5. Parsear datos de la categoria
+                        datos_categoria = self._parse_html_data(rows, cat_nombre)
                         all_legal_data.extend(datos_categoria)
-                        print(f"Guardados {len(datos_categoria)} registros de {cat_nombre}")
 
                     except Exception as e:
-                        print(f"Error procesando categoria {cat_nombre}: {str(e)}")
+                        print(f"Error en categoria {cat_nombre}: {str(e)}")
                         continue
 
             except Exception:
-                print("Error critico en el flujo de navegacion de SNIFA")
+                print("Error critico en el flujo de SNIFA Ingreso")
                 traceback.print_exc()
             finally:
                 browser.close()
 
-        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA")
+        # 6. ORDENAMIENTO POR ID (El numero al final del link indica el orden real)
+        # Segun la investigacion, los mas nuevos tienen un numero mas alto.
+        all_legal_data.sort(key=self._extract_id, reverse=True)
+        
+        print(f"Exito: Se procesaron {len(all_legal_data)} registros totales ordenados")
         return all_legal_data
+
+    def _extract_id(self, item):
+        # Extrae el numero final del link (ej: Ficha/10 -> 10)
+        match = re.search(r'/(\d+)$', item['link'])
+        return int(match.group(1)) if match else 0
 
     def _parse_html_data(self, rows, tipo_categoria):
         legal_list = []
@@ -103,22 +107,22 @@ class SnifaScraper:
         for row in rows:
             try:
                 tds = row.find_all("td")
-                if len(tds) < 4:
+                if len(tds) < 5:
                     continue
                     
-                rol = "Sin Rol"
+                expediente = "Sin Expediente"
+                razon_social = ""
                 link = ""
-                instalacion_text = ""
                 estado_text = "Desconocido"
                 
-                # Busqueda dinamica por data-label para ser inmunes al orden de las columnas
+                # Extraccion basada en data-label segun el analisis del .md
                 for td in tds:
                     label = td.get("data-label", "")
                     
                     if label == "Expediente":
-                        rol = td.get_text(strip=True)
-                    elif label == "Instalación" or label == "Instalacion":
-                        instalacion_text = td.get_text(" ", strip=True)
+                        expediente = td.get_text(strip=True)
+                    elif label == "Nombre razón social" or label == "Nombre razon social":
+                        razon_social = td.get_text(strip=True)
                     elif label == "Estado":
                         estado_text = td.get_text(strip=True)
                     elif label == "Detalle":
@@ -127,23 +131,22 @@ class SnifaScraper:
                             href = a_tag.get("href", "")
                             link = f"{self.url_base}{href}" if href.startswith("/") else href
 
-                # Si no pudimos extraer el enlace, lo descartamos
                 if not link:
                     continue
                 
-                nombre_completo = f"{rol} - {instalacion_text}" if instalacion_text else rol
+                # Combinamos Expediente y Razon Social para el nombre en el dashboard
+                nombre_completo = f"{expediente} - {razon_social}" if razon_social else expediente
                 
                 legal_list.append({
                     "nombre": nombre_completo,
                     "fecha": parse_fecha(fecha_hoy),
                     "estado": estado_text,
-                    "tipo": f"Sancionatorio ({tipo_categoria})",
+                    "tipo": f"Ingreso SEIA ({tipo_categoria})",
                     "fuente": "SNIFA",
                     "link": link
                 })
                 
-            except Exception as e:
-                print(f"Error parseando una fila especifica en SNIFA: {e}")
+            except Exception:
                 continue
                 
         return legal_list

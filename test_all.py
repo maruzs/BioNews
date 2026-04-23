@@ -12,6 +12,7 @@ from src.scrapers.tribunal3 import TercerTribunalScraper #Noticias
 from src.scrapers.primerTribunal import PrimerTribunalScraper #Legal
 from src.scrapers.segundoTribunal import SegundoTribunalScraper #Legal
 from src.scrapers.tercerTribunal import TercerTribunalScraperLegal #Legal
+from src.scrapers.reqSEIA import SnifaIngresoScraper # Nueva importacion
 from src.database.manager import DatabaseManager
 
 def run_sync():
@@ -24,7 +25,8 @@ def run_sync():
         #SegundoTribunalScraper(),
         #TercerTribunalScraperLegal(),
         #SEALegalScraper(),
-        SnifaScraper()
+        #SnifaScraper(),
+        SnifaIngresoScraper()
     ]
     
     for s in legales:
