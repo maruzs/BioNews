@@ -15,7 +15,7 @@ def run_sync():
     print("--- INICIANDO SCRAPING LEGAL ---")
     legales = [
         SEALegalScraper(),
-        SNIFAScraper()
+        #SNIFAScraper()
     ]
     
     for s in legales:

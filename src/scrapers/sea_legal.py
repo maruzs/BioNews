@@ -43,7 +43,7 @@ class SEALegalScraper:
                 
                 # 4. Cambiar a 20 registros
                 selector_cantidad = "select.dt-input"
-                page.select_option(selector_cantidad, "20")
+                page.select_option(selector_cantidad, "100")
                 
                 # Esperar a que la tabla se refresque con la fila 11
                 page.wait_for_selector("table#datatable-proyectos tbody tr:nth-child(11)", timeout=30000)
