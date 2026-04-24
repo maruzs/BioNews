@@ -1,65 +1,22 @@
-# src/main.py
-import sys
-import os
-import subprocess
+import flet as ft
+from ui.main_window import create_main_window
 
-def instalar_chromium_auto():
-    """Instala Chromium automáticamente si no existe"""
-    try:
-        from playwright.sync_api import sync_playwright
-        
-        # Intentar lanzar Chromium
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            browser.close()
-        return True
-        
-    except Exception as e:
-        if "Executable doesn't exist" in str(e) or "not found" in str(e).lower():
-            # Intentar instalar automáticamente
-            try:
-                print("Instalando Chromium automáticamente...")
-                subprocess.run(
-                    [sys.executable, "-m", "playwright", "install", "chromium"],
-                    check=True,
-                    capture_output=True
-                )
-                # Verificar la instalación
-                from playwright.sync_api import sync_playwright
-                with sync_playwright() as p:
-                    browser = p.chromium.launch()
-                    browser.close()
-                return True
-            except Exception as install_error:
-                print(f"Error instalando Chromium: {install_error}")
-                return False
-        return False
+def main(page: ft.Page):
+    # Configuracion basica de la ventana
+    page.title = "BioNews - Inteligencia medioambiental"
+    page.window.width = 1200
+    page.window.height = 800
+    page.window.min_width = 900
+    page.window.min_height = 600
+    page.padding = 0
+    page.theme_mode = ft.ThemeMode.LIGHT
 
-from PySide6.QtWidgets import QApplication, QMessageBox
-from ui.main_window import MainWindow
+    # Generar la estructura principal (navegacion, filtros y area de contenido)
+    layout = create_main_window(page)
 
-def main():
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-    
-    # Verificar/instalar Playwright
-    playwright_ok = instalar_chromium_auto()
-    
-    window = MainWindow()
-    
-    if not playwright_ok:
-        QMessageBox.warning(
-            window,
-            "Error de configuración",
-            "No se pudo instalar Chromium automáticamente.\n\n"
-            "Por favor ejecuta manualmente en una terminal:\n"
-            "playwright install chromium\n\n"
-            "El scraping estará deshabilitado hasta entonces."
-        )
-        window.btn_sync.setEnabled(False)
-    
-    window.show()
-    sys.exit(app.exec())
+    # Anadir el layout a la pagina
+    page.add(layout)
 
 if __name__ == "__main__":
-    main()
+    # Iniciar la aplicacion de escritorio usando run() en lugar de app()
+    ft.run(main)
