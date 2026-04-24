@@ -11,3 +11,7 @@ BioNews.spec
 __pycache__/
 instruccionesGemini.md
 flet042026.md
+pw-browser/
+logs/
+BioNews_Installer.iss
+BioNews.spec

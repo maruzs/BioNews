@@ -1,9 +1,8 @@
 import flet as ft
 import threading
-import subprocess
-import sys
 import os
 from datetime import datetime
+import startScraping 
 from .styles import COLOR_PRIMARIO
 
 LOGS_MEMORIA = []
@@ -33,12 +32,13 @@ def view_sync():
                 for line in LOGS_MEMORIA:
                     f.write(line + "\n")
             
-            print(f"Registro guardado en {path}")
+            # Notificacion en consola de depuracion
+            print(f"Registro guardado exitosamente en {path}")
         except Exception as ex:
-            print(f"Error al guardar errores: {ex}")
+            print(f"Error al intentar guardar el registro: {ex}")
 
     btn_save = ft.ElevatedButton(
-        "Guardar errores",
+        "Guardar Registro",
         icon=ft.Icons.SAVE,
         on_click=save_logs_action
     )
@@ -67,10 +67,10 @@ def view_sync():
     
     log_list = ft.ListView(expand=True, spacing=5, auto_scroll=True)
     
+    # Recuperar logs de la sesion actual
     for m in LOGS_MEMORIA:
         log_list.controls.append(ft.Text(m, size=12, selectable=True))
 
-    # AQUI ESTA LA MAGIA: Recibimos el objeto 'page' directo desde el boton
     def run_scrapers(page):
         global PROCESO_ACTIVO
         PROCESO_ACTIVO = True
@@ -79,73 +79,40 @@ def view_sync():
         progress_bar.visible = True
         progress_bar.value = 0
         warning_banner.visible = True
+        status_text.value = "Extrayendo informacion..."
         
-        try:
-            page.update()
-        except:
-            pass
+        page.update()
 
-        def log(msg):
+        def log_ui(msg):
+            # Guardar mensaje y actualizar lista visual
             LOGS_MEMORIA.append(msg)
             log_list.controls.append(ft.Text(msg, size=12, selectable=True))
-            # Forzamos la actualizacion de toda la pagina para no depender del boton "Guardar"
+            
+            # Movimiento de barra segun hitos del registro
+            if "Iniciando" in msg:
+                progress_bar.value = min(progress_bar.value + 0.05, 0.9)
+            elif "Guardad" in msg:
+                progress_bar.value = min(progress_bar.value + 0.02, 0.98)
+            
             try:
+                # Actualizacion total para garantizar visibilidad en cada linea
                 page.update()
             except:
                 pass
 
         try:
-            log("--- INICIANDO MOTOR DE EXTRACCION ---")
-            env = os.environ.copy()
-            env["PYTHONPATH"] = os.path.join(os.getcwd(), "src")
-
-            process = subprocess.Popen(
-                [sys.executable, "-u", "startScraping.py"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                cwd=os.getcwd(),
-                env=env
-            )
-
-            # Segun tu archivo de logs, los eventos importantes ocurren unas 25 veces
-            pasos_estimados = 25 
-            paso_actual = 0
-
-            for line in iter(process.stdout.readline, ''):
-                if line:
-                    msg = line.strip()
-                    log(msg)
-                    
-                    # Detectamos el inicio de un scraper o cuando guarda datos
-                    if "Iniciando scraping" in msg or "Guardad" in msg:
-                        paso_actual += 1
-                        # Evitamos que llegue a 100% antes de que termine realmente el proceso
-                        nuevo_valor = min(paso_actual / pasos_estimados, 0.95) 
-                        progress_bar.value = nuevo_valor
-                        try:
-                            page.update()
-                        except:
-                            pass
+            # Ejecucion directa del modulo integrado
+            startScraping.ejecutar_todo_el_scraping(log_ui)
             
-            process.wait()
-            
-            if process.returncode == 0:
-                progress_bar.value = 1.0
-                log("--- PROCESO FINALIZADO CON EXITO ---")
-                status_text.value = "Extraccion completada con exito."
-            else:
-                log(f"--- FALLO DE EJECUCION (Codigo: {process.returncode}) ---")
-                status_text.value = "Error en el proceso."
-
+            progress_bar.value = 1.0
+            status_text.value = "Proceso de extraccion finalizado."
         except Exception as e:
-            log(f"Error critico: {str(e)}")
+            log_ui(f"Error critico detectado: {str(e)}")
+            status_text.value = "Fallo en la sincronizacion."
         finally:
             PROCESO_ACTIVO = False
             btn_start.disabled = False
             warning_banner.visible = False
-            
             try:
                 page.update()
             except:
@@ -155,11 +122,8 @@ def view_sync():
         LOGS_MEMORIA.clear()
         log_list.controls.clear()
         
-        # Capturamos la pagina al hacer click y se la enviamos al hilo
-        page_ref = e.page
-        page_ref.update()
-            
-        hilo = threading.Thread(target=run_scrapers, args=(page_ref,), daemon=True)
+        # Se pasa la referencia de la pagina al hilo para manejar actualizaciones
+        hilo = threading.Thread(target=run_scrapers, args=(e.page,), daemon=True)
         hilo.start()
 
     btn_start.on_click = on_click_start
