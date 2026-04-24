@@ -1,63 +1,85 @@
 import flet as ft
 from database.manager import DatabaseManager
-from .styles import COLOR_PRIMARIO, COLOR_SECUNDARIO
 
-def view_dashboard():
-    db = DatabaseManager()
-    # Obtenemos los datos legales de la DB
-    data_legal = db.get_all_legal(limit=50)
-    
-    tabla = ft.DataTable(
-        # Ajustes para que no se vea apretado
-        data_row_min_height=60,
-        data_row_max_height=80,
-        column_spacing=25,
-        heading_row_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY),
-        divider_thickness=0.5,
-        columns=[
-            ft.DataColumn(ft.Text("Nombre", weight="bold")),
-            ft.DataColumn(ft.Text("Fecha", weight="bold")),
-            ft.DataColumn(ft.Text("Estado", weight="bold")),
-            ft.DataColumn(ft.Text("Tipo", weight="bold")),
-            ft.DataColumn(ft.Text("Fuente", weight="bold")),
-            ft.DataColumn(ft.IconButton(ft.Icons.SETTINGS, disabled=True)), # Columna de acciones
-        ],
-        rows=[]
-    )
-
-    for row in data_legal:
-        link_url = row[0]
+class DashboardView(ft.Column):
+    def __init__(self):
+        super().__init__()
+        self.db = DatabaseManager()
+        self.expand = True
+        self.spacing = 20
         
-        async def handle_click(e, url=link_url):
-            await e.page.launch_url(url)
+        # Fuentes de noticias conocidas
+        self.fuentes_disponibles = ["SMA", "SEA", "Corte Suprema", "Tercer Tribunal", "MMA"]
+        self.fuentes_seleccionadas = self.fuentes_disponibles.copy()
 
-        tabla.rows.append(
-            ft.DataRow(
-                cells=[
-                    # Cambio de ft.padding.vertical a ft.padding.symmetric
-                    ft.DataCell(
-                        ft.Container(
-                            ft.Text(row[1], width=350, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
-                            padding=ft.padding.symmetric(vertical=10)
-                        )
-                    ),
-                    ft.DataCell(ft.Text(row[2])),
-                    ft.DataCell(ft.Text(row[3])),
-                    ft.DataCell(ft.Text(row[4])),
-                    ft.DataCell(ft.Text(row[5])),
-                    ft.DataCell(
-                        ft.IconButton(
-                            ft.Icons.OPEN_IN_NEW, 
-                            on_click=handle_click,
-                            icon_color=COLOR_PRIMARIO
-                        )
-                    ),
-                ]
+        # Contenedor de las tarjetas de noticias
+        self.news_list = ft.ListView(expand=True, spacing=15, padding=10)
+        
+        # Generar controles de filtro
+        checkboxes = []
+        for fuente in self.fuentes_disponibles:
+            cb = ft.Checkbox(
+                label=fuente, 
+                value=True, 
+                on_change=self.filtrar_noticias,
+                data=fuente
             )
-        )
+            checkboxes.append(cb)
 
-    return ft.Column([
-        ft.Text("Dashboard de Seguimiento Legal", size=28, weight="bold", color=COLOR_PRIMARIO),
-        ft.Divider(height=10, thickness=1),
-        ft.ListView(expand=True, controls=[tabla], spacing=10)
-    ], scroll=ft.ScrollMode.ADAPTIVE, expand=True)
+        self.filtros_row = ft.Row(controls=checkboxes, wrap=True)
+
+        self.controls = [
+            ft.Text("Noticias Ambientales", size=24, weight=ft.FontWeight.BOLD),
+            self.filtros_row,
+            ft.Divider(),
+            self.news_list
+        ]
+        
+        self.cargar_noticias()
+
+    def filtrar_noticias(self, e):
+        # Actualizar la lista de fuentes seleccionadas
+        fuente = e.control.data
+        if e.control.value:
+            if fuente not in self.fuentes_seleccionadas:
+                self.fuentes_seleccionadas.append(fuente)
+        else:
+            if fuente in self.fuentes_seleccionadas:
+                self.fuentes_seleccionadas.remove(fuente)
+                
+        self.cargar_noticias()
+
+    def cargar_noticias(self):
+        self.news_list.controls.clear()
+        
+        # Asumiendo que get_all_news devuelve todas las noticias de la BD
+        # Ajusta este llamado segun la estructura exacta de tu DatabaseManager
+        todas_las_noticias = self.db.get_all_news() 
+        
+        noticias_filtradas = [n for n in todas_las_noticias if n[4] in self.fuentes_seleccionadas]
+
+        if not noticias_filtradas:
+            self.news_list.controls.append(ft.Text("No hay noticias para las fuentes seleccionadas."))
+        else:
+            for noticia in noticias_filtradas:
+                titulo = noticia[0]
+                fecha = noticia[1]
+                link = noticia[2]
+                fuente = noticia[4]
+                
+                card = ft.Card(
+                    content=ft.Container(
+                        padding=15,
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Text(fuente, weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_700),
+                                ft.Text(fecha, color=ft.colors.GREY_500)
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.Text(titulo, size=16, weight=ft.FontWeight.W_500),
+                            ft.TextButton("Leer noticia", url=link, icon=ft.icons.OPEN_IN_NEW)
+                        ])
+                    )
+                )
+                self.news_list.controls.append(card)
+        
+        self.update()

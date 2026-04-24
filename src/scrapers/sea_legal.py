@@ -1,8 +1,8 @@
 import os
 import json
 from playwright.sync_api import sync_playwright
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
+from utils.date_parser import parse_fecha
+from database.manager import DatabaseManager
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -1,9 +1,8 @@
 import json
 import traceback
 from playwright.sync_api import sync_playwright
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
-
+from utils.date_parser import parse_fecha
+from database.manager import DatabaseManager
 class PrimerTribunalScraper:
     def __init__(self):
         self.url_ui = "https://www.portaljudicial1ta.cl/sgc-web/consulta-causa.html"

@@ -1,7 +1,7 @@
 import hashlib
 from .engine import ScrapingEngine
 from datetime import datetime
-from ..utils.date_parser import parse_fecha
+from utils.date_parser import parse_fecha
 
 class DiarioOficialScraper:
     def __init__(self):

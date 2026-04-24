@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from datetime import datetime
-from ..utils.date_parser import parse_fecha
+from utils.date_parser import parse_fecha
 
 class CorteSupremaScraper:
     def __init__(self):
