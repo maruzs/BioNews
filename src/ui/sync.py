@@ -2,8 +2,9 @@ import flet as ft
 import threading
 import os
 from datetime import datetime
-import startScraping 
 from .styles import COLOR_PRIMARIO
+# Importamos directamente el modulo de scraping
+import startScraping 
 
 LOGS_MEMORIA = []
 PROCESO_ACTIVO = False
@@ -32,13 +33,13 @@ def view_sync():
                 for line in LOGS_MEMORIA:
                     f.write(line + "\n")
             
-            # Notificacion en consola de depuracion
-            print(f"Registro guardado exitosamente en {path}")
+            # Print para consola de depuracion
+            print(f"Registro guardado en {path}")
         except Exception as ex:
-            print(f"Error al intentar guardar el registro: {ex}")
+            print(f"Error al guardar errores: {ex}")
 
     btn_save = ft.ElevatedButton(
-        "Guardar Registro",
+        "Guardar errores",
         icon=ft.Icons.SAVE,
         on_click=save_logs_action
     )
@@ -67,7 +68,7 @@ def view_sync():
     
     log_list = ft.ListView(expand=True, spacing=5, auto_scroll=True)
     
-    # Recuperar logs de la sesion actual
+    # Cargar logs previos si existen en la sesion actual
     for m in LOGS_MEMORIA:
         log_list.controls.append(ft.Text(m, size=12, selectable=True))
 
@@ -79,40 +80,49 @@ def view_sync():
         progress_bar.visible = True
         progress_bar.value = 0
         warning_banner.visible = True
-        status_text.value = "Extrayendo informacion..."
         
-        page.update()
+        # Actualizacion inicial de la UI
+        try:
+            page.update()
+        except:
+            pass
 
-        def log_ui(msg):
-            # Guardar mensaje y actualizar lista visual
+        def log(msg):
+            # Agregar a memoria y a la lista visual
             LOGS_MEMORIA.append(msg)
             log_list.controls.append(ft.Text(msg, size=12, selectable=True))
             
-            # Movimiento de barra segun hitos del registro
+            # Logica para mover la barra de progreso segun el contenido del log
             if "Iniciando" in msg:
+                # Incremento pequeño al empezar una fuente
                 progress_bar.value = min(progress_bar.value + 0.05, 0.9)
             elif "Guardad" in msg:
-                progress_bar.value = min(progress_bar.value + 0.02, 0.98)
+                # Incremento al confirmar guardado de datos
+                progress_bar.value = min(progress_bar.value + 0.05, 0.98)
             
+            # Forzamos la actualizacion de la pagina en cada mensaje para el efecto cascada
             try:
-                # Actualizacion total para garantizar visibilidad en cada linea
                 page.update()
             except:
                 pass
 
         try:
-            # Ejecucion directa del modulo integrado
-            startScraping.ejecutar_todo_el_scraping(log_ui)
+            log("--- INICIANDO MOTOR DE EXTRACCION ---")
+            
+            # Llamada directa a la funcion dentro de startScraping.py
+            # IMPORTANTE: Asegurate de que en startScraping.py la funcion se llame run_sync
+            startScraping.run_sync(log)
             
             progress_bar.value = 1.0
-            status_text.value = "Proceso de extraccion finalizado."
+            status_text.value = "Extraccion completada con exito."
         except Exception as e:
-            log_ui(f"Error critico detectado: {str(e)}")
+            log(f"Error critico: {str(e)}")
             status_text.value = "Fallo en la sincronizacion."
         finally:
             PROCESO_ACTIVO = False
             btn_start.disabled = False
             warning_banner.visible = False
+            
             try:
                 page.update()
             except:
@@ -122,8 +132,11 @@ def view_sync():
         LOGS_MEMORIA.clear()
         log_list.controls.clear()
         
-        # Se pasa la referencia de la pagina al hilo para manejar actualizaciones
-        hilo = threading.Thread(target=run_scrapers, args=(e.page,), daemon=True)
+        # Capturamos la referencia de la pagina y arrancamos el hilo
+        page_ref = e.page
+        page_ref.update()
+            
+        hilo = threading.Thread(target=run_scrapers, args=(page_ref,), daemon=True)
         hilo.start()
 
     btn_start.on_click = on_click_start

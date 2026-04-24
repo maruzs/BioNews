@@ -1,3 +1,4 @@
+import traceback
 from src.scrapers.mma import MMAScraper
 from src.scrapers.sbap import SBAPScraper
 from src.scrapers.diario_oficial import DiarioOficialScraper
@@ -15,43 +16,45 @@ from src.scrapers.tercerTribunal import TercerTribunalScraperLegal
 from src.scrapers.reqSEIA import SnifaIngresoScraper
 from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
 from src.database.manager import DatabaseManager
-from src.scrapers.engine import ScrapingEngine
 
-def ejecutar_todo_el_scraping(log_callback):
-    # log_callback reemplaza los print para enviar texto a la interfaz
+def run_sync(log_callback):
     log_callback("Iniciando componentes del sistema...")
-
-    db = DatabaseManager()
-    log_callback("Base de datos conectada con exito")
     
+    try:
+        db = DatabaseManager()
+        log_callback("Base de datos conectada correctamente.")
+    except Exception as e:
+        log_callback(f"Error al conectar con la base de datos: {e}")
+        return
+
     # 1. Sincronizacion de datos legales
     log_callback("--- INICIANDO SCRAPING LEGAL ---")
     legales = [
-        ("Primer Tribunal Ambiental (1TA)", PrimerTribunalScraper()),
-        ("Segundo Tribunal Ambiental (2TA)", SegundoTribunalScraper()),
-        ("Tercer Tribunal Ambiental (3TA)", TercerTribunalScraperLegal()),
+        ("Primer Tribunal Ambiental", PrimerTribunalScraper()),
+        ("Segundo Tribunal Ambiental", SegundoTribunalScraper()),
+        ("Tercer Tribunal Ambiental", TercerTribunalScraperLegal()),
         ("SEA Legal", SEALegalScraper()),
         ("SNIFA Sancionatorios", SnifaScraper()),
         ("SNIFA Ingresos", SnifaIngresoScraper()),
         ("SNIFA Fiscalizaciones", SnifaFiscalizacionScraper())
     ]
     
-    for nombre, s in legales:
-        log_callback(f"Iniciando scraping legal en {nombre}")
+    for nombre, scraper in legales:
+        log_callback(f"Procesando: {nombre}...")
         try:
-            datos = s.get_legal_data()
+            datos = scraper.get_legal_data()
             if datos:
                 nuevos = db.save_legal(datos)
-                log_callback(f"Guardados {nuevos} nuevos registros legales")
+                log_callback(f"Exito: {nuevos} nuevos registros guardados.")
             else:
-                log_callback(f"Sin registros nuevos para {nombre}")
+                log_callback("Sin registros nuevos encontrados.")
         except Exception as e:
             log_callback(f"Error en {nombre}: {str(e)}")
 
     # 2. Sincronizacion de noticias
     log_callback("\n--- INICIANDO SCRAPING DE NOTICIAS ---")
-    scrapers = [
-        ("Tercer Tribunal", TercerTribunalScraper()),
+    noticias_scrapers = [
+        ("Tercer Tribunal (Noticias)", TercerTribunalScraper()),
         ("Corte Suprema", CorteSupremaScraper()),
         ("SMA", SMAScraper()),
         ("MMA", MMAScraper()),
@@ -59,19 +62,20 @@ def ejecutar_todo_el_scraping(log_callback):
         ("Diario Oficial", DiarioOficialScraper()),
         ("SEA Noticias", SEAScraper()),
         ("Sernageomin", SernageominScraper()),
-        ("Tribunal Noticias", TribunalScraper())
+        ("Tribunal Ambiental (Noticias)", TribunalScraper())
     ]
     
-    for nombre, s in scrapers:
-        log_callback(f"Iniciando scraping en {nombre}")
+    for nombre, scraper in noticias_scrapers:
+        log_callback(f"Procesando: {nombre}...")
         try:
-            noticias = s.get_news()
+            # Llamamos a get_data() segun tu estructura original
+            noticias = scraper.get_latest_news()
             if noticias:
-                nuevos = db.save_news(noticias)
-                log_callback(f"Guardadas {nuevos} nuevas noticias de {nombre}")
+                nuevas = db.save_news(noticias)
+                log_callback(f"Exito: {nuevas} nuevas noticias guardadas.")
             else:
-                log_callback(f"Sin noticias nuevas para {nombre}")
+                log_callback("No se encontraron noticias nuevas.")
         except Exception as e:
-            log_callback(f"Error en {nombre}: {str(e)}")
-            
-    log_callback("\n--- PROCESO COMPLETADO ---")
+            log_callback(f"Error inesperado en {nombre}: {str(e)}")
+
+    log_callback("\n--- SINCRONIZACION FINALIZADA ---")
