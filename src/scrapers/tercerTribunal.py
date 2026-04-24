@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-from utils.date_parser import parse_fecha
-from database.manager import DatabaseManager
+from ..utils.date_parser import parse_fecha
+from ..database.manager import DatabaseManager
 class TercerTribunalScraperLegal:
     def __init__(self):
         self.url_base = "https://causas.3ta.cl"

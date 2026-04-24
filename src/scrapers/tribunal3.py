@@ -1,6 +1,6 @@
 from .engine import ScrapingEngine
 from datetime import datetime
-from utils.date_parser import parse_fecha
+from ..utils.date_parser import parse_fecha
 
 class TercerTribunalScraper:
     def __init__(self):

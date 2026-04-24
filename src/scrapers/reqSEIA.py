@@ -3,8 +3,8 @@ import re
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from datetime import datetime
-from utils.date_parser import parse_fecha
-from database.manager import DatabaseManager
+from ..utils.date_parser import parse_fecha
+from ..database.manager import DatabaseManager
 
 class SnifaIngresoScraper:
     def __init__(self):

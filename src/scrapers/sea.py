@@ -1,6 +1,6 @@
 from .engine import ScrapingEngine
 from urllib.parse import urljoin
-from utils.date_parser import parse_fecha
+from ..utils.date_parser import parse_fecha
 
 class SEAScraper:
     def __init__(self):

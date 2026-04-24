@@ -1,5 +1,5 @@
 from .engine import ScrapingEngine
-from utils.date_parser import parse_fecha
+from ..utils.date_parser import parse_fecha
 
 class SernageominScraper:
     def __init__(self):

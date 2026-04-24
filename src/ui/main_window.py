@@ -1,6 +1,7 @@
 import flet as ft
 from ui.dashboard import view_dashboard
 from ui.legal import view_legal
+from ui.sync import view_sync  # Nueva importacion
 from ui.styles import COLOR_PRIMARIO, COLOR_FONDO
 
 def create_main_window(page: ft.Page):
@@ -14,8 +15,8 @@ def create_main_window(page: ft.Page):
     chk_sma = ft.Checkbox(label="SMA / SNIFA", value=True, active_color=COLOR_PRIMARIO)
     chk_corte = ft.Checkbox(label="Corte Suprema", value=True, active_color=COLOR_PRIMARIO)
     chk_tribunales = ft.Checkbox(label="Tribunales Amb.", value=True, active_color=COLOR_PRIMARIO)
+    chk_diario = ft.Checkbox(label="Diario Oficial", value=True, active_color=COLOR_PRIMARIO)
 
-    # SOLUCION AL ERROR 2: Logica del boton de filtros
     def apply_filters(e):
         fuentes_activas = []
         if chk_mma.value: fuentes_activas.append("MMA")
@@ -24,13 +25,12 @@ def create_main_window(page: ft.Page):
             fuentes_activas.append("SMA")
             fuentes_activas.append("SNIFA")
         if chk_corte.value: fuentes_activas.append("Corte Suprema")
-        if chk_tribunales.value: fuentes_activas.append("Tribunal") # Atrapa 1er, 2do y 3er tribunal
+        if chk_tribunales.value: fuentes_activas.append("Tribunal") 
+        if chk_diario.value: fuentes_activas.append("Diario Oficial")
 
-        # Recargar el dashboard pasandole las fuentes permitidas
         content_area.content = view_dashboard(fuentes_activas)
         content_area.update()
 
-    # Ocultar o mostrar filtros segun la seccion
     def change_view(e):
         index = e.control.selected_index
         if index == 0:
@@ -38,8 +38,11 @@ def create_main_window(page: ft.Page):
             filtros_panel.visible = True
         elif index == 1:
             content_area.content = view_legal()
-            # Ocultamos el panel porque Legal ya tiene sus propias pestañas
             filtros_panel.visible = False 
+        elif index == 2:
+            # Nueva logica para la pestana de Sincronizacion
+            content_area.content = view_sync()
+            filtros_panel.visible = False
         
         page.update()
 
@@ -60,6 +63,12 @@ def create_main_window(page: ft.Page):
                 selected_icon=ft.Icons.GAVEL,
                 label="Legal",
             ),
+            # Nueva opcion de Sincronizacion
+            ft.NavigationRailDestination(
+                icon=ft.Icons.SYNC_OUTLINED,
+                selected_icon=ft.Icons.SYNC,
+                label="Sincronizar",
+            ),
         ],
         on_change=change_view,
     )
@@ -67,7 +76,7 @@ def create_main_window(page: ft.Page):
     filtros_panel = ft.Container(
         width=200,
         padding=10,
-        visible=True, # Visible por defecto al iniciar en dashboard
+        visible=True, 
         content=ft.Column([
             ft.Text("Filtros de Noticias", weight="bold", size=16),
             chk_mma,
@@ -75,6 +84,7 @@ def create_main_window(page: ft.Page):
             chk_sma,
             chk_corte,
             chk_tribunales,
+            chk_diario,
             ft.Container(height=20),
             ft.ElevatedButton(
                 "Aplicar Filtros", 
