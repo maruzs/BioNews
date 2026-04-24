@@ -1,0 +1,138 @@
+--- INICIANDO MOTOR DE EXTRACCION ---
+INGRESA 1
+INGRESA 2
+--- INICIANDO SCRAPING LEGAL ---
+Iniciando scraping legal en Primer Tribunal Ambiental (1TA)
+Exito: Se procesaron 99 registros del 1TA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)
+Exito: Se procesaron 10 registros del 2TA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en Tercer Tribunal Ambiental (3TA)
+Exito: Se procesaron 10 registros legales del 3TA
+Guardados 0 nuevos registros legales
+Iniciando scraping SEA (Modo optimizado por fuente)
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en SNIFA (Sancionatorios)
+
+--- Consultando categoria: Agroindustrias ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Agroindustrias
+
+--- Consultando categoria: Energia ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Energia
+
+--- Consultando categoria: Infraestructura Portuaria ---
+Detectadas 37 filas en la pagina.
+Guardados 15 registros de Infraestructura Portuaria
+
+--- Consultando categoria: Instalacion fabril ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Instalacion fabril
+
+--- Consultando categoria: Mineria ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Mineria
+
+--- Consultando categoria: Saneamiento Ambiental ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Saneamiento Ambiental
+
+--- Consultando categoria: Transportes y almacenajes ---
+Detectadas 24 filas en la pagina.
+Guardados 15 registros de Transportes y almacenajes
+
+Exito: Se procesaron 105 registros totales de SNIFA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en SNIFA (Requerimientos de Ingreso)
+--- Consultando categoria: Agroindustrias ---
+--- Consultando categoria: Energia ---
+--- Consultando categoria: Infraestructura Portuaria ---
+--- Consultando categoria: Instalacion fabril ---
+--- Consultando categoria: Mineria ---
+--- Consultando categoria: Saneamiento Ambiental ---
+--- Consultando categoria: Transportes y almacenajes ---
+Exito: Se procesaron 113 registros totales ordenados
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en SNIFA (Fiscalizaciones)
+
+--- Consultando categoria: Agroindustrias ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 32 fiscalizaciones en la pagina.
+Guardados 15 registros de Agroindustrias
+
+--- Consultando categoria: Energia ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 18 fiscalizaciones en la pagina.
+Guardados 15 registros de Energia
+
+--- Consultando categoria: Infraestructura Portuaria ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 9 fiscalizaciones en la pagina.
+Guardados 9 registros de Infraestructura Portuaria
+
+--- Consultando categoria: Instalacion fabril ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 32 fiscalizaciones en la pagina.
+Guardados 15 registros de Instalacion fabril
+
+--- Consultando categoria: Mineria ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 10 fiscalizaciones en la pagina.
+Guardados 10 registros de Mineria
+
+--- Consultando categoria: Saneamiento Ambiental ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 11 fiscalizaciones en la pagina.
+Guardados 11 registros de Saneamiento Ambiental
+
+--- Consultando categoria: Transportes y almacenajes ---
+Filtro DFZ-2026 aplicado en el campo Expediente.
+Esperando que el servidor devuelva los datos (AJAX)...
+Detectadas 5 fiscalizaciones en la pagina.
+Guardados 5 registros de Transportes y almacenajes
+
+Exito: Se procesaron 80 registros totales de SNIFA Fiscalizaciones
+Guardados 0 nuevos registros legales
+
+--- INICIANDO SCRAPING DE NOTICIAS ---
+Iniciando scraping en Tercer Tribunal Ambiental
+Consultando pagina 1 del Tercer Tribunal...
+Consultando pagina 2 del Tercer Tribunal...
+Exito: Se encontraron 20 noticias en el Tercer Tribunal Ambiental
+Guardadas 0 nuevas noticias de Tercer Tribunal
+Iniciando scraping en Corte Suprema: https://www.pjud.cl/prensa-y-comunicaciones/noticias-del-poder-judicial
+Aplicando filtros de busqueda...
+Exito: Se encontraron 1 noticias medioambientales en la Corte Suprema
+Guardadas 0 nuevas noticias de Corte Suprema
+Iniciando scraping en SMA: https://portal.sma.gob.cl/index.php/sala-de-prensa/
+Exito: Se encontraron 10 noticias en la SMA
+Guardadas 0 nuevas noticias de SMA
+Iniciando scraping en MMA: https://mma.gob.cl/noticias/
+Se encontraron 24 noticias en MMA
+Guardadas 0 nuevas noticias de MMA
+Iniciando scraping en SBAP: https://sbap.gob.cl/sala-de-prensa/noticias-y-comunicados
+Se encontraron 104 noticias en SBAP
+Guardadas 0 nuevas noticias de SBAP
+Iniciando scraping en Diario Oficial: https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php
+Exito: Se encontraron 9 registros validos en el Diario Oficial
+Guardadas 0 nuevas noticias de Diario Oficial
+Iniciando scraping en SEA: https://www.sea.gob.cl/noticias
+Se encontraron 9 noticias en SEA
+Guardadas 0 nuevas noticias de SEA
+Iniciando scraping en Sernageomin: https://www.sernageomin.cl/category/noticias/
+Se encontraron 10 noticias en Sernageomin
+Guardadas 0 nuevas noticias de Sernageomin
+Iniciando scraping en Tribunal Ambiental: https://tribunalambiental.cl/resumen-de-noticias/
+Se encontraron 6 noticias en Tribunal Ambiental
+Guardadas 0 nuevas noticias de Tribunal Ambiental
+
+Sincronizacion terminada. Total noticias nuevas: 0
+--- PROCESO FINALIZADO CON EXITO ---

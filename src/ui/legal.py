@@ -4,12 +4,21 @@ from .styles import COLOR_PRIMARIO
 
 def view_legal():
     db = DatabaseManager()
-    # Se aumenta el limite para capturar todos los registros de las fuentes
     documentos_db = db.get_all_legal(limit=2000) 
     
     sea_docs = []
     snifa_docs = []
     tribunales_docs = []
+
+    # Funcion para extraer el numero de ficha del final del link
+    def extract_ficha_id(link):
+        try:
+            partes = [p for p in str(link).split('/') if p.strip()]
+            if partes and partes[-1].isdigit():
+                return int(partes[-1])
+        except:
+            pass
+        return 0
 
     for row in documentos_db:
         # Estructura: (link[0], nombre[1], fecha[2], estado[3], tipo[4], fuente[5])
@@ -24,6 +33,9 @@ def view_legal():
         else:
             tribunales_docs.append(row)
 
+    # AQUI: Ordenamos todos los registros de SNIFA por su ID de ficha (de mayor a menor)
+    snifa_docs.sort(key=lambda r: extract_ficha_id(r[0]), reverse=True)
+
     def create_tab_list(docs, es_snifa=False):
         lista = ft.ListView(expand=True, spacing=10)
         if not docs:
@@ -36,7 +48,7 @@ def view_legal():
             
             if es_snifa:
                 subtitulo = row[4] 
-                meta_info = f"Estado: {row[3]}"
+                meta_info = f"Estado: {row[3]} | Ficha: {extract_ficha_id(link)}" # Agregue el ID visible como extra
             else:
                 subtitulo = row[5]
                 meta_info = f"Fecha: {row[2]}"
@@ -71,11 +83,11 @@ def view_legal():
 
     content_area = ft.Container(content=list_sea, expand=True, padding=10)
     
-    # Area de sub-filtros para SNIFA
     def filter_snifa(e, keyword):
         if keyword == "todos":
             content_area.content = list_snifa_full
         else:
+            # Como snifa_docs ya esta ordenado, la sub-lista filtrada mantendra el orden
             filtered_docs = [r for r in snifa_docs if keyword.lower() in str(r[4]).lower()]
             content_area.content = create_tab_list(filtered_docs, es_snifa=True)
         content_area.update()
@@ -85,14 +97,13 @@ def view_legal():
         controls=[
             ft.TextButton("Todos", on_click=lambda e: filter_snifa(e, "todos")),
             ft.TextButton("Sancionatorio", on_click=lambda e: filter_snifa(e, "sancionatorio")),
-            ft.TextButton("Requerimiento Ingreso", on_click=lambda e: filter_snifa(e, "Ingreso SEIA")),
+            ft.TextButton("Requisitos Ingreso", on_click=lambda e: filter_snifa(e, "requisito")),
             ft.TextButton("Fiscalizaciones", on_click=lambda e: filter_snifa(e, "fiscalizacion")),
         ]
     )
 
     def change_custom_tab(e, category, list_view):
         content_area.content = list_view
-        # Mostrar sub-filtros solo si es SNIFA
         sub_filtros_snifa.visible = (category == "SNIFA")
         
         for btn, cat in [(btn_sea, "SEA"), (btn_snifa, "SNIFA"), (btn_tribunales, "Tribunales")]:
@@ -101,7 +112,6 @@ def view_legal():
             else:
                 btn.style = ft.ButtonStyle(color=COLOR_PRIMARIO, bgcolor=ft.Colors.TRANSPARENT)
         
-        # Usamos e.control.page para asegurar que el control este montado
         if e.control.page:
             e.control.page.update()
 

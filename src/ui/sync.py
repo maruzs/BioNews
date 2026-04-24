@@ -20,7 +20,6 @@ def view_sync():
         disabled=PROCESO_ACTIVO
     )
     
-    # Boton para guardar logs manualmente
     def save_logs_action(e):
         if not LOGS_MEMORIA:
             return
@@ -34,13 +33,12 @@ def view_sync():
                 for line in LOGS_MEMORIA:
                     f.write(line + "\n")
             
-            # Notificacion simple si la pagina esta disponible
             print(f"Registro guardado en {path}")
         except Exception as ex:
-            print(f"Error al guardar registro: {ex}")
+            print(f"Error al guardar errores: {ex}")
 
     btn_save = ft.ElevatedButton(
-        "Guardar Registro",
+        "Guardar errores",
         icon=ft.Icons.SAVE,
         on_click=save_logs_action
     )
@@ -69,11 +67,11 @@ def view_sync():
     
     log_list = ft.ListView(expand=True, spacing=5, auto_scroll=True)
     
-    # Cargar logs previos y hacerlos seleccionables
     for m in LOGS_MEMORIA:
         log_list.controls.append(ft.Text(m, size=12, selectable=True))
 
-    def run_scrapers():
+    # AQUI ESTA LA MAGIA: Recibimos el objeto 'page' directo desde el boton
+    def run_scrapers(page):
         global PROCESO_ACTIVO
         PROCESO_ACTIVO = True
         
@@ -82,15 +80,19 @@ def view_sync():
         progress_bar.value = 0
         warning_banner.visible = True
         
-        btn_start.update()
-        progress_bar.update()
-        warning_banner.update()
+        try:
+            page.update()
+        except:
+            pass
 
         def log(msg):
             LOGS_MEMORIA.append(msg)
-            # selectable=True permite que el usuario copie el texto
             log_list.controls.append(ft.Text(msg, size=12, selectable=True))
-            log_list.update()
+            # Forzamos la actualizacion de toda la pagina para no depender del boton "Guardar"
+            try:
+                page.update()
+            except:
+                pass
 
         try:
             log("--- INICIANDO MOTOR DE EXTRACCION ---")
@@ -107,16 +109,25 @@ def view_sync():
                 env=env
             )
 
-            # Ajusta este numero segun la cantidad de fuentes reales
-            fuentes_totales = 8 
+            # Segun tu archivo de logs, los eventos importantes ocurren unas 25 veces
+            pasos_estimados = 25 
+            paso_actual = 0
+
             for line in iter(process.stdout.readline, ''):
                 if line:
                     msg = line.strip()
                     log(msg)
-                    if "Listo" in msg or "Finalizado" in msg:
-                        if progress_bar.value < 1.0:
-                            progress_bar.value += (1.0 / fuentes_totales)
-                            progress_bar.update()
+                    
+                    # Detectamos el inicio de un scraper o cuando guarda datos
+                    if "Iniciando scraping" in msg or "Guardad" in msg:
+                        paso_actual += 1
+                        # Evitamos que llegue a 100% antes de que termine realmente el proceso
+                        nuevo_valor = min(paso_actual / pasos_estimados, 0.95) 
+                        progress_bar.value = nuevo_valor
+                        try:
+                            page.update()
+                        except:
+                            pass
             
             process.wait()
             
@@ -134,16 +145,21 @@ def view_sync():
             PROCESO_ACTIVO = False
             btn_start.disabled = False
             warning_banner.visible = False
-            btn_start.update()
-            warning_banner.update()
-            status_text.update()
-            progress_bar.update()
+            
+            try:
+                page.update()
+            except:
+                pass
 
     def on_click_start(e):
         LOGS_MEMORIA.clear()
         log_list.controls.clear()
-        log_list.update()
-        hilo = threading.Thread(target=run_scrapers, daemon=True)
+        
+        # Capturamos la pagina al hacer click y se la enviamos al hilo
+        page_ref = e.page
+        page_ref.update()
+            
+        hilo = threading.Thread(target=run_scrapers, args=(page_ref,), daemon=True)
         hilo.start()
 
     btn_start.on_click = on_click_start

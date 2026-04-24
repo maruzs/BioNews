@@ -1,0 +1,8 @@
+--- INICIANDO MOTOR DE EXTRACCION ---
+INGRESA 1
+INGRESA 2
+--- INICIANDO SCRAPING LEGAL ---
+Iniciando scraping legal en Primer Tribunal Ambiental (1TA)
+Exito: Se procesaron 99 registros del 1TA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)
