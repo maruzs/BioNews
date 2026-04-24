@@ -6,3 +6,8 @@ old/
 ignore/
 build/
 dist/
+BioNews_Debug.spec
+BioNews.spec
+__pycache__/
+instruccionesGemini.md
+flet042026.md

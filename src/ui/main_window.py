@@ -18,6 +18,18 @@ class ScrapingWorker(QThread):
 
     def run(self):
         try:
+            # Verificar que Chromium esté disponible
+            from playwright.sync_api import sync_playwright
+            try:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch()
+                    browser.close()
+            except Exception as e:
+                self.finalizado.emit(False, 
+                    "Chromium no está instalado.\n"
+                    "Reinicia la aplicación para instalarlo automáticamente."
+                )
+                return
             from scrapers.mma import MMAScraper
             from scrapers.sbap import SBAPScraper
             from scrapers.diario_oficial import DiarioOficialScraper
