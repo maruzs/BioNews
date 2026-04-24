@@ -9,7 +9,7 @@ class SBAPScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en SBAP: {self.url}")
+        print(f"Iniciando scraping en SBAP: {self.url}", flush=True)
         soup = self.engine.get_soup(self.url, wait_for_selector=".noticias-prensa")
         
         if not soup:
@@ -34,7 +34,7 @@ class SBAPScraper:
                     "fuente": "SBAP"
                 })
             except Exception as e:
-                print(f"Error en noticia principal SBAP: {e}")
+                print(f"Error en noticia principal SBAP: {e}", flush=True)
 
         # 2. Otras noticias secundarias
         for otra in soup.select(".otra-not"):
@@ -48,7 +48,7 @@ class SBAPScraper:
                     "fuente": "SBAP"
                 })
             except Exception as e:
-                print(f"Error en otra-not SBAP: {e}")
+                print(f"Error en otra-not SBAP: {e}", flush=True)
 
         # 3. Grid inferior de noticias
         for card in soup.select(".card-not"):
@@ -67,7 +67,7 @@ class SBAPScraper:
                     "fuente": "SBAP"
                 })
             except Exception as e:
-                print(f"Error en card SBAP: {e}")
+                print(f"Error en card SBAP: {e}", flush=True)
 
-        print(f"Se encontraron {len(news_list)} noticias en SBAP")
+        print(f"Se encontraron {len(news_list)} noticias en SBAP", flush=True)
         return news_list

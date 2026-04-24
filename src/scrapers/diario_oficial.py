@@ -19,11 +19,11 @@ class DiarioOficialScraper:
         }
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en Diario Oficial: {self.url_home}")
+        print(f"Iniciando scraping en Diario Oficial: {self.url_home}", flush=True)
         soup = self.engine.get_soup(self.url_home, wait_for_selector=".wrapsection")
         
         if not soup:
-            print("Error: No se pudo cargar el contenido de la pagina")
+            print("Error: No se pudo cargar el contenido de la pagina", flush=True)
             return []
 
         news_list = []
@@ -81,7 +81,7 @@ class DiarioOficialScraper:
                                 "fuente": "Diario Oficial"
                             })
                 except Exception as e:
-                    print(f"Error procesando fila de {current_min}: {e}")
+                    print(f"Error procesando fila de {current_min}: {e}", flush=True)
 
-        print(f"Exito: Se encontraron {len(news_list)} registros validos en el Diario Oficial")
+        print(f"Exito: Se encontraron {len(news_list)} registros validos en el Diario Oficial", flush=True)
         return news_list

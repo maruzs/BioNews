@@ -5,7 +5,6 @@ import sys
 import os
 from .styles import COLOR_PRIMARIO
 
-# Variable global para mantener los logs aunque se cambie de pestaña
 LOGS_MEMORIA = []
 PROCESO_ACTIVO = False
 
@@ -26,12 +25,11 @@ def view_sync():
         italic=True
     )
     
-    # Aviso de advertencia
     warning_banner = ft.Container(
         content=ft.Row([
             ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=ft.Colors.ORANGE_700),
             ft.Text(
-                "ADVERTENCIA: No cambie de pestana mientras la extraccion este activa o el proceso podria fallar.",
+                "ADVERTENCIA: No cambie de pestana mientras la extraccion este activa.",
                 color=ft.Colors.ORANGE_900,
                 weight="bold",
                 size=12
@@ -45,7 +43,6 @@ def view_sync():
     
     log_list = ft.ListView(expand=True, spacing=5, auto_scroll=True)
     
-    # Recuperar logs guardados anteriormente
     for m in LOGS_MEMORIA:
         log_list.controls.append(ft.Text(m, size=12))
 
@@ -63,17 +60,17 @@ def view_sync():
         warning_banner.update()
 
         def log(msg):
-            # Guardar en memoria y en la UI
             LOGS_MEMORIA.append(msg)
             log_list.controls.append(ft.Text(msg, size=12))
             log_list.update()
 
         try:
             log("--- INICIANDO MOTOR DE EXTRACCION ---")
+            log("Conectando con startScraping.py...") # Añadido de vuelta
             
-            # Ejecucion del script startScraping.py
+            # EL FIX: Añadimos "-u" para forzar la salida en tiempo real (unbuffered)
             process = subprocess.Popen(
-                [sys.executable, "startScraping.py"],
+                [sys.executable, "-u", "startScraping.py"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -81,12 +78,9 @@ def view_sync():
                 cwd=os.getcwd() 
             )
 
-            # Leer salida en tiempo real
             for line in iter(process.stdout.readline, ''):
                 if line:
-                    clean_line = line.strip()
-                    # Si el script imprime la info, aqui se loguea tal cual
-                    log(clean_line)
+                    log(line.strip())
             
             process.wait()
             

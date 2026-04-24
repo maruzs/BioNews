@@ -17,7 +17,7 @@ class CorteSupremaScraper:
         ]
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en Corte Suprema: {self.url_home}")
+        print(f"Iniciando scraping en Corte Suprema: {self.url_home}", flush=True)
         news_list = []
 
         with sync_playwright() as p:
@@ -31,7 +31,7 @@ class CorteSupremaScraper:
             try:
                 page.goto(self.url_home, wait_until="networkidle")
 
-                print("Aplicando filtros de busqueda...")
+                print("Aplicando filtros de busqueda...", flush=True)
                 
                 # 1. Seleccionar Jurisdiccion
                 page.select_option("#jurisdiction-id", label="Corte Suprema")
@@ -96,7 +96,7 @@ class CorteSupremaScraper:
                                 "fuente": "Corte Suprema"
                             })
                         except Exception as e:
-                            print(f"Error procesando noticia individual: {e}")
+                            print(f"Error procesando noticia individual: {e}", flush=True)
 
                     try:
                         current_page_val = page.eval_on_selector("#paginanew", "el => el.value")
@@ -114,9 +114,9 @@ class CorteSupremaScraper:
                         break 
 
             except Exception as e:
-                print(f"Fallo el flujo de navegacion: {e}")
+                print(f"Fallo el flujo de navegacion: {e}", flush=True)
             finally:
                 browser.close()
 
-        print(f"Exito: Se encontraron {len(news_list)} noticias medioambientales en la Corte Suprema")
+        print(f"Exito: Se encontraron {len(news_list)} noticias medioambientales en la Corte Suprema", flush=True)
         return news_list

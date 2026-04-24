@@ -10,7 +10,7 @@ class SegundoTribunalScraper:
         self.db = DatabaseManager()
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)")
+        print("Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)", flush=True)
         
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -58,7 +58,7 @@ class SegundoTribunalScraper:
                 return self._parse_html_data(rows)
 
             except Exception as e:
-                print(f"Error durante el proceso del 2TA: {str(e)}")
+                print(f"Error durante el proceso del 2TA: {str(e)}", flush=True)
                 return []
             finally:
                 browser.close()
@@ -105,8 +105,8 @@ class SegundoTribunalScraper:
                 })
                 
             except Exception as e:
-                print(f"Error parseando una fila especifica en 2TA: {e}")
+                print(f"Error parseando una fila especifica en 2TA: {e}", flush=True)
                 continue
         
-        print(f"Exito: Se procesaron {len(legal_list)} registros del 2TA")
+        print(f"Exito: Se procesaron {len(legal_list)} registros del 2TA", flush=True   )
         return legal_list

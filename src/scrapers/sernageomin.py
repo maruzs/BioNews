@@ -7,7 +7,7 @@ class SernageominScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en Sernageomin: {self.url}")
+        print(f"Iniciando scraping en Sernageomin: {self.url}", flush=True)
         # Esperamos al contenedor del grid de noticias
         soup = self.engine.get_soup(self.url, wait_for_selector=".fusion-posts-container")
         
@@ -45,8 +45,8 @@ class SernageominScraper:
                     "fuente": "Sernageomin"
                 })
             except Exception as e:
-                print(f"Error en noticia de Sernageomin: {e}")
+                print(f"Error en noticia de Sernageomin: {e}", flush=True)
                 continue
 
-        print(f"Se encontraron {len(news_list)} noticias en Sernageomin")
+        print(f"Se encontraron {len(news_list)} noticias en Sernageomin", flush=True    )
         return news_list

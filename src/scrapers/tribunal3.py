@@ -8,7 +8,7 @@ class TercerTribunalScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print("Iniciando scraping en Tercer Tribunal Ambiental")
+        print("Iniciando scraping en Tercer Tribunal Ambiental", flush=True)
         news_list = []
         
         # Iteramos sobre la pagina 1 y 2 segun la investigacion
@@ -18,13 +18,13 @@ class TercerTribunalScraper:
             else:
                 url = f"{self.url_base}/page/{page}/"
             
-            print(f"Consultando pagina {page} del Tercer Tribunal...")
+            print(f"Consultando pagina {page} del Tercer Tribunal...", flush=True)
             
             # Esperamos a que cargue al menos un articulo
             soup = self.engine.get_soup(url, wait_for_selector="article.entry-preview")
             
             if not soup:
-                print(f"Error: No se pudo cargar la pagina {page}")
+                print(f"Error: No se pudo cargar la pagina {page}", flush=True)
                 continue
                 
             # Buscamos todas las tarjetas de noticia
@@ -76,7 +76,7 @@ class TercerTribunalScraper:
                     })
                     
                 except Exception as e:
-                    print(f"Error procesando articulo del Tercer Tribunal: {e}")
+                    print(f"Error procesando articulo del Tercer Tribunal: {e}", flush=True)
 
-        print(f"Exito: Se encontraron {len(news_list)} noticias en el Tercer Tribunal Ambiental")
+        print(f"Exito: Se encontraron {len(news_list)} noticias en el Tercer Tribunal Ambiental", flush=True)
         return news_list

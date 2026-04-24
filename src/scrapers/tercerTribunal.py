@@ -8,7 +8,7 @@ class TercerTribunalScraperLegal:
         self.db = DatabaseManager()
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en Tercer Tribunal Ambiental (3TA)")
+        print("Iniciando scraping legal en Tercer Tribunal Ambiental (3TA)", flush=True)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -30,7 +30,7 @@ class TercerTribunalScraperLegal:
                 rows = soup.find_all("a", class_="cause-row")
 
                 if not rows:
-                    print("No se encontraron causas en el 3TA")
+                    print("No se encontraron causas en el 3TA", flush=True  )
                     return []
 
                 # Logica de eficiencia: comparar con DB
@@ -42,14 +42,14 @@ class TercerTribunalScraperLegal:
                 ultimo_db = self.db.get_last_by_source(nombre_fuente)
 
                 if ultimo_db and ultimo_db[1] == primer_api_nombre:
-                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.")
+                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.", flush=True)
                     return []
 
                 # Procesamos solo las primeras 15 tal como lo solicitaste
                 return self._parse_html_data(rows[:15])
 
             except Exception as e:
-                print(f"Error durante el proceso del 3TA: {str(e)}")
+                print(f"Error durante el proceso del 3TA: {str(e)}", flush=True )
                 return []
             finally:
                 browser.close()
@@ -90,8 +90,8 @@ class TercerTribunalScraperLegal:
                 })
 
             except Exception as e:
-                print(f"Error parseando causa especifica en 3TA: {e}")
+                print(f"Error parseando causa especifica en 3TA: {e}", flush=True)
                 continue
 
-        print(f"Exito: Se procesaron {len(legal_list)} registros legales del 3TA")
+        print(f"Exito: Se procesaron {len(legal_list)} registros legales del 3TA", flush=True)
         return legal_list

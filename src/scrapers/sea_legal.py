@@ -16,7 +16,7 @@ class SEALegalScraper:
         self.db = DatabaseManager()
 
     def get_legal_data(self):
-        print("Iniciando scraping SEA (Modo optimizado por fuente)")
+        print("Iniciando scraping SEA (Modo optimizado por fuente)", flush=True)
         
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -50,7 +50,7 @@ class SEALegalScraper:
                 return self._parse_json_data(data[:99])
 
             except Exception as e:
-                print(f"Error en scraper SEA: {str(e)}")
+                print(f"Error en scraper SEA: {str(e)}", flush=True)
                 return []
             finally:
                 browser.close()
@@ -69,6 +69,7 @@ class SEALegalScraper:
                     "fuente": "SEA Pertinencias",
                     "link": link
                 })
-            except Exception:
+            except Exception as e:
+                print(f"Error parseando fila de SEA Pertinencias: {e}", flush=True)
                 continue
         return legal_list

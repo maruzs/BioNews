@@ -8,7 +8,7 @@ class SMAScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en SMA: {self.url_home}")
+        print(f"Iniciando scraping en SMA: {self.url_home}", flush=True)
         
         # Esperamos a que carguen los articulos de la clase type-post
         soup = self.engine.get_soup(self.url_home, wait_for_selector="article.type-post")
@@ -66,7 +66,7 @@ class SMAScraper:
                 })
                 
             except Exception as e:
-                print(f"Error procesando articulo de SMA: {e}")
+                print(f"Error procesando articulo de SMA: {e}", flush=True)
 
-        print(f"Exito: Se encontraron {len(news_list)} noticias en la SMA")
+        print(f"Exito: Se encontraron {len(news_list)} noticias en la SMA", flush=True  )
         return news_list

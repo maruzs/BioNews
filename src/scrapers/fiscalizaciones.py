@@ -22,7 +22,7 @@ class SnifaFiscalizacionScraper:
         ]
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en SNIFA (Fiscalizaciones)")
+        print("Iniciando scraping legal en SNIFA (Fiscalizaciones)", flush=True)
         all_legal_data = []
 
         with sync_playwright() as p:
@@ -34,7 +34,7 @@ class SnifaFiscalizacionScraper:
 
             try:
                 for cat_nombre in self.categorias:
-                    print(f"\n--- Consultando categoria: {cat_nombre} ---")
+                    print(f"\n--- Consultando categoria: {cat_nombre} ---", flush=True)
                     
                     try:
                         # 1. Cargar pagina limpia
@@ -53,14 +53,14 @@ class SnifaFiscalizacionScraper:
                                 break
                         
                         if not target_val:
-                            print(f"No se encontro la opcion para: {cat_nombre}")
+                            print(f"No se encontro la opcion para: {cat_nombre}", flush=True)
                             continue
                             
                         page.select_option("#categoria", value=target_val)
                         
                         # 3. Escribir Expediente apuntando EXACTAMENTE al ID correcto
                         page.locator("input#expediente").fill("DFZ-2026")
-                        print("Filtro DFZ-2026 aplicado en el campo Expediente.")
+                        print("Filtro DFZ-2026 aplicado en el campo Expediente.", flush=True)
                         
                         # 4. Click y esperar redireccion
                         boton_buscar = page.locator("button:has-text('Buscar')").first
@@ -105,16 +105,16 @@ class SnifaFiscalizacionScraper:
                         print(f"Guardados {len(datos_categoria)} registros de {cat_nombre}")
 
                     except Exception as e:
-                        print(f"Error procesando categoria {cat_nombre}: {str(e)}")
+                        print(f"Error procesando categoria {cat_nombre}: {str(e)}", flush=True)
                         continue
 
             except Exception:
-                print("Error critico en el flujo de navegacion de SNIFA Fiscalizaciones")
+                print("Error critico en el flujo de navegacion de SNIFA Fiscalizaciones", flush=True)
                 traceback.print_exc()
             finally:
                 browser.close()
 
-        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA Fiscalizaciones")
+        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA Fiscalizaciones", flush=True)
         return all_legal_data
 
     def _parse_html_data(self, rows, tipo_categoria):
@@ -163,7 +163,7 @@ class SnifaFiscalizacionScraper:
                 })
                 
             except Exception as e:
-                print(f"Error parseando fila de SNIFA Fiscalizaciones: {e}")
+                print(f"Error parseando fila de SNIFA Fiscalizaciones: {e}", flush=True)
                 continue
                 
         return legal_list

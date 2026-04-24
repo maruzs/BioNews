@@ -10,7 +10,7 @@ class PrimerTribunalScraper:
         self.db = DatabaseManager()
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en Primer Tribunal Ambiental (1TA)")
+        print("Iniciando scraping legal en Primer Tribunal Ambiental (1TA)",flush=True)
         
         with sync_playwright() as p:
             # Puedes cambiar a headless=False para monitorear visualmente
@@ -42,7 +42,7 @@ class PrimerTribunalScraper:
                     data = raw_data
 
                 if not data or not isinstance(data, list):
-                    print("La API del 1TA no devolvio una lista de datos valida")
+                    print("La API del 1TA no devolvio una lista de datos valida",flush=True)
                     return []
 
                 nombre_fuente = "1TA"
@@ -52,13 +52,13 @@ class PrimerTribunalScraper:
                 primer_api_nombre = data[0].get("caratula")
 
                 if ultimo_db and ultimo_db[1] == primer_api_nombre:
-                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.")
+                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.",flush=True)
                     return []
 
                 return self._parse_json_data(data[:99])
 
             except Exception:
-                print("Error durante el proceso del 1TA")
+                print("Error durante el proceso del 1TA",flush=True)
                 traceback.print_exc()
                 return []
             finally:

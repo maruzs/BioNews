@@ -24,7 +24,7 @@ class SnifaIngresoScraper:
         ]
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en SNIFA (Requerimientos de Ingreso)")
+        print("Iniciando scraping legal en SNIFA (Requerimientos de Ingreso)", flush=True)
         all_legal_data = []
 
         with sync_playwright() as p:
@@ -36,7 +36,7 @@ class SnifaIngresoScraper:
 
             try:
                 for cat_nombre in self.categorias:
-                    print(f"--- Consultando categoria: {cat_nombre} ---")
+                    print(f"--- Consultando categoria: {cat_nombre} ---", flush=True)
                     
                     try:
                         # 1. Cargar pagina limpia (equivale a reiniciar busqueda)
@@ -55,7 +55,7 @@ class SnifaIngresoScraper:
                                 break
                         
                         if not target_val:
-                            print(f"No se encontro el ID para: {cat_nombre}")
+                            print(f"No se encontro el ID para: {cat_nombre}", flush=True)
                             continue
                             
                         # 3. Seleccionar y buscar
@@ -79,11 +79,11 @@ class SnifaIngresoScraper:
                         all_legal_data.extend(datos_categoria)
 
                     except Exception as e:
-                        print(f"Error en categoria {cat_nombre}: {str(e)}")
+                        print(f"Error en categoria {cat_nombre}: {str(e)}", flush=True)
                         continue
 
             except Exception:
-                print("Error critico en el flujo de SNIFA Ingreso")
+                print("Error critico en el flujo de SNIFA Ingreso", flush=True)
                 traceback.print_exc()
             finally:
                 browser.close()
@@ -92,7 +92,7 @@ class SnifaIngresoScraper:
         # Segun la investigacion, los mas nuevos tienen un numero mas alto.
         all_legal_data.sort(key=self._extract_id, reverse=True)
         
-        print(f"Exito: Se procesaron {len(all_legal_data)} registros totales ordenados")
+        print(f"Exito: Se procesaron {len(all_legal_data)} registros totales ordenados", flush=True )
         return all_legal_data
 
     def _extract_id(self, item):
@@ -146,7 +146,8 @@ class SnifaIngresoScraper:
                     "link": link
                 })
                 
-            except Exception:
+            except Exception as e:
+                print(f"Error parseando fila de SNIFA Requerimientos de Ingreso: {e}", flush=True)
                 continue
                 
         return legal_list

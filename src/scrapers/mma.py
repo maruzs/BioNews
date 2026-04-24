@@ -7,7 +7,7 @@ class MMAScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en MMA: {self.url}")
+        print(f"Iniciando scraping en MMA: {self.url}", flush=True)
         soup = self.engine.get_soup(self.url, wait_for_selector="#vantage-grid-loop")
         
         if not soup:
@@ -34,8 +34,8 @@ class MMAScraper:
                     "fuente": "MMA"
                 })
             except Exception as e:
-                print(f"Error procesando un articulo de MMA: {e}")
+                print(f"Error procesando un articulo de MMA: {e}", flush=True)
                 continue
         
-        print(f"Se encontraron {len(news_list)} noticias en MMA")
+        print(f"Se encontraron {len(news_list)} noticias en MMA", flush=True)
         return news_list

@@ -23,7 +23,7 @@ class SnifaScraper:
         ]
 
     def get_legal_data(self):
-        print("Iniciando scraping legal en SNIFA (Sancionatorios)")
+        print("Iniciando scraping legal en SNIFA (Sancionatorios)", flush=True)
         all_legal_data = []
 
         with sync_playwright() as p:
@@ -35,7 +35,7 @@ class SnifaScraper:
 
             try:
                 for cat_nombre in self.categorias:
-                    print(f"\n--- Consultando categoria: {cat_nombre} ---")
+                    print(f"\n--- Consultando categoria: {cat_nombre} ---", flush=True  )
                     
                     try:
                         # 1. Cargar pagina limpia
@@ -55,7 +55,7 @@ class SnifaScraper:
                                 break
                         
                         if not target_val:
-                            print(f"No se encontro la opcion en el dropdown para: {cat_nombre}")
+                            print(f"No se encontro la opcion en el dropdown para: {cat_nombre}",flush=True)
                             continue
                             
                         # 3. Seleccionamos usando el valor real que extrajimos
@@ -73,7 +73,7 @@ class SnifaScraper:
                         rows = soup.select("table tbody tr")
                         
                         if not rows:
-                            print(f"No se encontraron filas para {cat_nombre}")
+                            print(f"No se encontraron filas para {cat_nombre}",flush=True)
                             continue
                             
                         print(f"Detectadas {len(rows)} filas en la pagina.")
@@ -81,19 +81,19 @@ class SnifaScraper:
                         # 6. Parsear
                         datos_categoria = self._parse_html_data(rows[:15], cat_nombre)
                         all_legal_data.extend(datos_categoria)
-                        print(f"Guardados {len(datos_categoria)} registros de {cat_nombre}")
+                        print(f"Guardados {len(datos_categoria)} registros de {cat_nombre}", flush=True)
 
                     except Exception as e:
-                        print(f"Error procesando categoria {cat_nombre}: {str(e)}")
+                        print(f"Error procesando categoria {cat_nombre}: {str(e)}", flush=True)
                         continue
 
             except Exception:
-                print("Error critico en el flujo de navegacion de SNIFA")
+                print("Error critico en el flujo de navegacion de SNIFA", flush=True)
                 traceback.print_exc()
             finally:
                 browser.close()
 
-        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA")
+        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA",flush=True )
         return all_legal_data
 
     def _parse_html_data(self, rows, tipo_categoria):
@@ -143,7 +143,7 @@ class SnifaScraper:
                 })
                 
             except Exception as e:
-                print(f"Error parseando una fila especifica en SNIFA: {e}")
+                print(f"Error parseando una fila especifica en SNIFA: {e}", flush=True)
                 continue
                 
         return legal_list

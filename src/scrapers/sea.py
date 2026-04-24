@@ -9,7 +9,7 @@ class SEAScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en SEA: {self.url}")
+        print(f"Iniciando scraping en SEA: {self.url}", flush=True)
         # Aumentamos el tiempo de espera por si la pagina esta lenta
         soup = self.engine.get_soup(self.url, wait_for_selector=".views-row")
         
@@ -52,8 +52,8 @@ class SEAScraper:
                 })
             except Exception as e:
                 # Si una noticia falla, pasamos a la siguiente sin romper todo
-                print(f"Error procesando una noticia de SEA: {e}")
+                print(f"Error procesando una noticia de SEA: {e}", flush=True)
                 continue
 
-        print(f"Se encontraron {len(news_list)} noticias en SEA")
+        print(f"Se encontraron {len(news_list)} noticias en SEA", flush=True)
         return news_list
