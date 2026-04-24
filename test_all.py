@@ -13,6 +13,7 @@ from src.scrapers.primerTribunal import PrimerTribunalScraper #Legal
 from src.scrapers.segundoTribunal import SegundoTribunalScraper #Legal
 from src.scrapers.tercerTribunal import TercerTribunalScraperLegal #Legal
 from src.scrapers.reqSEIA import SnifaIngresoScraper # Nueva importacion
+from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper # Nueva importacion
 from src.database.manager import DatabaseManager
 
 def run_sync():
@@ -21,12 +22,13 @@ def run_sync():
     # 1. Sincronizacion de datos legales (Dashboard Principal)
     print("--- INICIANDO SCRAPING LEGAL ---")
     legales = [
-        #PrimerTribunalScraper(),
-        #SegundoTribunalScraper(),
-        #TercerTribunalScraperLegal(),
-        #SEALegalScraper(),
-        #SnifaScraper(),
-        SnifaIngresoScraper()
+        PrimerTribunalScraper(),
+        SegundoTribunalScraper(),
+        TercerTribunalScraperLegal(),
+        SEALegalScraper(),
+        SnifaScraper(),
+        SnifaIngresoScraper(),
+        SnifaFiscalizacionScraper()
     ]
     
     for s in legales:
@@ -38,15 +40,15 @@ def run_sync():
     # 2. Sincronizacion de noticias
     print("\n--- INICIANDO SCRAPING DE NOTICIAS ---")
     scrapers = [
-        #TercerTribunalScraper()
-        #CorteSupremaScraper()
-        #SMAScraper(),
-        #MMAScraper(),
-        #SBAPScraper(),
-        #DiarioOficialScraper(),
-        #SEAScraper(),
-        #SernageominScraper(),
-        #TribunalScraper()
+        TercerTribunalScraper(),
+        CorteSupremaScraper(),
+        SMAScraper(),
+        MMAScraper(),
+        SBAPScraper(),
+        DiarioOficialScraper(),
+        SEAScraper(),
+        SernageominScraper(),
+        TribunalScraper()
     ]
     
     total_noticias = 0

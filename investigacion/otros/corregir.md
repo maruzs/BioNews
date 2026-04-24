@@ -1,3 +1,0 @@
-En vez de revisar la ultima noticia (primera en la tabla) para ver si sigue siendo la mas nueva, revisa TODAS las noticias, si se corrige eso podria ser mucho mas rapido
-
-Corregir scraper de diario oficial, quiero que me lleve a la pagina del diario si encuentra algo referente a Ministerio de Medio Ambiente, Minería, Energía, Agricultura, Obras Públicas, y Salud, no que descargue el documento PDF. Actualmente solo descarga de hacienda y telecomunicaciones
