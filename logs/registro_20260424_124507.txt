@@ -1,0 +1,88 @@
+--- INICIANDO MOTOR DE EXTRACCION ---
+INGRESA 1
+INGRESA 2
+--- INICIANDO SCRAPING LEGAL ---
+Iniciando scraping legal en Primer Tribunal Ambiental (1TA)
+Exito: Se procesaron 99 registros del 1TA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)
+Exito: Se procesaron 10 registros del 2TA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en Tercer Tribunal Ambiental (3TA)
+Exito: Se procesaron 10 registros legales del 3TA
+Guardados 0 nuevos registros legales
+Iniciando scraping SEA (Modo optimizado por fuente)
+Error en scraper SEA: Frame.fill() missing 1 required positional argument: 'value'
+Iniciando scraping legal en SNIFA (Sancionatorios)
+
+--- Consultando categoria: Agroindustrias ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Agroindustrias
+
+--- Consultando categoria: Energia ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Energia
+
+--- Consultando categoria: Infraestructura Portuaria ---
+Detectadas 37 filas en la pagina.
+Guardados 15 registros de Infraestructura Portuaria
+
+--- Consultando categoria: Instalacion fabril ---
+Detectadas 50 filas en la pagina.
+Guardados 15 registros de Instalacion fabril
+
+--- Consultando categoria: Mineria ---
+Error procesando categoria Mineria: Page.goto: net::ERR_NETWORK_CHANGED at https://snifa.sma.gob.cl/Sancionatorio
+Call log:
+- navigating to "https://snifa.sma.gob.cl/Sancionatorio", waiting until "networkidle"
+
+
+--- Consultando categoria: Saneamiento Ambiental ---
+Error procesando categoria Saneamiento Ambiental: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/Sancionatorio
+Call log:
+- navigating to "https://snifa.sma.gob.cl/Sancionatorio", waiting until "networkidle"
+
+
+--- Consultando categoria: Transportes y almacenajes ---
+Error procesando categoria Transportes y almacenajes: Page.goto: Navigation to "https://snifa.sma.gob.cl/Sancionatorio" is interrupted by another navigation to "chrome-error://chromewebdata/"
+Call log:
+- navigating to "https://snifa.sma.gob.cl/Sancionatorio", waiting until "networkidle"
+
+
+Exito: Se procesaron 60 registros totales de SNIFA
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en SNIFA (Requerimientos de Ingreso)
+--- Consultando categoria: Agroindustrias ---
+--- Consultando categoria: Energia ---
+Error en categoria Energia: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+--- Consultando categoria: Infraestructura Portuaria ---
+Error en categoria Infraestructura Portuaria: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+--- Consultando categoria: Instalacion fabril ---
+Error en categoria Instalacion fabril: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+--- Consultando categoria: Mineria ---
+Error en categoria Mineria: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+--- Consultando categoria: Saneamiento Ambiental ---
+Error en categoria Saneamiento Ambiental: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+--- Consultando categoria: Transportes y almacenajes ---
+Error en categoria Transportes y almacenajes: Page.goto: net::ERR_INTERNET_DISCONNECTED at https://snifa.sma.gob.cl/RequerimientoIngreso
+Call log:
+- navigating to "https://snifa.sma.gob.cl/RequerimientoIngreso", waiting until "networkidle"
+
+Exito: Se procesaron 32 registros totales ordenados
+Guardados 0 nuevos registros legales
+Iniciando scraping legal en SNIFA (Fiscalizaciones)

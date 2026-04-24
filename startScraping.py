@@ -15,10 +15,13 @@ from src.scrapers.tercerTribunal import TercerTribunalScraperLegal #Legal
 from src.scrapers.reqSEIA import SnifaIngresoScraper # Nueva importacion
 from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper # Nueva importacion
 from src.database.manager import DatabaseManager
+from src.scrapers.engine import ScrapingEngine
 
 def run_sync():
+    print("INGRESA 1")
+
     db = DatabaseManager()
-    
+    print("INGRESA 2")
     # 1. Sincronizacion de datos legales (Dashboard Principal)
     print("--- INICIANDO SCRAPING LEGAL ---")
     legales = [
