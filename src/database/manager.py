@@ -65,7 +65,7 @@ class DatabaseManager:
             conn.commit()
             return inserted_count
 
-    def get_latest_news(self, limit=50):
+    def get_latest_news(self, limit=100):
         with self.get_connection() as conn:
             cursor = conn.cursor()
             # Ordenamos por la columna 'fecha' (formato YYYY-MM-DD) y luego por scraping
