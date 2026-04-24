@@ -1,8 +1,7 @@
-import flet as ft
+# src/ui/styles.py
+from PySide6.QtGui import QColor
 
-# Paleta de colores
-COLOR_FONDO = ft.Colors.WHITE
-COLOR_PRIMARIO = ft.Colors.GREEN_800
-COLOR_SECUNDARIO = ft.Colors.GREEN_100
-COLOR_TEXTO = ft.Colors.BLACK
-COLOR_ACENTO = ft.Colors.GREEN_700
+COLOR_PRIMARIO = QColor("#2E7D32")       # verde oscuro
+COLOR_SECUNDARIO = QColor("#C8E6C9")     # verde claro
+COLOR_FONDO = QColor("#FAFAFA")
+COLOR_TEXTO = QColor("#212121")

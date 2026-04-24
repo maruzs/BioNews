@@ -4,3 +4,5 @@ venv/
 JSONS/
 old/
 ignore/
+build/
+dist/
