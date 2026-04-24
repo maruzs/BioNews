@@ -2,9 +2,10 @@ import flet as ft
 from database.manager import DatabaseManager
 from .styles import COLOR_PRIMARIO
 
-def view_dashboard():
+def view_dashboard(fuentes_activas=None):
     db = DatabaseManager()
-    noticias_db = db.get_latest_news(limit=50)
+    # Traemos mas noticias de la DB para asegurarnos de tener suficientes al filtrar
+    noticias_db = db.get_latest_news(limit=150)
     grid_noticias = ft.ResponsiveRow()
 
     IMG_DEFAULT = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop"
@@ -12,7 +13,23 @@ def view_dashboard():
     if not noticias_db:
         return ft.Column([ft.Text("Sin datos en la base de datos", size=16, italic=True)])
 
+    noticias_filtradas = []
     for row in noticias_db:
+        # row[4] es la fuente en la tabla de noticias
+        fuente_db = str(row[4]).lower() 
+        
+        # Logica de filtrado
+        if fuentes_activas is None:
+            noticias_filtradas.append(row)
+        else:
+            # Revisa si alguna de las fuentes seleccionadas esta en el texto de la fuente de la DB
+            if any(f.lower() in fuente_db for f in fuentes_activas):
+                noticias_filtradas.append(row)
+
+    if not noticias_filtradas:
+        return ft.Column([ft.Text("No hay noticias para las fuentes seleccionadas.", size=16, italic=True)])
+
+    for row in noticias_filtradas:
         link = row[0]
         titulo = row[1]
         fecha = row[2]
@@ -21,9 +38,10 @@ def view_dashboard():
         
         img_url = imagen if (imagen and len(imagen) > 10) else IMG_DEFAULT
 
+        # SOLUCION AL ERROR 1: async/await
         def create_open_url(url):
-            def open_url(e):
-                e.page.launch_url(url)
+            async def open_url(e):
+                await e.page.launch_url(url)
             return open_url
 
         tarjeta = ft.Card(

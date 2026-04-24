@@ -11,19 +11,36 @@ def create_main_window(page: ft.Page):
 
     chk_mma = ft.Checkbox(label="MMA", value=True, active_color=COLOR_PRIMARIO)
     chk_sea = ft.Checkbox(label="SEA", value=True, active_color=COLOR_PRIMARIO)
-    chk_sma = ft.Checkbox(label="SMA", value=True, active_color=COLOR_PRIMARIO)
+    chk_sma = ft.Checkbox(label="SMA / SNIFA", value=True, active_color=COLOR_PRIMARIO)
     chk_corte = ft.Checkbox(label="Corte Suprema", value=True, active_color=COLOR_PRIMARIO)
-    chk_tribunales = ft.Checkbox(label="Tribunales Ambientales", value=True, active_color=COLOR_PRIMARIO)
+    chk_tribunales = ft.Checkbox(label="Tribunales Amb.", value=True, active_color=COLOR_PRIMARIO)
 
+    # SOLUCION AL ERROR 2: Logica del boton de filtros
     def apply_filters(e):
-        pass
+        fuentes_activas = []
+        if chk_mma.value: fuentes_activas.append("MMA")
+        if chk_sea.value: fuentes_activas.append("SEA")
+        if chk_sma.value: 
+            fuentes_activas.append("SMA")
+            fuentes_activas.append("SNIFA")
+        if chk_corte.value: fuentes_activas.append("Corte Suprema")
+        if chk_tribunales.value: fuentes_activas.append("Tribunal") # Atrapa 1er, 2do y 3er tribunal
 
+        # Recargar el dashboard pasandole las fuentes permitidas
+        content_area.content = view_dashboard(fuentes_activas)
+        content_area.update()
+
+    # Ocultar o mostrar filtros segun la seccion
     def change_view(e):
         index = e.control.selected_index
         if index == 0:
             content_area.content = view_dashboard()
+            filtros_panel.visible = True
         elif index == 1:
             content_area.content = view_legal()
+            # Ocultamos el panel porque Legal ya tiene sus propias pestañas
+            filtros_panel.visible = False 
+        
         page.update()
 
     rail = ft.NavigationRail(
@@ -50,8 +67,9 @@ def create_main_window(page: ft.Page):
     filtros_panel = ft.Container(
         width=200,
         padding=10,
+        visible=True, # Visible por defecto al iniciar en dashboard
         content=ft.Column([
-            ft.Text("Fuentes", weight="bold", size=16),
+            ft.Text("Filtros de Noticias", weight="bold", size=16),
             chk_mma,
             chk_sea,
             chk_sma,
