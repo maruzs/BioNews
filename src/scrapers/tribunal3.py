@@ -11,7 +11,6 @@ class TercerTribunalScraper:
         print("Iniciando scraping en Tercer Tribunal Ambiental", flush=True)
         news_list = []
         
-        # Iteramos sobre la pagina 1 y 2
         for page in range(1, 3):
             if page == 1:
                 url = f"{self.url_base}/"
@@ -20,22 +19,19 @@ class TercerTribunalScraper:
             
             print(f"Consultando pagina {page} del Tercer Tribunal...", flush=True)
             
-            # Busqueda amplia: esperamos cualquier article
             soup = self.engine.get_soup(url, wait_for_selector="article")
             
             if not soup:
                 print(f"Error: No se pudo cargar la pagina {page}", flush=True)
                 continue
                 
-            # Buscamos todos los articulos sin importar su clase (para incluir el destacado)
             articles = soup.find_all("article")
             
             for article in articles:
                 try:
-                    # 1. Extraer Titulo y Link
                     h2 = article.find("h2", class_="entry-title")
                     if not h2: 
-                        continue # Si no tiene titulo, lo saltamos
+                        continue 
                         
                     title_tag = h2.find("a")
                     if not title_tag: 
@@ -44,13 +40,11 @@ class TercerTribunalScraper:
                     titulo = title_tag.get_text(strip=True)
                     link = title_tag["href"]
 
-                    # 2. Extraer Imagen
                     imagen_url = ""
                     img_tag = article.find("img")
                     if img_tag:
                         imagen_url = img_tag.get("data-src") if img_tag.has_attr("data-src") else img_tag.get("src")
                     
-                    # 3. Extraer Fecha
                     fecha_raw = ""
                     p_date = article.find("p", class_="date")
                     if p_date:
@@ -59,11 +53,16 @@ class TercerTribunalScraper:
                             fecha_raw = texto_fecha.split("/")[0].strip()
                         else:
                             fecha_raw = texto_fecha
+                    else:
+                        # Respaldo para las noticias destacadas o formatos nuevos
+                        meta_info = article.find("div", class_="fusion-meta-info")
+                        if meta_info:
+                            fecha_raw = meta_info.get_text(separator=" ", strip=True)
                             
                     if not fecha_raw:
-                        fecha_raw = datetime.now().strftime("%Y-%m-%d")
+                        # Respaldo seguro en formato DD-MM-YYYY
+                        fecha_raw = datetime.now().strftime("%d-%m-%Y")
 
-                    # 4. Construir y guardar el diccionario
                     news_list.append({
                         "titulo": titulo,
                         "fecha": parse_fecha(fecha_raw),

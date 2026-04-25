@@ -4,6 +4,10 @@ from ui.main_window import create_main_window
 def main(page: ft.Page):
     # Configuracion basica de la ventana
     page.title = "BioNews - Inteligencia medioambiental"
+    
+    # Asegura que busque el archivo directamente en la carpeta definida en assets_dir
+    page.window.icon = "planet-earth.ico" 
+    
     page.window.width = 1200
     page.window.height = 800
     page.window.min_width = 900
@@ -18,5 +22,5 @@ def main(page: ft.Page):
     page.add(layout)
 
 if __name__ == "__main__":
-    # Iniciar la aplicacion de escritorio usando run() en lugar de app()
-    ft.run(main)
+    # Iniciar la aplicacion usando run(), especificando la carpeta de assets explicitamente
+    ft.run(main, assets_dir="assets")

@@ -88,6 +88,7 @@ def create_main_window(page: ft.Page):
             chk_corte,
             chk_tribunales,
             chk_diario,
+            chk_sbap,
             ft.Container(height=20),
             ft.ElevatedButton(
                 "Aplicar Filtros", 
