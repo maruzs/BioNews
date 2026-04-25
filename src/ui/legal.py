@@ -97,7 +97,7 @@ def view_legal():
         controls=[
             ft.TextButton("Todos", on_click=lambda e: filter_snifa(e, "todos")),
             ft.TextButton("Sancionatorio", on_click=lambda e: filter_snifa(e, "sancionatorio")),
-            ft.TextButton("Requisitos Ingreso", on_click=lambda e: filter_snifa(e, "requisito")),
+            ft.TextButton("Requisitos Ingreso", on_click=lambda e: filter_snifa(e, "Ingreso SEIA")),
             ft.TextButton("Fiscalizaciones", on_click=lambda e: filter_snifa(e, "fiscalizacion")),
         ]
     )
