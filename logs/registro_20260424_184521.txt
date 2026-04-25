@@ -1,5 +1,0 @@
---- INICIANDO MOTOR DE EXTRACCION ---
-INGRESA 1
-INGRESA 2
---- INICIANDO SCRAPING LEGAL ---
-Iniciando scraping legal en Primer Tribunal Ambiental (1TA)

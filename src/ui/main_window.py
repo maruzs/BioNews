@@ -16,6 +16,8 @@ def create_main_window(page: ft.Page):
     chk_corte = ft.Checkbox(label="Corte Suprema", value=True, active_color=COLOR_PRIMARIO)
     chk_tribunales = ft.Checkbox(label="Tribunales Amb.", value=True, active_color=COLOR_PRIMARIO)
     chk_diario = ft.Checkbox(label="Diario Oficial", value=True, active_color=COLOR_PRIMARIO)
+    chk_sbap = ft.Checkbox(label="SBAP", value=True, active_color=COLOR_PRIMARIO)
+
 
     def apply_filters(e):
         fuentes_activas = []
@@ -27,6 +29,7 @@ def create_main_window(page: ft.Page):
         if chk_corte.value: fuentes_activas.append("Corte Suprema")
         if chk_tribunales.value: fuentes_activas.append("Tribunal") 
         if chk_diario.value: fuentes_activas.append("Diario Oficial")
+        if chk_sbap.value: fuentes_activas.append("SBAP")
 
         content_area.content = view_dashboard(fuentes_activas)
         content_area.update()

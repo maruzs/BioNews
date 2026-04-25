@@ -72,8 +72,8 @@ class PrimerTribunalScraper:
                 if " " in fecha_raw:
                     fecha_raw = fecha_raw.split(" ")[0]
                 
-                id_causa = item.get("idCausa", "")
-                link = f"https://www.portaljudicial1ta.cl/sgc-web/ver-causa.html?idCausa={id_causa}"
+                id_causa = item.get("numeroRol", "")
+                link = f"https://www.portaljudicial1ta.cl/sgc-web/ver-causa.html?rol={id_causa}"
                 
                 legal_list.append({
                     "nombre": item.get("caratula", "Sin caratula"),

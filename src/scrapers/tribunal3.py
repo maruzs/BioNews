@@ -11,7 +11,7 @@ class TercerTribunalScraper:
         print("Iniciando scraping en Tercer Tribunal Ambiental", flush=True)
         news_list = []
         
-        # Iteramos sobre la pagina 1 y 2 segun la investigacion
+        # Iteramos sobre la pagina 1 y 2
         for page in range(1, 3):
             if page == 1:
                 url = f"{self.url_base}/"
@@ -20,49 +20,46 @@ class TercerTribunalScraper:
             
             print(f"Consultando pagina {page} del Tercer Tribunal...", flush=True)
             
-            # Esperamos a que cargue al menos un articulo
-            soup = self.engine.get_soup(url, wait_for_selector="article.entry-preview")
+            # Busqueda amplia: esperamos cualquier article
+            soup = self.engine.get_soup(url, wait_for_selector="article")
             
             if not soup:
                 print(f"Error: No se pudo cargar la pagina {page}", flush=True)
                 continue
                 
-            # Buscamos todas las tarjetas de noticia
-            articles = soup.find_all("article", class_="entry-preview")
+            # Buscamos todos los articulos sin importar su clase (para incluir el destacado)
+            articles = soup.find_all("article")
             
             for article in articles:
                 try:
-                    # 1. Extraer Titulo y Link (etiqueta h2 clase entry-title)
+                    # 1. Extraer Titulo y Link
                     h2 = article.find("h2", class_="entry-title")
-                    if not h2:
-                        continue
-                    
-                    a_tag = h2.find("a")
-                    if not a_tag:
+                    if not h2: 
+                        continue # Si no tiene titulo, lo saltamos
+                        
+                    title_tag = h2.find("a")
+                    if not title_tag: 
                         continue
                         
-                    titulo = a_tag.get_text(strip=True)
-                    link = a_tag.get("href")
-                    
-                    # 2. Extraer Imagen (primera etiqueta img dentro del articulo)
+                    titulo = title_tag.get_text(strip=True)
+                    link = title_tag["href"]
+
+                    # 2. Extraer Imagen
                     imagen_url = ""
                     img_tag = article.find("img")
-                    if img_tag and img_tag.has_attr("src"):
-                        imagen_url = img_tag["src"]
-                        
-                    # 3. Extraer Fecha (etiqueta p clase date)
+                    if img_tag:
+                        imagen_url = img_tag.get("data-src") if img_tag.has_attr("data-src") else img_tag.get("src")
+                    
+                    # 3. Extraer Fecha
                     fecha_raw = ""
                     p_date = article.find("p", class_="date")
                     if p_date:
-                        # El texto suele ser "29 abril, 2026 / Noticias"
                         texto_fecha = p_date.get_text(strip=True)
-                        # Cortamos por el '/' y nos quedamos con la primera parte
                         if "/" in texto_fecha:
                             fecha_raw = texto_fecha.split("/")[0].strip()
                         else:
                             fecha_raw = texto_fecha
                             
-                    # Respaldo en caso de que no encuentre la fecha
                     if not fecha_raw:
                         fecha_raw = datetime.now().strftime("%Y-%m-%d")
 

@@ -14,7 +14,7 @@ class SMAScraper:
         soup = self.engine.get_soup(self.url_home, wait_for_selector="article.type-post")
         
         if not soup:
-            print("Error: No se pudo cargar el contenido de la pagina de la SMA")
+            print("Error: No se pudo cargar el contenido de la pagina de la SMA", flush=True)
             return []
 
         news_list = []
@@ -49,12 +49,21 @@ class SMAScraper:
                     # El texto viene asi: 2026-04-01T14:56:56-03:00
                     fecha_iso = span_updated.get_text(strip=True)
                     if len(fecha_iso) >= 10:
-                        # Cortamos los primeros 10 caracteres (YYYY-MM-DD)
-                        fecha_raw = fecha_iso[:10]
+                        # Cortamos a YYYY-MM-DD y lo separamos
+                        partes = fecha_iso[:10].split("-")
+                        if len(partes) == 3:
+                            # Lo invertimos a DD-MM-YYYY para que date_parser lo entienda
+                            fecha_raw = f"{partes[2]}-{partes[1]}-{partes[0]}"
                 
-                # Respaldo en caso de que no encuentre la fecha
+                # Respaldo usando el texto visible (ej: "1 Abril, 2026")
                 if not fecha_raw:
-                    fecha_raw = datetime.now().strftime("%Y-%m-%d")
+                    meta_info = article.find("div", class_="fusion-meta-info")
+                    if meta_info:
+                        fecha_raw = meta_info.get_text(separator=" ", strip=True)
+
+                # Respaldo final si todo falla
+                if not fecha_raw:
+                    fecha_raw = datetime.now().strftime("%d-%m-%Y")
 
                 # 4. Construir y guardar el diccionario
                 news_list.append({
@@ -68,5 +77,5 @@ class SMAScraper:
             except Exception as e:
                 print(f"Error procesando articulo de SMA: {e}", flush=True)
 
-        print(f"Exito: Se encontraron {len(news_list)} noticias en la SMA", flush=True  )
+        print(f"Exito: Se encontraron {len(news_list)} noticias en la SMA", flush=True)
         return news_list
