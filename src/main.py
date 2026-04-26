@@ -1,31 +1,22 @@
 import flet as ft
-import os
-import sys
 import ssl
-import certifi
+import os
 from ui.main_window import create_main_window
 
-# Configuracion de seguridad SSL para evitar errores de certificados en otros PCs
-try:
-    os.environ['SSL_CERT_FILE'] = certifi.where()
-    os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
-    ssl._create_default_https_context = ssl._create_unverified_context
-except Exception:
-    pass
-
-# Configuracion global de rutas para Playwright
-if getattr(sys, 'frozen', False):
-    base_path = os.path.dirname(sys.executable)
-else:
-    base_path = os.path.abspath(".")
-
-# Indicamos a Playwright donde buscar sus controladores si los necesita de forma interna
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(base_path, "pw-browser")
+# --- SOLUCION PARA OTROS COMPUTADORES ---
+# Este comando ignora la verificacion de certificados SSL. 
+# Es vital porque en muchos PCs los certificados de Python estan desactualizados
+# y eso impide que Flet descargue su motor de ejecucion.
+ssl._create_default_https_context = ssl._create_unverified_context
 
 def main(page: ft.Page):
     page.title = "BioNews - Inteligencia medioambiental"
+    
+    # Configuracion del Icono
+    # Al usar assets_dir="assets" en ft.run, Flet busca aqui directamente.
     page.window.icon = "planet-earth.ico" 
     
+    # Dimensiones de la ventana
     page.window.width = 1200
     page.window.height = 800
     page.window.min_width = 900
@@ -33,9 +24,10 @@ def main(page: ft.Page):
     page.padding = 0
     page.theme_mode = ft.ThemeMode.LIGHT
 
+    # Cargar la interfaz
     layout = create_main_window(page)
     page.add(layout)
 
 if __name__ == "__main__":
-    # assets_dir permite que Flet encuentre el icono y las imagenes locales
+    # assets_dir le dice a Flet que busque imagenes e iconos en esa carpeta
     ft.run(main, assets_dir="assets")
