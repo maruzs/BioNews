@@ -1,13 +1,23 @@
 import flet as ft
 import ssl
 import os
+import certifi
 from ui.main_window import create_main_window
 
-# --- SOLUCION PARA OTROS COMPUTADORES ---
-# Este comando ignora la verificacion de certificados SSL. 
-# Es vital porque en muchos PCs los certificados de Python estan desactualizados
-# y eso impide que Flet descargue su motor de ejecucion.
-ssl._create_default_https_context = ssl._create_unverified_context
+"""
+--- SOLUCION PARA OTROS COMPUTADORES ---
+Este comando ignora la verificacion de certificados SSL. 
+Es vital porque en muchos PCs los certificados de Python estan desactualizados
+y eso impide que Flet descargue su motor de ejecucion.
+#ssl._create_default_https_context = ssl._create_unverified_context
+"""
+
+"""--- SOLUCION PROFESIONAL SSL ---
+En lugar de ignorar la seguridad, le entregamos a Python un certificado raiz actualizado.
+Esto soluciona el error 'CERTIFICATE_VERIFY_FAILED' de forma segura.
+"""
+os.environ['SSL_CERT_FILE'] = certifi.where()
+os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
 def main(page: ft.Page):
     page.title = "BioNews - Inteligencia medioambiental"
