@@ -46,21 +46,40 @@ class TercerTribunalScraper:
                         imagen_url = img_tag.get("data-src") if img_tag.has_attr("data-src") else img_tag.get("src")
                     
                     fecha_raw = ""
-                    p_date = article.find("p", class_="date")
-                    if p_date:
-                        texto_fecha = p_date.get_text(strip=True)
-                        if "/" in texto_fecha:
-                            fecha_raw = texto_fecha.split("/")[0].strip()
-                        else:
-                            fecha_raw = texto_fecha
-                    else:
-                        # Respaldo para las noticias destacadas o formatos nuevos
+                    
+                    # 1. NUEVA LOGICA: Extraer desde la etiqueta <time> segun el analisis
+                    time_tag = article.find("time", class_="entry-date")
+                    print("Intentando extraer fecha desde <time class='entry-date'>...", flush=True)
+                    if not time_tag:
+                        time_tag = article.find("time", class_="updated")
+                        
+                    if time_tag and time_tag.has_attr("datetime"):
+                        fecha_iso = time_tag["datetime"] # Ej: 2026-04-23T08:59:30-04:00
+                        if "T" in fecha_iso:
+                            fecha_solo = fecha_iso.split("T")[0] # Nos quedamos con 2026-04-23
+                            partes = fecha_solo.split("-")
+                            if len(partes) == 3:
+                                # Invertimos a DD-MM-YYYY para que el date_parser lo entienda
+                                fecha_raw = f"{partes[2]}-{partes[1]}-{partes[0]}"
+                    
+                    # 2. Respaldos por si alguna noticia antigua no tiene la etiqueta time
+                    if not fecha_raw:
+                        print("Etiqueta <time> no encontrada o sin atributo datetime, intentando con <p class='date'>...", flush=True)
+                        p_date = article.find("p", class_="date")
+                        if p_date:
+                            texto_fecha = p_date.get_text(strip=True)
+                            if "/" in texto_fecha:
+                                fecha_raw = texto_fecha.split("/")[0].strip()
+                            else:
+                                fecha_raw = texto_fecha
+                                
+                    if not fecha_raw:
                         meta_info = article.find("div", class_="fusion-meta-info")
                         if meta_info:
                             fecha_raw = meta_info.get_text(separator=" ", strip=True)
                             
+                    # 3. Respaldo final absoluto
                     if not fecha_raw:
-                        # Respaldo seguro en formato DD-MM-YYYY
                         fecha_raw = datetime.now().strftime("%d-%m-%Y")
 
                     news_list.append({

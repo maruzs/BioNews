@@ -11,8 +11,8 @@ class SEALegalScraper:
     def __init__(self):
         self.url_login = "https://pertinencia.sea.gob.cl/login"
         self.url_api = "https://pertinencia.sea.gob.cl/api/proceso/buscarcp"
-        self.user = os.getenv("21324866-9")
-        self.password = os.getenv("Memr2026.")
+        self.user = "21324866-9" #os.getenv("SEA_USER")
+        self.password = "Memr2026."#os.getenv("SEA_PASSWORD")
         self.db = DatabaseManager()
 
     def get_legal_data(self):
