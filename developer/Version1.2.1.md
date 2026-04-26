@@ -1,3 +1,4 @@
+"            
 # BioNews v1.2.1
 ## Correcciones y mejoras proxima version:
 [] Para SNIFA se guarda el expediente, pero me interesa que tambien muestre la empresa relacionada
@@ -13,3 +14,15 @@
 
 ## Otras cosas que revisar
 [X] Eliminar librerias y dependencias no utilizadas
+
+## WIP - Seguimiento favoritos:
+1. Investigacion:
+   [X] Sea 
+   [ ] SNIFA
+   [ ] Tribunales
+2. Desarrollo codigo:
+   [ ] Codigo sea
+   [ ] Codigo SNIFA
+   [ ] Codigo tribunales
+   
+"

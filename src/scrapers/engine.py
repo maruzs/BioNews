@@ -11,7 +11,7 @@ class ScrapingEngine:
         else:
             base_path = os.path.abspath(".")
         
-        exe_path = os.path.join(base_path, "pw-browser", "chromium-1148", "chrome-win", "chrome.exe")
+        exe_path = os.path.join(base_path, "pw-browser", "chromium-1208", "chrome-win", "chrome.exe")
         return exe_path if os.path.exists(exe_path) else None
 
     def get_soup(self, url, wait_for_selector=None):
