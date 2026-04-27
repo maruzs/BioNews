@@ -72,6 +72,7 @@ def create_main_window(page: ft.Page):
                 selected_icon=ft.Icons.SYNC,
                 label="Sincronizar",
             ),
+            # Nueva opcion de favoritos
         ],
         on_change=change_view,
     )
