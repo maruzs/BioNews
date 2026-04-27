@@ -58,11 +58,36 @@ def view_legal():
                     await e.page.launch_url(url)
                 return open_url
 
+            def toggle_favorite(e, f_id=link, f_src=row[5] if not es_snifa else row[4], f_name=titulo):
+                is_fav = db.is_favorite(f_id)
+                if is_fav:
+                    db.remove_favorite(f_id)
+                    e.control.icon = ft.Icons.FAVORITE_BORDER
+                    e.control.icon_color = ft.Colors.GREY_400
+                else:
+                    db.add_favorite(f_id, f_src, f_name)
+                    e.control.icon = ft.Icons.FAVORITE
+                    e.control.icon_color = ft.Colors.RED_400
+                e.control.update()
+
+            is_currently_fav = db.is_favorite(link)
+            fav_icon = ft.Icons.FAVORITE if is_currently_fav else ft.Icons.FAVORITE_BORDER
+            fav_color = ft.Colors.RED_400 if is_currently_fav else ft.Colors.GREY_400
+
             tarjeta = ft.Card(
                 content=ft.Container(
                     padding=15,
                     content=ft.Column([
-                        ft.Text(subtitulo, size=12, color=COLOR_PRIMARIO, weight="bold"),
+                        ft.Row([
+                            ft.Text(subtitulo, size=12, color=COLOR_PRIMARIO, weight="bold", expand=True),
+                            ft.IconButton(
+                                icon=fav_icon,
+                                icon_color=fav_color,
+                                icon_size=20,
+                                on_click=toggle_favorite,
+                                tooltip="Agregar/Quitar de favoritos"
+                            )
+                        ]),
                         ft.Text(titulo, weight="bold", size=14),
                         ft.Text(meta_info, size=11, italic=True),
                         ft.ElevatedButton(

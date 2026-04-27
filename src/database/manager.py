@@ -38,6 +38,15 @@ class DatabaseManager:
                     fecha_scraping TIMESTAMP
                 )
             """)
+            # Tabla para favoritos
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS favoritos (
+                    id_o_link TEXT PRIMARY KEY,
+                    fuente TEXT,
+                    nombre TEXT,
+                    fecha_agregado TIMESTAMP
+                )
+            """)
             conn.commit()
 
     def save_news(self, news_list):
@@ -129,3 +138,44 @@ class DatabaseManager:
             query = "SELECT * FROM legal WHERE fuente = ? ORDER BY fecha_scraping DESC LIMIT 1"
             cursor.execute(query, (fuente,))
             return cursor.fetchone()
+
+    def add_favorite(self, id_o_link, fuente, nombre):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO favoritos 
+                    (id_o_link, fuente, nombre, fecha_agregado)
+                    VALUES (?, ?, ?, ?)
+                """, (id_o_link, fuente, nombre, datetime.now()))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error al guardar favorito: {e}")
+                return False
+
+    def remove_favorite(self, id_o_link):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("DELETE FROM favoritos WHERE id_o_link = ?", (id_o_link,))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error al eliminar favorito: {e}")
+                return False
+
+    def get_favorites(self, fuente=None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if fuente:
+                cursor.execute("SELECT * FROM favoritos WHERE fuente LIKE ? ORDER BY fecha_agregado DESC", (f"%{fuente}%",))
+            else:
+                cursor.execute("SELECT * FROM favoritos ORDER BY fecha_agregado DESC")
+            return cursor.fetchall()
+
+    def is_favorite(self, id_o_link):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM favoritos WHERE id_o_link = ?", (id_o_link,))
+            return cursor.fetchone() is not None

@@ -1,6 +1,7 @@
 import flet as ft
 from ui.dashboard import view_dashboard
 from ui.legal import view_legal
+from ui.favorites import view_favorites  # Importamos la vista de favoritos
 from ui.sync import view_sync  # Nueva importacion
 from ui.styles import COLOR_PRIMARIO, COLOR_FONDO
 
@@ -17,6 +18,7 @@ def create_main_window(page: ft.Page):
     chk_tribunales = ft.Checkbox(label="Tribunales Amb.", value=True, active_color=COLOR_PRIMARIO)
     chk_diario = ft.Checkbox(label="Diario Oficial", value=True, active_color=COLOR_PRIMARIO)
     chk_sbap = ft.Checkbox(label="SBAP", value=True, active_color=COLOR_PRIMARIO)
+    chk_sernageomin = ft.Checkbox(label="Sernageomin", value=True, active_color=COLOR_PRIMARIO)
 
 
     def apply_filters(e):
@@ -30,6 +32,7 @@ def create_main_window(page: ft.Page):
         if chk_tribunales.value: fuentes_activas.append("Tribunal") 
         if chk_diario.value: fuentes_activas.append("Diario Oficial")
         if chk_sbap.value: fuentes_activas.append("SBAP")
+        if chk_sernageomin.value: fuentes_activas.append("Sernageomin")
 
         content_area.content = view_dashboard(fuentes_activas)
         content_area.update()
@@ -43,6 +46,10 @@ def create_main_window(page: ft.Page):
             content_area.content = view_legal()
             filtros_panel.visible = False 
         elif index == 2:
+            # Vista de favoritos
+            content_area.content = view_favorites()
+            filtros_panel.visible = False
+        elif index == 3:
             # Nueva logica para la pestana de Sincronizacion
             content_area.content = view_sync()
             filtros_panel.visible = False
@@ -66,13 +73,18 @@ def create_main_window(page: ft.Page):
                 selected_icon=ft.Icons.GAVEL,
                 label="Legal",
             ),
+            # Nueva opcion de favoritos
+            ft.NavigationRailDestination(
+                icon=ft.Icons.FAVORITE_BORDER,
+                selected_icon=ft.Icons.FAVORITE,
+                label="Favoritos",
+            ),
             # Nueva opcion de Sincronizacion
             ft.NavigationRailDestination(
                 icon=ft.Icons.SYNC_OUTLINED,
                 selected_icon=ft.Icons.SYNC,
                 label="Sincronizar",
             ),
-            # Nueva opcion de favoritos
         ],
         on_change=change_view,
     )
@@ -90,6 +102,7 @@ def create_main_window(page: ft.Page):
             chk_tribunales,
             chk_diario,
             chk_sbap,
+            chk_sernageomin,
             ft.Container(height=20),
             ft.ElevatedButton(
                 "Aplicar Filtros", 

@@ -1,7 +1,13 @@
 import flet as ft
 import ssl
 import os
+import sys
 import certifi
+
+# Añadimos la raíz del proyecto al path para que las importaciones funcionen correctamente
+# tanto en desarrollo como al compilar con PyInstaller.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from ui.main_window import create_main_window
 
 # --- SOLUCION PARA OTROS COMPUTADORES ---
