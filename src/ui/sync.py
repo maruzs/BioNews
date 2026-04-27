@@ -92,17 +92,16 @@ def view_sync():
             LOGS_MEMORIA.append(msg)
             log_list.controls.append(ft.Text(msg, size=12, selectable=True))
             
-            # Logica para mover la barra de progreso segun el contenido del log
-            if "Iniciando" in msg:
-                # Incremento pequeño al empezar una fuente
-                progress_bar.value = min(progress_bar.value + 0.05, 0.9)
-            elif "Guardad" in msg:
-                # Incremento al confirmar guardado de datos
-                progress_bar.value = min(progress_bar.value + 0.05, 0.98)
-            
-            # Forzamos la actualizacion de la pagina en cada mensaje para el efecto cascada
+            # Forzamos la actualizacion directa de los componentes
             try:
-                page.update()
+                log_list.update()
+            except:
+                pass
+
+        def update_progress(val):
+            progress_bar.value = val
+            try:
+                progress_bar.update()
             except:
                 pass
 
@@ -111,10 +110,16 @@ def view_sync():
             
             # Llamada directa a la funcion dentro de startScraping.py
             # IMPORTANTE: Asegurate de que en startScraping.py la funcion se llame run_sync
-            startScraping.run_sync(log)
+            startScraping.run_sync(log, update_progress)
             
             progress_bar.value = 1.0
             status_text.value = "Extraccion completada con exito."
+            try:
+                progress_bar.update()
+                status_text.update()
+                btn_start.update()
+            except:
+                pass
         except Exception as e:
             log(f"Error critico: {str(e)}")
             status_text.value = "Fallo en la sincronizacion."
@@ -124,7 +129,9 @@ def view_sync():
             warning_banner.visible = False
             
             try:
-                page.update()
+                btn_start.update()
+                warning_banner.update()
+                status_text.update()
             except:
                 pass
 

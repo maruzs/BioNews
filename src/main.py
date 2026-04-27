@@ -38,5 +38,8 @@ def main(page: ft.Page):
     page.add(layout)
 
 if __name__ == "__main__":
-    # assets_dir le dice a Flet que busque imagenes e iconos en esa carpeta
-    ft.run(main, assets_dir="assets")
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+    
+    # assets_dir le dice a Flet que busque imagenes e iconos en esa carpeta absoluta
+    ft.run(main, assets_dir=ASSETS_DIR)

@@ -56,9 +56,12 @@ class DatabaseManager:
             for item in news_list:
                 try:
                     cursor.execute("""
-                        INSERT OR IGNORE INTO noticias 
+                        INSERT INTO noticias 
                         (link, titulo, fecha, imagen, fuente, fecha_scraping)
                         VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(link) DO UPDATE SET 
+                            titulo=excluded.titulo,
+                            fecha_scraping=excluded.fecha_scraping
                     """, (
                         item['link'], 
                         item['titulo'], 
@@ -102,9 +105,13 @@ class DatabaseManager:
             for item in legal_list:
                 try:
                     cursor.execute("""
-                        INSERT OR IGNORE INTO legal 
+                        INSERT INTO legal 
                         (link, nombre, fecha, estado, tipo, fuente, fecha_scraping)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(link) DO UPDATE SET 
+                            nombre=excluded.nombre,
+                            estado=excluded.estado,
+                            fecha_scraping=excluded.fecha_scraping
                     """, (
                         item['link'], 
                         item['nombre'], 

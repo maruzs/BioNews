@@ -49,7 +49,7 @@ class TercerTribunalScraper:
                     
                     # 1. NUEVA LOGICA: Extraer desde la etiqueta <time> segun el analisis
                     time_tag = article.find("time", class_="entry-date")
-                    print("Intentando extraer fecha desde <time class='entry-date'>...", flush=True)
+                    #print("Intentando extraer fecha desde <time class='entry-date'>...", flush=True)
                     if not time_tag:
                         time_tag = article.find("time", class_="updated")
                         

@@ -108,28 +108,106 @@ def view_legal():
 
     content_area = ft.Container(content=list_sea, expand=True, padding=10)
     
-    def filter_snifa(e, keyword):
-        if keyword == "todos":
-            content_area.content = list_snifa_full
-        else:
-            # Como snifa_docs ya esta ordenado, la sub-lista filtrada mantendra el orden
-            filtered_docs = [r for r in snifa_docs if keyword.lower() in str(r[4]).lower()]
-            content_area.content = create_tab_list(filtered_docs, es_snifa=True)
-        content_area.update()
+    # --- FILTROS SNIFA ---
+    current_snifa_type = "todos"
+    
+    search_snifa = ft.TextField(
+        label="Buscar por Expediente o Nombre...", 
+        prefix_icon=ft.Icons.SEARCH,
+        on_change=lambda e: apply_snifa_filters(),
+        expand=True,
+        height=45,
+        text_size=13
+    )
+    
+    # Extraer categorias y estados dinamicamente de snifa_docs
+    categorias_snifa = set()
+    estados_snifa = set()
+    for r in snifa_docs:
+        tipo_str = str(r[4])
+        if "(" in tipo_str and ")" in tipo_str:
+            cat = tipo_str.split("(")[1].split(")")[0]
+            categorias_snifa.add(cat)
+        
+        estado_str = str(r[3])
+        if estado_str:
+            estados_snifa.add(estado_str)
+            
+    categorias_snifa = sorted(list(categorias_snifa))
+    estados_snifa = sorted(list(estados_snifa))
+    
+    cat_checkboxes = [ft.Checkbox(label=c, value=False, on_change=lambda e: apply_snifa_filters()) for c in categorias_snifa]
+    estado_checkboxes = [ft.Checkbox(label=est, value=False, on_change=lambda e: apply_snifa_filters()) for est in estados_snifa]
+    
+    btn_type_todos = ft.TextButton("Todos", on_click=lambda e: filter_snifa_type(e, "todos"), style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=COLOR_PRIMARIO))
+    btn_type_sancionatorio = ft.TextButton("Sancionatorio", on_click=lambda e: filter_snifa_type(e, "sancionatorio"), style=ft.ButtonStyle(color=COLOR_PRIMARIO))
+    btn_type_ingreso = ft.TextButton("Requisitos Ingreso", on_click=lambda e: filter_snifa_type(e, "Ingreso SEIA"), style=ft.ButtonStyle(color=COLOR_PRIMARIO))
+    btn_type_fiscalizacion = ft.TextButton("Fiscalizaciones", on_click=lambda e: filter_snifa_type(e, "fiscalizacion"), style=ft.ButtonStyle(color=COLOR_PRIMARIO))
+    
+    snifa_type_buttons = [btn_type_todos, btn_type_sancionatorio, btn_type_ingreso, btn_type_fiscalizacion]
+    
+    def filter_snifa_type(e, keyword):
+        nonlocal current_snifa_type
+        current_snifa_type = keyword
+        # Actualizar colores de los botones de tipo
+        for btn in snifa_type_buttons:
+            if btn == e.control:
+                btn.style = ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=COLOR_PRIMARIO)
+            else:
+                btn.style = ft.ButtonStyle(color=COLOR_PRIMARIO, bgcolor=ft.Colors.TRANSPARENT)
+        
+        apply_snifa_filters()
+        if e.control.page:
+            e.control.page.update()
 
-    sub_filtros_snifa = ft.Row(
+    def apply_snifa_filters():
+        filtered_docs = snifa_docs
+        
+        # 1. Filtro de tipo (Sancionatorio, Fiscalizacion, etc)
+        if current_snifa_type != "todos":
+            filtered_docs = [r for r in filtered_docs if current_snifa_type.lower() in str(r[4]).lower()]
+            
+        # 2. Filtro de busqueda
+        q = search_snifa.value.lower() if search_snifa.value else ""
+        if q:
+            filtered_docs = [r for r in filtered_docs if q in str(r[1]).lower()]
+            
+        # 3. Filtro de Categorias
+        selected_cats = [cb.label for cb in cat_checkboxes if cb.value]
+        if selected_cats:
+            filtered_docs = [r for r in filtered_docs if any(f"({c})" in str(r[4]) for c in selected_cats)]
+            
+        # 4. Filtro de Estados
+        selected_estados = [cb.label for cb in estado_checkboxes if cb.value]
+        if selected_estados:
+            filtered_docs = [r for r in filtered_docs if str(r[3]) in selected_estados]
+            
+        content_area.content = create_tab_list(filtered_docs, es_snifa=True)
+        if content_area.page:
+            content_area.update()
+
+    filtros_snifa_container = ft.Column(
         visible=False,
         controls=[
-            ft.TextButton("Todos", on_click=lambda e: filter_snifa(e, "todos")),
-            ft.TextButton("Sancionatorio", on_click=lambda e: filter_snifa(e, "sancionatorio")),
-            ft.TextButton("Requisitos Ingreso", on_click=lambda e: filter_snifa(e, "Ingreso SEIA")),
-            ft.TextButton("Fiscalizaciones", on_click=lambda e: filter_snifa(e, "fiscalizacion")),
+            ft.Row(snifa_type_buttons),
+            search_snifa,
+            ft.ExpansionTile(
+                title=ft.Text("Filtros Avanzados (Categoría y Estado)", size=14, weight="bold", color=COLOR_PRIMARIO),
+                controls=[
+                    ft.Text("Categorías", weight="bold", size=13),
+                    ft.Row(cat_checkboxes, wrap=True),
+                    ft.Divider(height=1),
+                    ft.Text("Estado", weight="bold", size=13),
+                    ft.Row(estado_checkboxes, wrap=True),
+                ]
+            )
         ]
     )
 
+
     def change_custom_tab(e, category, list_view):
         content_area.content = list_view
-        sub_filtros_snifa.visible = (category == "SNIFA")
+        filtros_snifa_container.visible = (category == "SNIFA")
         
         for btn, cat in [(btn_sea, "SEA"), (btn_snifa, "SNIFA"), (btn_tribunales, "Tribunales")]:
             if cat == category:
@@ -162,7 +240,7 @@ def view_legal():
         ft.Row([ft.Text("Actualizaciones Legales", size=25, weight="bold", color=COLOR_PRIMARIO)]),
         ft.Divider(),
         tab_row,
-        sub_filtros_snifa,
+        filtros_snifa_container,
         ft.Divider(height=1, color=ft.Colors.GREY_300),
         content_area
     ], expand=True)

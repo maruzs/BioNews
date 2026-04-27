@@ -112,6 +112,7 @@ class SnifaIngresoScraper:
                     
                 expediente = "Sin Expediente"
                 razon_social = ""
+                unidad_fiscalizable = ""
                 link = ""
                 estado_text = "Desconocido"
                 
@@ -123,6 +124,8 @@ class SnifaIngresoScraper:
                         expediente = td.get_text(strip=True)
                     elif label == "Nombre razón social" or label == "Nombre razon social":
                         razon_social = td.get_text(strip=True)
+                    elif label == "Unidad Fiscalizable":
+                        unidad_fiscalizable = td.get_text(strip=True)
                     elif label == "Estado":
                         estado_text = td.get_text(strip=True)
                     elif label == "Detalle":
@@ -134,8 +137,11 @@ class SnifaIngresoScraper:
                 if not link:
                     continue
                 
-                # Combinamos Expediente y Razon Social para el nombre en el dashboard
-                nombre_completo = f"{expediente} - {razon_social}" if razon_social else expediente
+                # Combinamos Expediente y Unidad Fiscalizable (o Razon Social) para el nombre en el dashboard
+                if unidad_fiscalizable:
+                    nombre_completo = f"{expediente} {unidad_fiscalizable}"
+                else:
+                    nombre_completo = f"{expediente} - {razon_social}" if razon_social else expediente
                 
                 legal_list.append({
                     "nombre": nombre_completo,

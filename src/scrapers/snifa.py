@@ -108,6 +108,7 @@ class SnifaScraper:
                     
                 rol = "Sin Rol"
                 link = ""
+                unidad_fiscalizable = ""
                 instalacion_text = ""
                 estado_text = "Desconocido"
                 
@@ -117,6 +118,8 @@ class SnifaScraper:
                     
                     if label == "Expediente":
                         rol = td.get_text(strip=True)
+                    elif label == "Unidad Fiscalizable":
+                        unidad_fiscalizable = td.get_text(" ", strip=True)
                     elif label == "Instalación" or label == "Instalacion":
                         instalacion_text = td.get_text(" ", strip=True)
                     elif label == "Estado":
@@ -131,7 +134,10 @@ class SnifaScraper:
                 if not link:
                     continue
                 
-                nombre_completo = f"{rol} - {instalacion_text}" if instalacion_text else rol
+                if unidad_fiscalizable:
+                    nombre_completo = f"{rol} {unidad_fiscalizable}"
+                else:
+                    nombre_completo = f"{rol} - {instalacion_text}" if instalacion_text else rol
                 
                 legal_list.append({
                     "nombre": nombre_completo,

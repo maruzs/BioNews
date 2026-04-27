@@ -6,7 +6,7 @@ from ..utils.date_parser import parse_fecha
 class DiarioOficialScraper:
     def __init__(self):
         self.url_home = "https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php"
-        self.logo_gob = "https://www.diariooficial.interior.gob.cl/edicionelectronica/css/bitmaps/logo_do.jpg"
+        self.logo_gob = "logo_diario.jpg"
         self.engine = ScrapingEngine()
         
         self.target_ministerios = {
