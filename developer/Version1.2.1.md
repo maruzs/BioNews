@@ -18,6 +18,10 @@
 [X] Barra de busqueda para SNIFA
 [X] Checkboxes para filtrar por Categoria y Estado en SNIFA
 [ ] Orden de Fiscalizaciones en SNIFA esta raro por la ausencia de fechas
+[ ] Otras entidades diario oficial que contengan temas medioambientales
+[ ] Informacion mas detallada dentro de las tarjetas del diario oficial
+[ ] Agregar categoria 'Equipamiento', 'Infrastructura de Transporte'
+[ ] En favoritos no se muestra nada al filtrar por SNIFA ni Tribunales, solo SEA
 
 ## Posibles vulnerabilidades que arreglar
 
@@ -57,3 +61,148 @@ Implementar en SNIFA:
 [] Informes de seguimiento ambiental
 
 "
+
+
+# NO COMMIT
+
+## Cosas a imitar de ecosinfoambiental
+Watchlist
+
+## SEA:
+Proyectos evaluados
+Pertinencias
+Participacion ciudadana
+
+## SMA:
+Fiscalizaciones:
+   * Reporte de fiscalizacion:
+      - Listado de fiscalizaciones
+   * Dashboard
+      - Fiscalizaciones
+      - Unidades fiscalizables
+      - Fiscalizaciones por tipo 
+      - Cantidad de expediente anual (grafico)
+      - Fiscalizaciones por region 
+      - Fiscalizacion por Categoria Economica
+
+Sancionatorios:
+   * Documentos sancionatorios:
+      - Listado de procedimientos sancionatorios
+   * Dashboard:
+      - Cantidad de hechos 
+      - Cantidad de procedimientos
+      - Estados sancionatorios
+      - Procedimientos sancionatorios por tipo de instrumento
+      - Distribucion de Categorias Economicas por Numero de Procedimientos
+      - Clasificacion por gravedad
+      - Clasificacion por estado
+
+Sanciones:
+   * Registro de sanciones:
+      - Listado de procedimiento de sanciones 
+   * Dashboard:
+      - Cantidad de hechos
+      - Multas Totales UTA
+      - Estado de sancion anual
+      - Multas por categoria economica en UTA
+      - Clasificacion por gravedad infraccion Art. 36
+      - Estados
+
+Seguimiento Ambiental:
+   * Registro de seguimiento ambiental:
+      - Listado de seguimiento ambiental
+   * Dashboard:
+      - Numero de expedientes
+      - Seguimiento ambiental por categoria
+      - Seguimiento ambiental anual
+      - Seguimiento ambiental por region
+      - Seguimiento por Componente Ambiental
+
+Programa de cumplimiento:
+   * Reporte por programa de cumplimiento
+      - Listado de programa de cumplimiento
+   * Dashboard:
+      - Total PdC
+      - Programa de cumplimiento anual
+      - Tipo de programa de cumplimiento
+      - PdC por estado 
+      - PdC por region
+      - PdC por categoria economica
+
+Medidas Provisionales:
+   * Registro de medidas provisionales
+      - Listado de medidas provisionales
+   * Dashboard:
+      - Numero de expedientes
+      - Medidas provisionales por categoria
+      - Medidas provisionales anual
+      - Medidas provisionales por region
+      - Medidas provisionales por estado
+
+Requerimiento de ingreso:
+   * Registro de requerimiento de ingreso:
+      - Listado de requerimiento de ingreso
+   * Dashboard:
+      - Numero de expedientes
+      - Requerimiento de ingreso por categoria
+      - Requerimiento de ingreso anual
+      - Requerimiento de ingreso por region
+      - Requerimiento de ingreso por tipo de documento 
+
+## Tribunales Ambientales:
+   * Reporte tribunales ambientales:
+      - Listado de tribunales ambientales
+   * Dashboard:
+      - Numero de procedimientos 
+      - Procedimientos por ano
+      - Procedimientos por estado procesal
+      - Procedimientos por tipo
+      - Procedimientos totales por tribunal ambiental
+      - Procedimientos por categoria economica
+      - Procedimientos por region
+
+## SEA
+
+Proyectos evaluados:
+   * Registro de proyectos evaluados:
+      - Listado de proyectos evaluados
+   * Dashboard:
+      - Cantidad de proyectos
+      - Cantidad de RCA
+      - Estados de proyectos
+      - Evolución Temporal de EIA y DIA de RCA Aprobadas
+      - Proyectos Aprobados con RCA por Región y Categoría Económica
+
+
+
+Pertinencias:
+   * Registro de pertinencias:
+      - Listado de pertinencias
+   * Dashboard:
+      - Pertinencias por region
+      - Pertinencias por categoria economica
+      - Estado de sacion anual 
+
+Participacion ciudadana:
+   * Registro de participacion ciudadana:
+      - Listado de participacion ciudadana
+   * Dashboard:
+      - Total de proyectos con PAC 
+      - Proceso PAC a la fecha (DIA)
+      - Proceso PAC a la fecha (EIA)
+      - Participación Ciudadana por Región
+      - Participación Ciudadana por Tipo de Presentación y Estado de Proyecto
+      - Participación Ciudadana Anual
+
+## DIARIO OFICIAL
+
+Normativas:
+   * Reporte de Normativas:
+      - Listado de normativas
+   * Dashboard:
+      - Cantidad de normativas
+      - Normativas por ano
+      - Normativas por organismo
+      - Normativas por region
+      - Subsecretaria por Organismo
+
