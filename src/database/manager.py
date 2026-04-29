@@ -62,6 +62,7 @@ class DatabaseManager:
                         ON CONFLICT(link) DO UPDATE SET 
                             titulo=excluded.titulo,
                             fecha_scraping=excluded.fecha_scraping
+                        WHERE noticias.titulo != excluded.titulo
                     """, (
                         item['link'], 
                         item['titulo'], 
@@ -112,6 +113,7 @@ class DatabaseManager:
                             nombre=excluded.nombre,
                             estado=excluded.estado,
                             fecha_scraping=excluded.fecha_scraping
+                        WHERE legal.estado != excluded.estado OR legal.nombre != excluded.nombre
                     """, (
                         item['link'], 
                         item['nombre'], 
@@ -176,7 +178,12 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             if fuente:
-                cursor.execute("SELECT * FROM favoritos WHERE fuente LIKE ? ORDER BY fecha_agregado DESC", (f"%{fuente}%",))
+                if fuente == "Tribunales":
+                    cursor.execute("SELECT * FROM favoritos WHERE fuente LIKE '%TA%' OR fuente LIKE '%Tribunal%' OR fuente LIKE '%Corte%' ORDER BY fecha_agregado DESC")
+                elif fuente == "SNIFA":
+                    cursor.execute("SELECT * FROM favoritos WHERE fuente LIKE '%Fiscalizacion%' OR fuente LIKE '%Sancionatorio%' OR fuente LIKE '%Ingreso%' OR fuente LIKE '%SNIFA%' ORDER BY fecha_agregado DESC")
+                else:
+                    cursor.execute("SELECT * FROM favoritos WHERE fuente LIKE ? ORDER BY fecha_agregado DESC", (f"%{fuente}%",))
             else:
                 cursor.execute("SELECT * FROM favoritos ORDER BY fecha_agregado DESC")
             return cursor.fetchall()

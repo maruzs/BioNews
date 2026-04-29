@@ -34,33 +34,9 @@ class SernageominScraper:
                 title = title_tag.get_text(strip=True)
                 link = title_tag["href"]
                 
-                # Imagen (tomamos la primera del wrapper)
-                img_tag = article.select_one(".fusion-image-wrapper img")
-                img_url = img_tag["src"] if img_tag else ""
-                
-                local_img_path = ""
-                if img_url:
-                    try:
-                        os.makedirs("assets", exist_ok=True)
-                        img_hash = hashlib.md5(img_url.encode('utf-8')).hexdigest()[:10]
-                        ext = img_url.split(".")[-1].split("?")[0]
-                        if len(ext) > 4 or not ext: 
-                            ext = "png"
-                            
-                        filename = f"sern_{img_hash}.{ext}"
-                        filepath = os.path.join("assets", filename)
-                        
-                        if not os.path.exists(filepath):
-                            # Descargar ignorando SSL
-                            r = requests.get(img_url, verify=False, timeout=15)
-                            if r.status_code == 200:
-                                with open(filepath, "wb") as f:
-                                    f.write(r.content)
-                        
-                        local_img_path = filename
-                    except Exception as e:
-                        print(f"Error descargando imagen {img_url}: {e}", flush=True)
-                        local_img_path = img_url # Fallback a la url original
+                # Imagen (usar solo el logo de Sernageomin segun lo solicitado)
+                local_img_path = "logo_sernageomin.png"
+                img_url = "logo_sernageomin.png"
                 
                 # Fecha: segun el md esta en el tercer span del meta
                 # Formato esperado: "16 de Abril de 2026"

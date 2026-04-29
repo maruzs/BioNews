@@ -66,7 +66,7 @@ class DiarioOficialScraper:
                         
                         if info_limpia:
                             prefijo_sub = f"{current_sub} " if current_sub else ""
-                            titulo_final = f"Diario Oficial - {current_min}\n{prefijo_sub}{info_limpia}"
+                            titulo_final = f"Min. {current_min} - {prefijo_sub}{info_limpia}"
                             
                             # SOLUCION: Generamos un hash unico basado en el texto de la noticia
                             # Esto asegura que el "link" sea unico en SQLite pero siga abriendo el home
