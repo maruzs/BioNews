@@ -1,4 +1,4 @@
-# BioNews v1.2.1 -> v1.2.2
+# BioNews v1.3 -> v1.3.1
 
 ## Correcciones y mejoras proxima version:
 
@@ -14,14 +14,22 @@
 [ ] Informe anual
 [ ] Graficos
 [ ] Resumen de nuevos cambios y documentos con IA
-[ ] Mostrar avances de scrapeo en 'Registro de actividad'
+[ ] Mostrar 'Ultima actualizacion' en la pagina web (ultima vez que se scrapeo)
 [X] Barra de busqueda para SNIFA
 [X] Checkboxes para filtrar por Categoria y Estado en SNIFA
 [ ] Orden de Fiscalizaciones en SNIFA esta raro por la ausencia de fechas
 [ ] Otras entidades diario oficial que contengan temas medioambientales
-[ ] Informacion mas detallada dentro de las tarjetas del diario oficial
-[ ] Agregar categoria 'Equipamiento', 'Infrastructura de Transporte'
-[ ] En favoritos no se muestra nada al filtrar por SNIFA ni Tribunales, solo SEA
+[X] Informacion mas detallada dentro de las tarjetas del diario oficial
+[ ] Agregar categoria 'Equipamiento', 'Infrastructura de Transporte', etc y que se pueda seleccionar cuales interesan dentro de las preferencias en ajustes de perfil mediante checkboxes
+[X] En favoritos no se muestra nada al filtrar por SNIFA ni Tribunales, solo SEA
+[ ] Ajustes de perfil (notificaciones, colores, etc)
+[ ] Hostear pagina para que cualquiera pueda acceder
+[ ] Ejecutar scraping cada 1 hora a ciertos servicios
+[ ] Borrar cosas que no sirven o no se usan
+[ ] Implementar Dashboards
+[ ] Idear Home y su contenido
+[ ] Hacer logo
+[ ] Agregar pertinencias, sancionatorios y fiscalizaciones antiguas para hacerle seguimiento
 
 ## Posibles vulnerabilidades que arreglar
 
@@ -29,33 +37,14 @@
 [ ] Inyeccion de SQL
 [ ] Ejecucion de binarios externos (reemplazo de chromium)
 [ ] Sandboxing en scraping, actualizar pw-browser
+[ ] Aumentar limite de filas para las tablas
+[ ] Hacer una tabla por cada fuente
 
-## Otras cosas que revisar
+## Investigacion:
 
-[X] Eliminar librerias y dependencias no utilizadas
-[ ] Hacer que se pueda expandir la pantalla con F11
-[X] No muestra noticias corte suprema pero se supone que si las obtiene
-[X] Checkbox noticias sernageomin
-[ ] Fotos noticias sernageomin
-[X] Logo diario oficial
-[ ] Cambiar logo de flet en la app
-
-## WIP - Seguimiento favoritos:
-
-1. Investigacion:
-   [X] Sea
-   [ ] SNIFA
-   [ ] Tribunales
-2. Desarrollo codigo:
-   [ ] Codigo sea
-   [ ] Codigo SNIFA
-   [ ] Codigo tribunales
-
-[X]Barra de busqueda para favoritos
-
-[X]Agregar pertinencias, sancionatorios y fiscalizaciones antiguas para hacerle seguimiento
-
-Implementar en SNIFA:
+[X] Sea
+[ ] SNIFA
+[ ] Tribunales
 [] Medidas provisionales
 [] Programas de cumplimiento
 [] Informes de seguimiento ambiental
