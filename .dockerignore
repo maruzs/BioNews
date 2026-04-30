@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Frontend (se construye aparte)
+web/node_modules/
+web/dist/
+web/.git
+
+# Development
+pw-browser/
+ignore/
+old/
+JSONS/
+build/
+dist/
+*.spec
+promtps/
+zInvestigacion/
+developer/
+DisenoTabla.html
+
+# Docker
+docker-compose.yml
+Dockerfile
+web/Dockerfile
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (se generan dentro del contenedor)
+logs/

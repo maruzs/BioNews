@@ -25,7 +25,6 @@ function App() {
                 <Bell size={20} />
                 <span className="notification-badge">115</span>
               </div>
-              <div className="profile-circle">SC</div>
             </div>
           </div>
           <Routes>

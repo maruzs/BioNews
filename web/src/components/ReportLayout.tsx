@@ -39,7 +39,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/legal');
+        const res = await fetch('/api/legal');
         const json = await res.json();
         // Don't filter here if it's favorites page, filter later using the set
         let filtered = json;
@@ -55,7 +55,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
 
     const fetchFavorites = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/favorites');
+        const res = await fetch('/api/favorites');
         const json = await res.json();
         setFavorites(new Set(json.map((f: any) => f.id_o_link)));
       } catch(err) {
@@ -71,14 +71,14 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     const isFav = favorites.has(item.link);
     try {
       if (isFav) {
-        await fetch(`http://127.0.0.1:8000/api/favorites/${encodeURIComponent(item.link)}`, { method: 'DELETE' });
+        await fetch(`/api/favorites/${encodeURIComponent(item.link)}`, { method: 'DELETE' });
         setFavorites(prev => {
           const next = new Set(prev);
           next.delete(item.link);
           return next;
         });
       } else {
-        await fetch('http://127.0.0.1:8000/api/favorites', {
+        await fetch('/api/favorites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id_o_link: item.link, fuente: item.fuente, nombre: item.nombre })

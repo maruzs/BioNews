@@ -21,7 +21,7 @@ const NewsPage = () => {
   // Here we would normally fetch from our FastAPI backend, e.g. http://localhost:8000/api/news
   // For the initial design iteration, we'll use dummy data if the API is not up yet
   useEffect(() => {
-    fetch('http://localhost:8000/api/news')
+    fetch('/api/news')
       .then(res => res.json())
       .then(data => {
         setNews(data);

@@ -1,0 +1,78 @@
+# ============================================================
+# BioNews - Docker Compose
+# ============================================================
+# Levanta 3 servicios:
+#   - api:       Backend FastAPI (puerto 8000 interno)
+#   - scheduler: Scrapers automáticos (7am-7pm, cada hora)
+#   - web:       Frontend React + Nginx (puerto 80)
+#
+# Uso:
+#   docker compose up -d --build
+#   docker compose logs -f
+#   docker compose down
+# ============================================================
+
+services:
+
+  # ── Backend FastAPI ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bionews-api
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    networks:
+      - bionews-net
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Scheduler de Scrapers ───────────────────────────────────
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bionews-scheduler
+    restart: unless-stopped
+    command: [ "python", "scheduler.py" ]
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    networks:
+      - bionews-net
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ── Frontend (Nginx + React build) ──────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: bionews-web
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    networks:
+      - bionews-net
+    depends_on:
+      api:
+        condition: service_healthy
+
+# Los datos se guardan directamente en ./data y ./logs del host
+
+networks:
+  bionews-net:
+    driver: bridge
