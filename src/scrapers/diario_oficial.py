@@ -68,10 +68,16 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
                     enlace = tds[1].find('a')
                     accion_link = enlace.get('href') if enlace else ""
                     
+                    # Convertir para la BD (YYYY-MM-DD)
+                    try:
+                        fecha_db = datetime.strptime(fecha_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+                    except:
+                        fecha_db = fecha_str
+
                     cursor.execute('''
                         INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (fecha_str, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link))
+                    ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link))
                     
     except Exception as e:
         print(f"Error procesando seccion {tipo_normativa} para la fecha {fecha_str}: {e}")

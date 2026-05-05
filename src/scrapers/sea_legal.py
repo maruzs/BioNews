@@ -133,12 +133,15 @@ class PertinenciasScraper:
                 
                 accion = f"{url_base}/api/public/expediente/{expediente}"
                 
+                from ..utils.date_parser import parse_fecha
+                fecha_db = parse_fecha(fecha) if fecha else ""
+                
                 try:
                     cursor.execute('''
                         INSERT OR IGNORE INTO pertinencias 
                         (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (expediente, nombre, proponente, fecha, estado, accion))
+                    ''', (expediente, nombre, proponente, fecha_db, estado, accion))
                     
                     if cursor.rowcount > 0:
                         nuevos_registros += 1

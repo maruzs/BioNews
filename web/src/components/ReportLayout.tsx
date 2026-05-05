@@ -117,7 +117,7 @@ const TABLE_ID_FIELDS: Record<string, string> = {
   programasDeCumplimiento: 'expediente',
   Tribunales: 'Rol',
   pertinencias: 'Expediente',
-  normativas: 'normativa',
+  // normativas: removed to fallback to composite ID
 };
 
 const TABLE_ACTION_FIELDS: Record<string, string> = {
@@ -169,9 +169,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
         const prefs = JSON.parse(user.preferences);
         let initialFilters: Record<string, string> = {};
         if (tableName === 'normativas' && prefs.normativas?.length > 0) {
-          initialFilters['organismo'] = prefs.normativas.join(' ');
+          initialFilters['organismo'] = prefs.normativas.join('; ');
         } else if (['fiscalizaciones', 'sancionatorios', 'registroSanciones', 'programasDeCumplimiento', 'medidas_provisionales', 'requerimientos'].includes(tableName || '') && prefs.sma?.length > 0) {
-          initialFilters['categoria'] = prefs.sma.join(' ');
+          initialFilters['categoria'] = prefs.sma.join('; ');
         }
         
         if (Object.keys(initialFilters).length > 0) {
@@ -300,12 +300,22 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
       const itemVal = item[field];
       if (!itemVal) return false;
       
-      const terms = filterValue.toLowerCase().split(' ').filter(Boolean);
       const strVal = String(itemVal).toLowerCase();
       
-      if (terms.length > 0) {
-        return terms.some(t => strVal.includes(t));
+      // For categorical fields, check for exact match if it was selected from a dropdown (space separated logic was flawed)
+      const categoricalFields = ['estado', 'Estado', 'Estado_Procesal', 'organismo', 'Tribunal', 'categoria', 'region'];
+      if (categoricalFields.includes(field)) {
+        // If it's a multiple preference (space separated), check for any exact match
+        const selectedOptions = filterValue.toLowerCase().split('  '); // Use double space or just exact match?
+        // Let's use simple logic: if it's one of the unique options, check exact.
+        // Actually, the leak happens because of .includes().
+        // For preference terms, we should match at least one full term.
+        const terms = filterValue.split(';').map(t => t.trim().toLowerCase()).filter(Boolean);
+        if (terms.length > 0) {
+          return terms.some(t => strVal === t || strVal.includes(t));
+        }
       }
+
       return strVal.includes(filterValue.toLowerCase());
     });
 
@@ -399,10 +409,14 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
   }, [columnConfig, tableName, isFavoritesPage]);
 
   const rows = useMemo(() => filteredData.map((item, index) => {
-    const itemId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
+    // Generar un ID único y estable para DataGrid
+    const baseId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
+    // Si el baseId no es suficientemente único (como en normativas), combinamos con otros campos o el índice
+    const uniqueId = baseId ? `${baseId}-${item.fecha || item.Fecha || ''}-${index}` : `row-${index}`;
+    
     return {
       ...item,
-      id: itemId || String(index),
+      id: uniqueId,
       rowNumber: index + 1
     };
   }), [filteredData, effectiveIdField, isFavoritesPage]);
@@ -444,21 +458,27 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
         valueGetter: isDateField ? (value: any) => {
           if (!value) return null;
           const str = String(value);
-          // Si es un string YYYY-MM-DD HH:MM:SS (como fecha_agregado de SQLite)
-          if (str.includes('-')) {
-            const datePart = str.split(' ')[0];
-            const parts = datePart.split('-');
+          // Intentar parseo ISO directo (YYYY-MM-DD)
+          if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+            return new Date(str.split(' ')[0] + 'T00:00:00');
+          }
+          // Soporte para "/" y "-" (DD-MM-YYYY o MM-DD-YYYY)
+          const separator = str.includes('-') ? '-' : (str.includes('/') ? '/' : null);
+          if (separator) {
+            const parts = str.split(' ')[0].split(separator);
             if (parts.length === 3) {
-              if (parts[0].length === 4) {
-                // YYYY-MM-DD
-                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-              } else {
-                // DD-MM-YYYY
-                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+              const p0 = parseInt(parts[0]);
+              const p1 = parseInt(parts[1]);
+              const p2 = parseInt(parts[2]);
+              if (p0 > 1000) { // YYYY-MM-DD
+                return new Date(p0, p1 - 1, p2);
               }
+              // DD-MM-YYYY (Asumimos esto por defecto para scrapers que no migraron)
+              return new Date(p2, p1 - 1, p0);
             }
           }
-          return new Date(str);
+          const d = new Date(str);
+          return isNaN(d.getTime()) ? null : d;
         } : undefined
       });
     });
@@ -538,12 +558,34 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
             <div className="filter-grid" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
               {activeColumns
                 .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
-                .map(col => (
-                  <div key={col.field} style={{ flex: '1 1 200px' }}>
-                    <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
-                    <input type="text" className="filter-select" value={columnFilters[col.field] || ''} onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} placeholder={`Buscar ${col.headerName.toLowerCase()}`} />
-                  </div>
-              ))}
+                .map(col => {
+                  const categoricalFields = ['estado', 'Estado', 'Estado_Procesal', 'organismo', 'Tribunal', 'categoria', 'region'];
+                  const isCategorical = categoricalFields.includes(col.field);
+                  
+                  if (isCategorical) {
+                    const options = Array.from(new Set(data.map(item => item[col.field]).filter(Boolean))).sort();
+                    return (
+                      <div key={col.field} style={{ flex: '1 1 200px' }}>
+                        <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
+                        <select 
+                          className="filter-select" 
+                          value={columnFilters[col.field] || ''} 
+                          onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})}
+                        >
+                          <option value="">Todos</option>
+                          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={col.field} style={{ flex: '1 1 200px' }}>
+                      <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
+                      <input type="text" className="filter-select" value={columnFilters[col.field] || ''} onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} placeholder={`Buscar ${col.headerName.toLowerCase()}`} />
+                    </div>
+                  );
+              })}
               {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
                 <div style={{ flex: '1 1 300px' }}>
                   <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Rango de Fechas</h4>

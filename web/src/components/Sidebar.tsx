@@ -14,14 +14,14 @@ const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [updates, setUpdates] = useState<Record<string, boolean>>({});
   const location = useLocation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   
   const checkUpdates = (data: any[]) => {
     const hasUpdates = (fuenteKeys: string[], category: string) => {
       const categoryLogs = data.filter(log => fuenteKeys.includes(log.fuente) && log.nuevos_registros > 0);
       if (categoryLogs.length === 0) return false;
       
-      const lastRead = localStorage.getItem(`read_${category}`);
+      const lastRead = localStorage.getItem(`read_${category}_${user?.id}`);
       if (!lastRead) return true;
 
       // Check if any log's ultimo_exito is newer than lastRead
@@ -29,7 +29,7 @@ const Sidebar = () => {
     };
 
     const newsLogs = data.filter(log => (log.fuente.includes('Noticias') || log.fuente === 'MMA' || log.fuente === 'SMA' || log.fuente === 'Corte Suprema' || log.fuente === 'Sernageomin' || log.fuente === 'SBAP') && log.nuevos_registros > 0);
-    const lastReadNews = localStorage.getItem('read_noticias');
+    const lastReadNews = localStorage.getItem(`read_noticias_${user?.id}`);
     const newsHasUpdate = newsLogs.length > 0 && (!lastReadNews || newsLogs.some(log => new Date(log.ultimo_exito) > new Date(lastReadNews)));
 
     setUpdates({
@@ -66,8 +66,9 @@ const Sidebar = () => {
     setUpdates(prev => {
       const next = { ...prev };
       const markRead = (key: string) => {
+        if (!user) return;
         next[key] = false;
-        localStorage.setItem(`read_${key}`, now);
+        localStorage.setItem(`read_${key}_${user.id}`, now);
       };
 
       if (path === '/noticias') markRead('noticias');
