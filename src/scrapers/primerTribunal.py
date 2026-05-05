@@ -1,90 +1,170 @@
+"""
+Scraper del Primer Tribunal Ambiental
+Consulta la API REST del portal judicial 1TA y guarda en la tabla Tribunales de data.db
+"""
+import requests
 import json
-import traceback
-from playwright.sync_api import sync_playwright
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
+import sqlite3
+import os
+from datetime import datetime
+
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+
+
+def obtener_ultima_fecha(conn):
+    """
+    Busca la fecha mas reciente ingresada en la base de datos para el Primer Tribunal.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Primer'")
+        filas = cursor.fetchall()
+        
+        if not filas:
+            return None
+            
+        fechas_validas = []
+        for fila in filas:
+            fecha_str = fila[0]
+            if fecha_str:
+                try:
+                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    fechas_validas.append(dt)
+                except ValueError:
+                    continue
+                    
+        if fechas_validas:
+            return max(fechas_validas)
+        return None
+        
+    except sqlite3.OperationalError:
+        return None
+
+
+def obtener_causas_ano_actual():
+    """
+    Hace la peticion POST filtrando unicamente por el ano en curso.
+    """
+    url = "https://www.portaljudicial1ta.cl/sgc-ws/rest/consulta-causa/get-consulta-causa"
+    
+    ano_actual = str(datetime.now().year)
+    
+    payload = {
+        'tipoCausa': (None, 'null'),
+        'numeroRol': (None, ''),
+        'anioIngreso': (None, ano_actual),
+        'estado': (None, 'null')
+    }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+        "Accept": "*/*",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+
+    try:
+        print(f"Buscando causas del ano {ano_actual} en el Primer Tribunal...")
+        response = requests.post(url, files=payload, headers=headers)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'response' in data and data['response']:
+            causas = json.loads(data['response'])
+            return causas
+        return []
+            
+    except Exception as e:
+        print(f"Error al consultar la API: {e}")
+        return []
+
+
+def procesar_nuevos_registros(causas, conn, ultima_fecha_db):
+    cursor = conn.cursor()
+    
+    nuevos_registros = 0
+    
+    # Ordenar las causas obtenidas por fecha descendente
+    causas_procesadas = []
+    for causa in causas:
+        fecha_raw = causa.get('fechaCausa', '')
+        fecha_str = fecha_raw.split(' ')[0] if fecha_raw else ''
+        try:
+            dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+            causas_procesadas.append((dt, fecha_str, causa))
+        except ValueError:
+            continue
+            
+    # Ordenar de mas reciente a mas antigua
+    causas_procesadas.sort(key=lambda x: x[0], reverse=True)
+    
+    for dt, fecha_str, causa in causas_procesadas:
+        if ultima_fecha_db and dt < ultima_fecha_db:
+            break
+            
+        rol = causa.get('numeroRol')
+        if not rol:
+            continue
+            
+        caratula = causa.get('caratula', '')
+        tribunal = 'Primer'
+        tipo_procedimiento = causa.get('tipoCausa', '')
+        
+        estado_raw = causa.get('estado', '')
+        estado = estado_raw.split('(')[0].strip() if estado_raw else ''
+        
+        accion = f"https://www.portaljudicial1ta.cl/sgc-web/ver-causa.html?rol={rol}"
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO Tribunales
+            (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado, accion))
+        
+        nuevos_registros += 1
+        
+        if nuevos_registros >= 10:
+            print("Se alcanzo el limite de 10 registros procesados.")
+            break
+
+    conn.commit()
+    print(f"Actualizacion completada. Se revisaron/guardaron {nuevos_registros} registros.")
+    return nuevos_registros
+
+
 class PrimerTribunalScraper:
-    def __init__(self):
-        self.url_ui = "https://www.portaljudicial1ta.cl/sgc-web/consulta-causa.html"
-        self.api_endpoint = "**/get-consulta-causa"
-        self.db = DatabaseManager()
-
-    def get_legal_data(self):
-        print("Iniciando scraping legal en Primer Tribunal Ambiental (1TA)",flush=True)
-        
-        with sync_playwright() as p:
-            # Puedes cambiar a headless=False para monitorear visualmente
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
-
-            try:
-                page.goto(self.url_ui, wait_until="networkidle")
+    """Wrapper para integracion con el sistema BioNews."""
+    
+    def run(self):
+        """Ejecuta el scraper y guarda directamente en la BD."""
+        if not os.path.exists(DB_PATH):
+            print("La base de datos no existe.")
+            return 0
+            
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            ultima_fecha = obtener_ultima_fecha(conn)
+            
+            if ultima_fecha:
+                print(f"Ultima fecha registrada en BD: {ultima_fecha.strftime('%d-%m-%Y')}")
+            else:
+                print("No se encontraron fechas previas. Se procesaran hasta 10 del ano actual.")
                 
-                # Esperamos a que el boton sea visible
-                page.wait_for_selector("#btnBuscar", state="visible", timeout=10000)
+            causas = obtener_causas_ano_actual()
+            
+            nuevos = 0
+            if causas:
+                nuevos = procesar_nuevos_registros(causas, conn, ultima_fecha)
+            else:
+                print("No se obtuvieron datos de la API.")
                 
-                # Interceptamos la respuesta de la API al hacer click
-                with page.expect_response(self.api_endpoint, timeout=15000) as response_info:
-                    page.click("#btnBuscar")
-                
-                response = response_info.value
-                raw_data = response.json()
-                
-                # El KeyError 0 ocurria porque raw_data es un diccionario
-                # Segun el .md, los datos reales vienen en la llave 'response' como string
-                if isinstance(raw_data, dict) and "response" in raw_data:
-                    # Convertimos el string JSON interno en una lista de Python
-                    data = json.loads(raw_data["response"])
-                else:
-                    data = raw_data
+            conn.close()
+            return nuevos
+        except sqlite3.Error as e:
+            print(f"Error de base de datos: {e}")
+            return 0
 
-                if not data or not isinstance(data, list):
-                    print("La API del 1TA no devolvio una lista de datos valida",flush=True)
-                    return []
 
-                nombre_fuente = "1TA"
-                ultimo_db = self.db.get_last_by_source(nombre_fuente)
-                
-                # Ahora que data es una lista, podemos acceder al indice 0
-                primer_api_nombre = data[0].get("caratula")
-
-                if ultimo_db and ultimo_db[1] == primer_api_nombre:
-                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.",flush=True)
-                    return []
-
-                return self._parse_json_data(data[:99])
-
-            except Exception:
-                print("Error durante el proceso del 1TA",flush=True)
-                traceback.print_exc()
-                return []
-            finally:
-                browser.close()
-
-    def _parse_json_data(self, data):
-        legal_list = []
-        for item in data:
-            try:
-                fecha_raw = item.get("fechaCausa", "")
-                if " " in fecha_raw:
-                    fecha_raw = fecha_raw.split(" ")[0]
-                
-                id_causa = item.get("numeroRol", "")
-                link = f"https://www.portaljudicial1ta.cl/sgc-web/ver-causa.html?rol={id_causa}"
-                
-                legal_list.append({
-                    "nombre": item.get("caratula", "Sin caratula"),
-                    "fecha": parse_fecha(fecha_raw),
-                    "estado": item.get("estado", "Sin estado").strip(),
-                    "tipo": item.get("tipoCausa", "Sin tipo"),
-                    "fuente": "1TA",
-                    "link": link
-                })
-            except Exception:
-                continue
-        
-        print(f"Exito: Se procesaron {len(legal_list)} registros del 1TA")
-        return legal_list
+if __name__ == "__main__":
+    scraper = PrimerTribunalScraper()
+    scraper.run()

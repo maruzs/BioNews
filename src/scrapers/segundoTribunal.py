@@ -1,112 +1,203 @@
+"""
+Scraper del Segundo Tribunal Ambiental
+Usa Playwright para interceptar JSON de la API del 2TA y guarda en la tabla Tribunales de data.db
+"""
+import sqlite3
+import os
+from datetime import datetime
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
 
-class SegundoTribunalScraper:
-    def __init__(self):
-        self.url_base = "https://2ta.lexsoft.cl/2ta/"
-        self.url_home = f"{self.url_base}search?proc=4"
-        self.db = DatabaseManager()
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
-    def get_legal_data(self):
-        print("Iniciando scraping legal en Segundo Tribunal Ambiental (2TA)", flush=True)
+
+def obtener_ultima_fecha(conn):
+    """
+    Busca la fecha mas reciente ingresada en la base de datos para el Segundo Tribunal.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Segundo'")
+        filas = cursor.fetchall()
         
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
-
-            try:
-                page.goto(self.url_home, wait_until="networkidle")
-                
-                # Esperar a que la tabla dinamica inyecte las filas
-                page.wait_for_selector("table#selectable tbody tr", state="visible", timeout=15000)
-                
-                # Extraemos el HTML una vez que JS termino de armar la tabla
-                content = page.content()
-                soup = BeautifulSoup(content, "html.parser")
-                
-                table = soup.find("table", id="selectable")
-                if not table:
-                    print("Error: No se encontro la tabla de causas en el 2TA")
-                    return []
-                    
-                tbody = table.find("tbody")
-                # Si hay tbody usamos sus filas, sino todas las tr ignorando la cabecera
-                rows = tbody.find_all("tr") if tbody else table.find_all("tr")[1:]
-                
-                if not rows:
-                    print("La tabla del 2TA no tiene filas")
-                    return []
-                
-                # Logica de eficiencia: Comparar la causa mas reciente con la base de datos
-                primer_row_tds = rows[0].find_all("td")
-                if len(primer_row_tds) >= 3:
-                    # El indice 2 contiene la Caratula segun tu investigacion
-                    primer_api_nombre = primer_row_tds[2].get_text(strip=True)
-                    
-                    nombre_fuente = "2TA"
-                    ultimo_db = self.db.get_last_by_source(nombre_fuente)
-                    
-                    if ultimo_db and ultimo_db[1] == primer_api_nombre:
-                        print(f"No hay cambios en {nombre_fuente}. Fin del proceso.")
-                        return []
-
-                return self._parse_html_data(rows)
-
-            except Exception as e:
-                print(f"Error durante el proceso del 2TA: {str(e)}", flush=True)
-                return []
-            finally:
-                browser.close()
-
-    def _parse_html_data(self, rows):
-        legal_list = []
-        for row in rows:
-            try:
-                tds = row.find_all("td")
-                # Aseguramos que la fila tenga al menos las 5 columnas de datos principales
-                if len(tds) < 5:
+        if not filas:
+            return None
+            
+        fechas_validas = []
+        for fila in filas:
+            fecha_str = fila[0]
+            if fecha_str:
+                try:
+                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    fechas_validas.append(dt)
+                except ValueError:
                     continue
                     
-                # 1. Rol y Link de Detalle (Estan en el primer td)
-                a_tag = tds[0].find("a")
-                href = a_tag.get("href", "") if a_tag else ""
-                
-                if href:
-                    # El href viene como 'search?proc=3&idCausa=400693', le anadimos la url base
-                    link = f"{self.url_base}{href}"
-                else:
-                    # Si no tiene enlace, no sirve para nuestra base de datos (Primary Key)
-                    continue 
-                    
-                # 2. Fecha (Segundo td)
-                fecha_raw = tds[1].get_text(strip=True)
-                
-                # 3. Caratula/Nombre (Tercer td)
-                nombre = tds[2].get_text(strip=True)
-                
-                # 4. Procedimiento/Tipo (Cuarto td)
-                tipo = tds[3].get_text(strip=True)
-                
-                # 5. Etapa/Estado (Quinto td)
-                estado = tds[4].get_text(strip=True)
-                
-                legal_list.append({
-                    "nombre": nombre,
-                    "fecha": parse_fecha(fecha_raw),
-                    "estado": estado,
-                    "tipo": tipo,
-                    "fuente": "2TA",
-                    "link": link
-                })
-                
-            except Exception as e:
-                print(f"Error parseando una fila especifica en 2TA: {e}", flush=True)
-                continue
+        if fechas_validas:
+            return max(fechas_validas)
+        return None
         
-        print(f"Exito: Se procesaron {len(legal_list)} registros del 2TA", flush=True   )
-        return legal_list
+    except sqlite3.OperationalError:
+        return None
+
+
+def extraer_nuevos_con_playwright(ano_actual, resultados_interceptados):
+    print(f"Iniciando Chromium para buscar causas del ano {ano_actual}...")
+    
+    def manejar_respuesta(response):
+        """Intercepta silenciosamente el JSON de respuesta del servidor."""
+        if "searchPaginado" in response.url and response.status == 200:
+            try:
+                body = response.json()
+                results = body.get('results', [])
+                if results:
+                    resultados_interceptados.extend(results)
+            except Exception:
+                pass
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        
+        page.on("response", manejar_respuesta)
+        
+        print("Navegando a la pagina principal...")
+        page.goto("https://2ta.lexsoft.cl/2ta/search?proc=4")
+        page.wait_for_load_state("networkidle")
+        
+        # 1. Seleccionamos 'Buscar por: Rol' (indice 0)
+        page.evaluate("document.getElementById('procedimiento').selectedIndex = 0; document.getElementById('procedimiento').dispatchEvent(new Event('change'));")
+        
+        # 2. Seleccionamos dinamicamente el ano actual
+        script_ano = f"""
+        let selEra = document.getElementById('era');
+        for(let i=0; i<selEra.options.length; i++) {{
+            if(selEra.options[i].text === '{ano_actual}') {{
+                selEra.selectedIndex = i;
+                selEra.dispatchEvent(new Event('change'));
+                break;
+            }}
+        }}
+        """
+        page.evaluate(script_ano)
+        
+        # 3. Obtenemos la cantidad de tipos de causa
+        opciones_tipo = page.locator("select#tipo option").count()
+        
+        for i in range(opciones_tipo):
+            print(f"Consultando categoria de tramite #{i + 1} de {opciones_tipo}...")
+            
+            page.evaluate(f"document.getElementById('tipo').selectedIndex = {i}; document.getElementById('tipo').dispatchEvent(new Event('change'));")
+            
+            page.locator("button[type='submit']").last.click(force=True)
+            page.wait_for_timeout(3000)
+            
+        browser.close()
+
+
+def procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha_db):
+    cursor = conn.cursor()
+    
+    nuevos_registros = 0
+    ids_procesados = set()
+    causas_procesadas = []
+    
+    for causa in resultados_interceptados:
+        id_causa = causa.get('id')
+        if not id_causa or id_causa in ids_procesados:
+            continue
+            
+        ids_procesados.add(id_causa)
+        
+        fecha_ms = causa.get('fechaIngreso')
+        if not fecha_ms:
+            continue
+            
+        fecha_str = datetime.fromtimestamp(fecha_ms / 1000.0).strftime('%d-%m-%Y')
+        try:
+            dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+            causas_procesadas.append((dt, fecha_str, causa, id_causa))
+        except ValueError:
+            continue
+            
+    # Ordenar de mas reciente a mas antigua
+    causas_procesadas.sort(key=lambda x: x[0], reverse=True)
+    
+    for dt, fecha_str, causa, id_causa in causas_procesadas:
+        if ultima_fecha_db and dt < ultima_fecha_db:
+            continue
+            
+        rol = causa.get('rol')
+        if not rol:
+            continue
+            
+        caratula = causa.get('descripcion', '')
+        tribunal = 'Segundo'
+        
+        procedimiento_obj = causa.get('procedimiento', {})
+        tipo_procedimiento = procedimiento_obj.get('name', '') if procedimiento_obj else ''
+        
+        estado_procesal = ""
+        cuadernos = causa.get('cuadernos', [])
+        if cuadernos and len(cuadernos) > 0:
+            estado_obj = cuadernos[0].get('estadoProcesal', {})
+            estado_procesal = estado_obj.get('name', '') if estado_obj else ''
+            
+        accion = f"https://2ta.lexsoft.cl/2ta/search?proc=3&idCausa={id_causa}"
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO Tribunales
+            (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion))
+        
+        nuevos_registros += 1
+        
+        if nuevos_registros >= 10:
+            print("Se alcanzo el limite maximo de 10 nuevos registros.")
+            break
+
+    conn.commit()
+    print(f"Actualizacion completada. Se guardaron o actualizaron {nuevos_registros} registros.")
+    return nuevos_registros
+
+
+class SegundoTribunalScraper:
+    """Wrapper para integracion con el sistema BioNews."""
+    
+    def run(self):
+        """Ejecuta el scraper y guarda directamente en la BD."""
+        if not os.path.exists(DB_PATH):
+            print("La base de datos no existe.")
+            return 0
+        
+        ano_actual = str(datetime.now().year)
+            
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            ultima_fecha = obtener_ultima_fecha(conn)
+            
+            if ultima_fecha:
+                print(f"Ultima fecha en BD para el Segundo Tribunal: {ultima_fecha.strftime('%d-%m-%Y')}")
+            else:
+                print("No se encontraron fechas previas. Se procesaran los mas recientes.")
+            
+            resultados_interceptados = []
+            extraer_nuevos_con_playwright(ano_actual, resultados_interceptados)
+            
+            nuevos = 0
+            if resultados_interceptados:
+                nuevos = procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha)
+            else:
+                print("No se interceptaron datos en la red.")
+                
+            conn.close()
+            return nuevos
+        except sqlite3.Error as e:
+            print(f"Error de base de datos: {e}")
+            return 0
+
+
+if __name__ == "__main__":
+    scraper = SegundoTribunalScraper()
+    scraper.run()

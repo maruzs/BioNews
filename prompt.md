@@ -1,9 +1,12 @@
-Ok, lee el codigo y entiende como funciona. Luego quiero que implementemos lo siguiente:
+# Dashboards
 
-1. Hostear en un servidor propio (es otro computador)
-2. Que corra la web y la base de datos en el servidor propio
-3. Que se pueda acceder desde cualquier computador con internet a la web usando un navegador (usa tailscale)
-4. Que cada dentro de las 7 am y las 7pm cada una hora se ejecuten los scrapers de manera automatica, de momento de forma secuencial y en un tiempo mas implemntaremos de forma paralela
-5. Borra el SC que aparece en el header del frontend arriba a la derecha
+Hay que implementar los dashboards para SMA, SEA y tribunal ambiental de primera instancia. Estos dashboards deben estar basados en la informacion que tenemos en la base de datos.
 
-Pensaba hacerlo con contenedores de docker, actualmente mi servidor (es una laptop headless siempre prendida conectada al router por cable) esta funcionando con ubuntu server, como llevo todo el codigo para alla y lo despliego para poder acceder desde cualquier parte del mundo, desde cualquier dispositivo. Tengo nginx y docker ya instalados en la laptop servidor
+A futuro el Home debera mostrar algunos dashboards bonitos pero referentes al comportamiento del usuario (intereses y eso)
+Tambien hay que pensar en la landing page, que deberia ser un poco mas bonita, con el logo que diseñe
+
+# Pagos
+
+Hay que implementar un sistema de pagos para poder acceder a los dashboards premium.
+Para esto hay que usar un servicio de pagos en linea, como Stripe o MercadoPago.
+Considerando que es un proyecto personal, lo mas facil es usar Stripe.

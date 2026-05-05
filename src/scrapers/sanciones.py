@@ -1,8 +1,8 @@
 """
-Scraper de Requerimientos de Ingreso - SNIFA
-https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado
+Scraper de Registro Publico de Sanciones - SNIFA
+https://snifa.sma.gob.cl/RegistroPublico/Resultado
 
-Compara el total de registros y busca por diferencia de expedientes contra la BD.
+Compara total de registros y busca nuevos por diferencia de expedientes.
 """
 import sqlite3
 import os
@@ -16,7 +16,7 @@ def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM requerimientos")
+    cursor.execute("SELECT expediente FROM registroSanciones")
     expedientes = set(row[0] for row in cursor.fetchall())
     conn.close()
     return expedientes, len(expedientes)
@@ -34,6 +34,8 @@ def parse_row(row):
         'nombre_razon_social': '',
         'categoria': '',
         'region': '',
+        'multa_uta': '',
+        'pago_multa': '',
         'detalle_link': ''
     }
 
@@ -62,6 +64,10 @@ def parse_row(row):
             if not items:
                 items = [td.get_text(strip=True)]
             data['region'] = ' / '.join(filter(None, items))
+        elif label in ('Multa (UTA)', 'Multa'):
+            data['multa_uta'] = td.get_text(strip=True)
+        elif label in ('Pago de Multa', 'Pago'):
+            data['pago_multa'] = td.get_text(strip=True)
         elif label == 'Detalle':
             a_tag = td.find('a')
             if a_tag:
@@ -76,13 +82,13 @@ def parse_row(row):
     return data
 
 
-class RequerimientosScraper:
+class RegistroSancionesScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Requerimientos de Ingreso...")
-        url = "https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado"
+        print("Iniciando scraper de Registro Publico de Sanciones...")
+        url = "https://snifa.sma.gob.cl/RegistroPublico/Resultado"
 
         db_expedientes, db_count = get_db_info()
         print(f"Registros actuales en BD: {db_count}")
@@ -104,9 +110,10 @@ class RequerimientosScraper:
                 all_records.append(data)
 
         web_count = len(all_records)
-        print(f"Registros en la web: {web_count}")
+        web_unique = len(set(r['expediente'] for r in all_records))
+        print(f"Registros en la web: {web_count} ({web_unique} unicos)")
 
-        if web_count <= db_count:
+        if web_unique <= db_count:
             print("No hay registros nuevos. La BD esta actualizada.")
             return 0
 
@@ -123,26 +130,28 @@ class RequerimientosScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO requerimientos (
+                INSERT OR REPLACE INTO registroSanciones (
                     expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, detalle_link
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    categoria, region, multa_uta, pago_multa, detalle_link
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['unidad_fiscalizable'],
                 record['nombre_razon_social'],
                 record['categoria'],
                 record['region'],
+                record['multa_uta'],
+                record['pago_multa'],
                 record['detalle_link']
             ))
             print(f"  + {record['expediente']}")
 
         conn.commit()
         conn.close()
-        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Requerimientos de Ingreso.")
+        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Registro Publico de Sanciones.")
         return len(nuevos)
 
 
 if __name__ == '__main__':
-    scraper = RequerimientosScraper()
+    scraper = RegistroSancionesScraper()
     scraper.run()

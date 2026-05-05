@@ -1,97 +1,192 @@
-from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
-class TercerTribunalScraperLegal:
-    def __init__(self):
-        self.url_base = "https://causas.3ta.cl"
-        self.db = DatabaseManager()
+"""
+Scraper del Tercer Tribunal Ambiental (Legal)
+Consulta la API REST del 3TA y guarda en la tabla Tribunales de data.db
+"""
+import requests
+import sqlite3
+import os
+from datetime import datetime
 
-    def get_legal_data(self):
-        print("Iniciando scraping legal en Tercer Tribunal Ambiental (3TA)", flush=True)
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
+# Mapeos predefinidos
+MAPEO_ROLES = {
+    1: ("Demanda", "D"),
+    2: ("Solicitud", "S"),
+    3: ("Reclamacion", "R"),
+    4: ("Otros", "O"),
+    6: ("Consulta", "C"),
+    7: ("Exhorto", "E"),
+    8: ("Demanda Ejecutiva", "DE")
+}
 
-            try:
-                page.goto(self.url_base, wait_until="networkidle")
+MAPEO_CORTES = {
+    1: "Primer",
+    2: "Segundo",
+    3: "Tercer"
+}
 
-                # Esperamos a que aparezcan las filas de causas
-                page.wait_for_selector("a.cause-row", state="visible", timeout=15000)
 
-                # Extraemos el HTML una vez que React termino de renderizar
-                content = page.content()
-                soup = BeautifulSoup(content, "html.parser")
-
-                rows = soup.find_all("a", class_="cause-row")
-
-                if not rows:
-                    print("No se encontraron causas en el 3TA", flush=True  )
-                    return []
-
-                # Logica de eficiencia: comparar con DB
-                # Segun el html, la caratula esta en un span con clase cause-cover
-                primer_caratula_tag = rows[0].find(class_="cause-cover")
-                primer_api_nombre = primer_caratula_tag.get_text(strip=True) if primer_caratula_tag else "Sin caratula"
-
-                nombre_fuente = "3TA"
-                ultimo_db = self.db.get_last_by_source(nombre_fuente)
-
-                if ultimo_db and ultimo_db[1] == primer_api_nombre:
-                    print(f"No hay cambios en {nombre_fuente}. Fin del proceso.", flush=True)
-                    return []
-
-                # Procesamos solo las primeras 15 tal como lo solicitaste
-                return self._parse_html_data(rows[:15])
-
-            except Exception as e:
-                print(f"Error durante el proceso del 3TA: {str(e)}", flush=True )
-                return []
-            finally:
-                browser.close()
-
-    def _parse_html_data(self, rows):
-        legal_list = []
-        for row in rows:
-            try:
-                # 1. Link (viene relativo, ej: /causes/5101)
-                href = row.get("href", "")
-                if not href:
+def obtener_ultima_fecha(conn):
+    """
+    Busca la fecha mas reciente ingresada en la BD para el Tercer Tribunal.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Tercer'")
+        filas = cursor.fetchall()
+        
+        if not filas:
+            return None
+            
+        fechas_validas = []
+        for fila in filas:
+            fecha_str = fila[0]
+            if fecha_str:
+                try:
+                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    fechas_validas.append(dt)
+                except ValueError:
                     continue
-                link = f"{self.url_base}{href}" if href.startswith("/") else href
+                    
+        if fechas_validas:
+            return max(fechas_validas)
+        return None
+        
+    except sqlite3.OperationalError:
+        return None
 
-                # 2. Caratula / Nombre
-                caratula_tag = row.find(class_="cause-cover")
-                nombre = caratula_tag.get_text(strip=True) if caratula_tag else "Sin caratula"
 
-                # 3. Fecha
-                fecha_tag = row.find(class_="cause-issue-date")
-                fecha_raw = fecha_tag.get_text(strip=True) if fecha_tag else ""
+def determinar_estado(causa):
+    """
+    Evalua el estado en cascada segun la existencia de las fechas de cierre.
+    """
+    if causa.get('archived_at'):
+        return "Archivada"
+    elif causa.get('ended_at'):
+        return "Terminada"
+    elif causa.get('suspended_at'):
+        return "Suspendida"
+    else:
+        return "En tramitacion"
 
-                # 4. Tipo y Rol (Ej: Reclamacion R-18-2026)
-                # Como estan sueltos en el mismo span que contiene la fecha, 
-                # extraemos todo el texto del padre y le restamos la fecha.
-                tipo_completo = "Sin tipo"
-                if fecha_tag and fecha_tag.parent:
-                    texto_padre = fecha_tag.parent.get_text(" ", strip=True).replace('\xa0', ' ')
-                    tipo_completo = texto_padre.replace(fecha_raw, "").strip()
 
-                legal_list.append({
-                    "nombre": nombre,
-                    "fecha": parse_fecha(fecha_raw),
-                    "estado": "Ver detalle", # La UI principal no muestra el estado
-                    "tipo": tipo_completo,
-                    "fuente": "3TA",
-                    "link": link
-                })
-
-            except Exception as e:
-                print(f"Error parseando causa especifica en 3TA: {e}", flush=True)
+def actualizar_tercer_tribunal(conn, ultima_fecha_db):
+    url = "https://causas.3ta.cl/api/v1/causes/?cause_state=ALL&page=1"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+        "Accept": "application/json"
+    }
+    
+    print("Descargando registros desde la API del Tercer Tribunal...")
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        objects = data.get('objects', {})
+        causes_dict = objects.get('causes', {})
+        
+        if not causes_dict:
+            print("No se encontraron resultados en la API.")
+            return 0
+            
+        # Pre-procesar y ordenar por fecha descendente
+        causas_procesadas = []
+        for id_causa_str, causa in causes_dict.items():
+            created_at = causa.get('created_at', '')
+            if not created_at:
                 continue
+                
+            fecha_raw = created_at.split('T')[0]
+            try:
+                dt = datetime.strptime(fecha_raw, "%Y-%m-%d")
+                fecha_str = dt.strftime("%d-%m-%Y")
+                causas_procesadas.append((dt, fecha_str, causa))
+            except ValueError:
+                continue
+                
+        causas_procesadas.sort(key=lambda x: x[0], reverse=True)
+        
+        cursor = conn.cursor()
+        nuevos_registros = 0
+        
+        for dt, fecha_str, causa in causas_procesadas:
+            if ultima_fecha_db and dt < ultima_fecha_db:
+                break
+                
+            role_number = causa.get('role_number')
+            cause_role_id = causa.get('cause_role_id')
+            court_id = causa.get('court_id')
+            id_causa = causa.get('id')
+            
+            if not role_number or not cause_role_id:
+                continue
+                
+            anio = dt.year
+            rol_info = MAPEO_ROLES.get(cause_role_id, ("Desconocido", "X"))
+            tipo_procedimiento = rol_info[0]
+            letra_rol = rol_info[1]
+            
+            tribunal = MAPEO_CORTES.get(court_id, "Tercer")
+            rol = f"{letra_rol}-{role_number}-{anio}"
+            
+            caratula = causa.get('cover_title') or "sin caratula"
+            estado_procesal = determinar_estado(causa)
+            accion = f"https://causas.3ta.cl/causes/{id_causa}"
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO Tribunales
+                (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion))
+            
+            nuevos_registros += 1
+            
+            if nuevos_registros >= 10:
+                print("Se alcanzo el limite maximo de 10 nuevos registros.")
+                break
+                
+        conn.commit()
+        print(f"Actualizacion completada. Se guardaron o actualizaron {nuevos_registros} registros.")
+        return nuevos_registros
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error de red: {e}")
+        return 0
+    except Exception as e:
+        print(f"Error procesando los datos: {e}")
+        return 0
 
-        print(f"Exito: Se procesaron {len(legal_list)} registros legales del 3TA", flush=True)
-        return legal_list
+
+class TercerTribunalScraperLegal:
+    """Wrapper para integracion con el sistema BioNews."""
+    
+    def run(self):
+        """Ejecuta el scraper y guarda directamente en la BD."""
+        if not os.path.exists(DB_PATH):
+            print("La base de datos no existe.")
+            return 0
+            
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            ultima_fecha = obtener_ultima_fecha(conn)
+            
+            if ultima_fecha:
+                print(f"Ultima fecha en BD para el Tercer Tribunal: {ultima_fecha.strftime('%d-%m-%Y')}")
+            else:
+                print("No se encontraron fechas previas. Se procesaran los mas recientes.")
+                
+            nuevos = actualizar_tercer_tribunal(conn, ultima_fecha)
+            conn.close()
+            return nuevos
+        except sqlite3.Error as e:
+            print(f"Error de base de datos: {e}")
+            return 0
+
+
+if __name__ == "__main__":
+    scraper = TercerTribunalScraperLegal()
+    scraper.run()

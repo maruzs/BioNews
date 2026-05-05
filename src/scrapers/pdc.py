@@ -1,8 +1,8 @@
 """
-Scraper de Requerimientos de Ingreso - SNIFA
-https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado
+Scraper de Programas de Cumplimiento - SNIFA
+https://snifa.sma.gob.cl/ProgramaCumplimiento/Resultado
 
-Compara el total de registros y busca por diferencia de expedientes contra la BD.
+Compara total de registros y busca nuevos por diferencia de expedientes.
 """
 import sqlite3
 import os
@@ -16,7 +16,7 @@ def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM requerimientos")
+    cursor.execute("SELECT expediente FROM programasDeCumplimiento")
     expedientes = set(row[0] for row in cursor.fetchall())
     conn.close()
     return expedientes, len(expedientes)
@@ -76,13 +76,13 @@ def parse_row(row):
     return data
 
 
-class RequerimientosScraper:
+class ProgramasCumplimientoScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Requerimientos de Ingreso...")
-        url = "https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado"
+        print("Iniciando scraper de Programas de Cumplimiento...")
+        url = "https://snifa.sma.gob.cl/ProgramaCumplimiento/Resultado"
 
         db_expedientes, db_count = get_db_info()
         print(f"Registros actuales en BD: {db_count}")
@@ -123,7 +123,7 @@ class RequerimientosScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO requerimientos (
+                INSERT OR REPLACE INTO programasDeCumplimiento (
                     expediente, unidad_fiscalizable, nombre_razon_social,
                     categoria, region, detalle_link
                 ) VALUES (?, ?, ?, ?, ?, ?)
@@ -139,10 +139,10 @@ class RequerimientosScraper:
 
         conn.commit()
         conn.close()
-        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Requerimientos de Ingreso.")
+        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Programas de Cumplimiento.")
         return len(nuevos)
 
 
 if __name__ == '__main__':
-    scraper = RequerimientosScraper()
+    scraper = ProgramasCumplimientoScraper()
     scraper.run()

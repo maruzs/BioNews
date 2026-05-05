@@ -1,8 +1,8 @@
 """
-Scraper de Requerimientos de Ingreso - SNIFA
-https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado
+Scraper de Medidas Provisionales - SNIFA
+https://snifa.sma.gob.cl/MedidaProvisional/Resultado
 
-Compara el total de registros y busca por diferencia de expedientes contra la BD.
+Compara el total de registros y agrega los nuevos por diferencia de expedientes.
 """
 import sqlite3
 import os
@@ -16,7 +16,7 @@ def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM requerimientos")
+    cursor.execute("SELECT expediente FROM medidas_provisionales")
     expedientes = set(row[0] for row in cursor.fetchall())
     conn.close()
     return expedientes, len(expedientes)
@@ -34,6 +34,7 @@ def parse_row(row):
         'nombre_razon_social': '',
         'categoria': '',
         'region': '',
+        'estado': '',
         'detalle_link': ''
     }
 
@@ -62,6 +63,8 @@ def parse_row(row):
             if not items:
                 items = [td.get_text(strip=True)]
             data['region'] = ' / '.join(filter(None, items))
+        elif label == 'Estado':
+            data['estado'] = td.get_text(strip=True)
         elif label == 'Detalle':
             a_tag = td.find('a')
             if a_tag:
@@ -76,13 +79,13 @@ def parse_row(row):
     return data
 
 
-class RequerimientosScraper:
+class MedidasProvisionalesScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Requerimientos de Ingreso...")
-        url = "https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado"
+        print("Iniciando scraper de Medidas Provisionales...")
+        url = "https://snifa.sma.gob.cl/MedidaProvisional/Resultado"
 
         db_expedientes, db_count = get_db_info()
         print(f"Registros actuales en BD: {db_count}")
@@ -123,26 +126,27 @@ class RequerimientosScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO requerimientos (
+                INSERT OR REPLACE INTO medidas_provisionales (
                     expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, detalle_link
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    categoria, region, estado, detalle_link
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['unidad_fiscalizable'],
                 record['nombre_razon_social'],
                 record['categoria'],
                 record['region'],
+                record['estado'],
                 record['detalle_link']
             ))
             print(f"  + {record['expediente']}")
 
         conn.commit()
         conn.close()
-        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Requerimientos de Ingreso.")
+        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Medidas Provisionales.")
         return len(nuevos)
 
 
 if __name__ == '__main__':
-    scraper = RequerimientosScraper()
+    scraper = MedidasProvisionalesScraper()
     scraper.run()

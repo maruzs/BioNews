@@ -1,29 +1,122 @@
+"""
+Scraper de Fiscalizaciones - SNIFA
+https://snifa.sma.gob.cl/Fiscalizacion
+
+Usa Playwright porque la pagina carga los datos via JavaScript/AJAX.
+Filtra por DFZ-{año_actual} y cambia la paginacion para obtener todos los registros.
+"""
+import sqlite3
+import os
 import traceback
+from datetime import datetime
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-from datetime import datetime
-from ..utils.date_parser import parse_fecha
-from ..database.manager import DatabaseManager
+
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+
+
+def get_db_expedientes():
+    """Obtiene todos los expedientes existentes en la BD."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT expediente FROM fiscalizaciones")
+    expedientes = set(row[0] for row in cursor.fetchall())
+    db_count = len(expedientes)
+    conn.close()
+    return expedientes, db_count
+
+
+def parse_row(row):
+    """Extrae los datos de una fila de la tabla HTML."""
+    tds = row.find_all('td')
+    if len(tds) < 4:
+        return None
+
+    data = {
+        'expediente': '',
+        'unidad_fiscalizable': '',
+        'nombre_razon_social': '',
+        'categoria': '',
+        'region': '',
+        'estado': '',
+        'detalle_link': ''
+    }
+
+    for td in tds:
+        label = (td.get('data-label') or '').strip()
+
+        if label == 'Expediente':
+            data['expediente'] = td.get_text(strip=True)
+        elif label in ('Unidad Fiscalizable', 'Unidad fiscalizable'):
+            items = [li.text.strip() for li in td.find_all('li')]
+            if not items:
+                items = [td.get_text(strip=True)]
+            data['unidad_fiscalizable'] = ' / '.join(filter(None, items))
+        elif label in ('Nombre Razón Social', 'Nombre razón social', 'Nombre Razon Social'):
+            items = [li.text.strip() for li in td.find_all('li')]
+            if not items:
+                items = [td.get_text(strip=True)]
+            data['nombre_razon_social'] = ' / '.join(filter(None, items))
+        elif label in ('Categoría', 'Categoria'):
+            items = [li.text.strip() for li in td.find_all('li')]
+            if not items:
+                items = [td.get_text(strip=True)]
+            data['categoria'] = ' / '.join(filter(None, items))
+        elif label in ('Región', 'Region'):
+            items = [li.text.strip() for li in td.find_all('li')]
+            if not items:
+                items = [td.get_text(strip=True)]
+            data['region'] = ' / '.join(filter(None, items))
+        elif label == 'Estado':
+            data['estado'] = td.get_text(strip=True)
+        elif label == 'Detalle':
+            a_tag = td.find('a')
+            if a_tag:
+                href = a_tag.get('href', '')
+                if href.startswith('/'):
+                    data['detalle_link'] = f"https://snifa.sma.gob.cl{href}"
+                else:
+                    data['detalle_link'] = href
+
+    if not data['expediente']:
+        return None
+    return data
+
+
+def wait_for_table(page, max_retries=8):
+    """Espera inteligentemente a que la tabla termine de cargar."""
+    page.wait_for_timeout(3000)
+    for attempt in range(max_retries):
+        soup = BeautifulSoup(page.content(), "html.parser")
+        rows = soup.select("table tbody tr")
+        if rows:
+            tds = rows[0].find_all("td")
+            texto_fila = rows[0].get_text().lower()
+            if len(tds) < 4 and ("procesando" in texto_fila or "cargando" in texto_fila):
+                print(f"  Tabla cargando, reintento {attempt + 1}/{max_retries}...")
+                page.wait_for_timeout(5000)
+            else:
+                return True
+        else:
+            print(f"  Sin filas aun, reintento {attempt + 1}/{max_retries}...")
+            page.wait_for_timeout(5000)
+    return False
+
 
 class SnifaFiscalizacionScraper:
-    def __init__(self):
-        self.url_base = "https://snifa.sma.gob.cl"
-        self.url_home = f"{self.url_base}/Fiscalizacion"
-        self.db = DatabaseManager()
-        
-        self.categorias = [
-            "Agroindustrias",
-            "Energia",
-            "Infraestructura Portuaria",
-            "Instalacion fabril",
-            "Mineria",
-            "Saneamiento Ambiental",
-            "Transportes y almacenajes"
-        ]
+    """Wrapper para integracion con el sistema BioNews."""
+    
+    def run(self):
+        """Ejecuta el scraper y guarda directamente en la BD."""
+        print("Iniciando scraper de Fiscalizaciones (via Playwright)...")
+        url = "https://snifa.sma.gob.cl/Fiscalizacion"
+        current_year = datetime.now().year
+        txt_numero = f"DFZ-{current_year}"
 
-    def get_legal_data(self):
-        print("Iniciando scraping legal en SNIFA (Fiscalizaciones)", flush=True)
-        all_legal_data = []
+        db_expedientes, db_count = get_db_expedientes()
+        print(f"Registros actuales en BD: {db_count}")
+
+        all_records = []
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -33,143 +126,94 @@ class SnifaFiscalizacionScraper:
             page = context.new_page()
 
             try:
-                for cat_nombre in self.categorias:
-                    print(f"\n--- Consultando categoria: {cat_nombre} ---", flush=True)
-                    
-                    try:
-                        # 1. Cargar pagina limpia
-                        page.goto(self.url_home, wait_until="networkidle", timeout=60000)
-                        page.wait_for_selector("#categoria", state="visible", timeout=15000)
-                        
-                        # 2. Seleccionar categoria
-                        options = page.locator("#categoria option").all()
-                        target_val = None
-                        search_text = cat_nombre.lower()
-                        
-                        for opt in options:
-                            opt_text = opt.inner_text().lower().replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-                            if search_text in opt_text:
-                                target_val = opt.get_attribute("value")
-                                break
-                        
-                        if not target_val:
-                            print(f"No se encontro la opcion para: {cat_nombre}", flush=True)
-                            continue
-                            
-                        page.select_option("#categoria", value=target_val)
-                        
-                        # 3. Escribir Expediente apuntando EXACTAMENTE al ID correcto
-                        page.locator("input#expediente").fill("DFZ-2026")
-                        print("Filtro DFZ-2026 aplicado en el campo Expediente.", flush=True)
-                        
-                        # 4. Click y esperar redireccion
-                        boton_buscar = page.locator("button:has-text('Buscar')").first
-                        with page.expect_navigation(wait_until="domcontentloaded", timeout=40000):
-                            boton_buscar.click()
-                        
-                        # 5. Bucle de espera inteligente para AJAX
-                        print("Esperando que el servidor devuelva los datos (AJAX)...")
-                        page.wait_for_timeout(5000)
-                        
-                        for _ in range(4):
-                            soup = BeautifulSoup(page.content(), "html.parser")
-                            rows = soup.select("table tbody tr")
-                            if rows:
-                                tds = rows[0].find_all("td")
-                                texto_fila = rows[0].get_text().lower()
-                                if len(tds) < 4 and ("procesando" in texto_fila or "cargando" in texto_fila):
-                                    print("La tabla sigue cargando, esperando 4 segundos extra...")
-                                    page.wait_for_timeout(4000)
-                                else:
-                                    break 
-                            else:
-                                break
-                        
-                        # 6. Extraer HTML final
-                        soup = BeautifulSoup(page.content(), "html.parser")
-                        rows = soup.select("table tbody tr")
-                        
-                        if not rows:
-                            print(f"No se encontraron filas para {cat_nombre}")
-                            continue
-                            
-                        if len(rows) == 1 and len(rows[0].find_all("td")) < 4:
-                            print(f"Sin resultados reales para {cat_nombre} en DFZ-2026")
-                            continue
+                print(f"Navegando a {url}...")
+                page.goto(url, wait_until="networkidle", timeout=60000)
 
-                        print(f"Detectadas {len(rows)} fiscalizaciones en la pagina.")
+                page.wait_for_selector("#expediente", state="visible", timeout=30000)
 
-                        # 7. Parsear
-                        datos_categoria = self._parse_html_data(rows[:15], cat_nombre)
-                        all_legal_data.extend(datos_categoria)
-                        print(f"Guardados {len(datos_categoria)} registros de {cat_nombre}")
+                print(f"Ingresando filtro: {txt_numero}")
+                page.locator("#expediente").fill(txt_numero)
 
-                    except Exception as e:
-                        print(f"Error procesando categoria {cat_nombre}: {str(e)}", flush=True)
-                        continue
+                buscar_btn = page.locator("button.btn:has-text('Buscar')").first
+                with page.expect_navigation(wait_until="domcontentloaded", timeout=90000):
+                    buscar_btn.click()
 
-            except Exception:
-                print("Error critico en el flujo de navegacion de SNIFA Fiscalizaciones", flush=True)
-                traceback.print_exc()
-            finally:
-                browser.close()
+                print("Esperando resultados iniciales...")
+                wait_for_table(page)
 
-        print(f"\nExito: Se procesaron {len(all_legal_data)} registros totales de SNIFA Fiscalizaciones", flush=True)
-        return all_legal_data
+                print("Cambiando a mostrar todos los registros...")
+                page.evaluate("""
+                    () => {
+                        const select = document.querySelector('select[name$="_length"]');
+                        if (select) {
+                            const opt = document.createElement('option');
+                            opt.value = '-1';
+                            opt.text = 'Todos';
+                            select.appendChild(opt);
+                            select.value = '-1';
+                            select.dispatchEvent(new Event('change'));
+                        }
+                    }
+                """)
 
-    def _parse_html_data(self, rows, tipo_categoria):
-        legal_list = []
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-        
-        for row in rows:
-            try:
-                tds = row.find_all("td")
-                if len(tds) < 5:
-                    continue
-                    
-                expediente = "Sin Expediente"
-                razon_social = ""
-                unidad_fiscalizable = ""
-                link = ""
-                estado_text = "Desconocido"
-                
-                # Extraccion flexible por data-label
-                for td in tds:
-                    label = td.get("data-label", "")
-                    
-                    if label == "Expediente":
-                        expediente = td.get_text(strip=True)
-                    elif label == "Nombre razón social" or label == "Nombre razon social":
-                        razon_social = td.get_text(strip=True)
-                    elif label == "Unidad Fiscalizable":
-                        unidad_fiscalizable = td.get_text(strip=True)
-                    elif label == "Estado":
-                        estado_text = td.get_text(strip=True)
-                    elif label == "Detalle":
-                        a_tag = td.find("a")
-                        if a_tag:
-                            href = a_tag.get("href", "")
-                            link = f"{self.url_base}{href}" if href.startswith("/") else href
+                print("Esperando que se carguen todos los registros...")
+                page.wait_for_timeout(5000)
+                wait_for_table(page, max_retries=10)
 
-                if not link:
-                    continue
-                
-                if unidad_fiscalizable:
-                    nombre_completo = f"{expediente} {unidad_fiscalizable}"
-                else:
-                    nombre_completo = f"{expediente} - {razon_social}" if razon_social else expediente
-                
-                legal_list.append({
-                    "nombre": nombre_completo,
-                    "fecha": parse_fecha(fecha_hoy),
-                    "estado": estado_text,
-                    "tipo": f"Fiscalizacion ({tipo_categoria})",
-                    "fuente": "SNIFA",
-                    "link": link
-                })
-                
+                soup = BeautifulSoup(page.content(), 'html.parser')
+                rows = soup.select("table tbody tr")
+                for row in rows:
+                    data = parse_row(row)
+                    if data:
+                        all_records.append(data)
+
             except Exception as e:
-                print(f"Error parseando fila de SNIFA Fiscalizaciones: {e}", flush=True)
-                continue
-                
-        return legal_list
+                print(f"Error en la navegacion: {e}")
+                traceback.print_exc()
+
+            browser.close()
+
+        if not all_records:
+            print("No se encontraron registros en la web.")
+            return 0
+
+        web_count = len(all_records)
+        print(f"Total registros en la web (año {current_year}): {web_count}")
+
+        nuevos = [r for r in all_records if r['expediente'] not in db_expedientes]
+
+        if not nuevos:
+            print("No hay registros nuevos. La BD esta actualizada.")
+            return 0
+
+        print(f"Encontrados {len(nuevos)} registros nuevos.")
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        for record in nuevos:
+            cursor.execute('''
+                INSERT OR REPLACE INTO fiscalizaciones (
+                    expediente, nombre_razon_social, unidad_fiscalizable,
+                    categoria, region, estado, detalle_link
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                record['expediente'],
+                record['nombre_razon_social'],
+                record['unidad_fiscalizable'],
+                record['categoria'],
+                record['region'],
+                record['estado'],
+                record['detalle_link']
+            ))
+            print(f"  + {record['expediente']}")
+
+        conn.commit()
+        conn.close()
+        print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Fiscalizaciones.")
+        return len(nuevos)
+
+
+if __name__ == '__main__':
+    scraper = SnifaFiscalizacionScraper()
+    scraper.run()

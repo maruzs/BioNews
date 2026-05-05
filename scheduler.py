@@ -1,15 +1,13 @@
 """
 scheduler.py  –  BioNews Automated Scraping Scheduler
 ======================================================
-Corre los scrapers de manera secuencial cada hora entre las 07:00 y las 19:00
-(hora local del servidor). Registra cada ejecución en logs/scheduler.log.
-
-Uso:
-    python scheduler.py
-
-El proceso se puede correr en segundo plano con:
-    Windows:  pythonw scheduler.py   (sin ventana de consola)
-    Linux:    nohup python scheduler.py &
+Corre los scrapers según la programación definida:
+- Diario Oficial: 1 vez al día (07:00)
+- SNIFA/SMA: 2 veces al día (07:00 y 14:00)
+- Pertinencias: cada 1 hora
+- Noticias: cada 1 hora
+- Todo lo demás (Tribunales): cada 1 hora
+Nota: Las tareas de "cada 1 hora" solo se ejecutan entre las 07:00 y las 19:00.
 """
 
 import schedule
@@ -38,93 +36,40 @@ log = logging.getLogger("bionews.scheduler")
 HORA_INICIO = dtime(7, 0)
 HORA_FIN    = dtime(19, 0)
 
-
 def dentro_del_horario() -> bool:
     ahora = datetime.now().time()
     return HORA_INICIO <= ahora <= HORA_FIN
 
-
-# ─── Job principal ───────────────────────────────────────────────────────────
-def run_scrapers_job():
-    """Ejecuta todos los scrapers de forma secuencial."""
-    if not dentro_del_horario():
-        log.info("Fuera del horario de ejecución (07:00–19:00). Se omite esta corrida.")
-        return
-
-    log.info("=" * 60)
-    log.info("INICIANDO CICLO DE SCRAPING AUTOMÁTICO")
-    log.info("=" * 60)
-
-    # Importamos aquí para que errores de importación no maten el scheduler
+def get_db():
     try:
-        from src.scrapers.mma import MMAScraper
-        from src.scrapers.sbap import SBAPScraper
-        from src.scrapers.diario_oficial import DiarioOficialScraper
-        from src.scrapers.sea import SEAScraper
-        from src.scrapers.sernageomin import SernageominScraper
-        from src.scrapers.tribunal2 import TribunalScraper
-        from src.scrapers.sea_legal import SEALegalScraper
-        from src.scrapers.snifa import SnifaScraper
-        from src.scrapers.sma import SMAScraper
-        from src.scrapers.corteSuprema import CorteSupremaScraper
-        from src.scrapers.tribunal3 import TercerTribunalScraper
-        from src.scrapers.primerTribunal import PrimerTribunalScraper
-        from src.scrapers.segundoTribunal import SegundoTribunalScraper
-        from src.scrapers.tercerTribunal import TercerTribunalScraperLegal
-        from src.scrapers.reqSEIA import SnifaIngresoScraper
-        from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
         from src.database.manager import DatabaseManager
-    except ImportError as e:
-        log.error(f"Error de importación: {e}")
-        return
-
-    try:
-        db = DatabaseManager()
-        log.info("Base de datos conectada correctamente.")
+        return DatabaseManager()
     except Exception as e:
         log.error(f"Error al conectar con la base de datos: {e}")
-        return
+        return None
 
-    # ── Scrapers legales ─────────────────────────────────────────────────────
-    legales = [
-        ("Primer Tribunal Ambiental",  PrimerTribunalScraper),
-        ("Segundo Tribunal Ambiental", SegundoTribunalScraper),
-        ("Tercer Tribunal Ambiental",  TercerTribunalScraperLegal),
-        ("SEA Legal",                  SEALegalScraper),
-        ("SNIFA Sancionatorios",       SnifaScraper),
-        ("SNIFA Ingresos",             SnifaIngresoScraper),
-        ("SNIFA Fiscalizaciones",      SnifaFiscalizacionScraper),
-    ]
-
-    log.info("--- INICIANDO SCRAPING LEGAL ---")
-    for nombre, ScraperClass in legales:
+def ejecutar_scrapers(scrapers_list, msg_inicio):
+    """Ejecuta una lista de scrapers de datos"""
+    log.info("=" * 40)
+    log.info(msg_inicio)
+    log.info("=" * 40)
+    for nombre, ScraperClass in scrapers_list:
         log.info(f"  ▶ Procesando: {nombre}...")
         try:
             scraper = ScraperClass()
-            datos = scraper.get_legal_data()
-            if datos:
-                nuevos = db.save_legal(datos)
-                log.info(f"  ✓ {nombre}: {nuevos} nuevos registros guardados.")
-            else:
-                log.info(f"  – {nombre}: sin registros nuevos.")
+            nuevos = scraper.run()
+            log.info(f"  ✓ {nombre}: {nuevos} nuevos registros guardados.")
         except Exception:
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
-
-    # ── Scrapers de noticias ──────────────────────────────────────────────────
-    noticias = [
-        ("Tercer Tribunal (Noticias)",   TercerTribunalScraper),
-        ("Corte Suprema",                CorteSupremaScraper),
-        ("SMA",                          SMAScraper),
-        ("MMA",                          MMAScraper),
-        ("SBAP",                         SBAPScraper),
-        ("Diario Oficial",               DiarioOficialScraper),
-        ("SEA Noticias",                 SEAScraper),
-        ("Sernageomin",                  SernageominScraper),
-        ("Tribunal Ambiental (Noticias)",TribunalScraper),
-    ]
-
-    log.info("--- INICIANDO SCRAPING DE NOTICIAS ---")
-    for nombre, ScraperClass in noticias:
+            
+def ejecutar_noticias(scrapers_list, msg_inicio):
+    """Ejecuta una lista de scrapers de noticias"""
+    log.info("=" * 40)
+    log.info(msg_inicio)
+    log.info("=" * 40)
+    db = get_db()
+    if not db: return
+    for nombre, ScraperClass in scrapers_list:
         log.info(f"  ▶ Procesando: {nombre}...")
         try:
             scraper = ScraperClass()
@@ -137,27 +82,103 @@ def run_scrapers_job():
         except Exception:
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
 
-    log.info("=" * 60)
-    log.info("CICLO DE SCRAPING FINALIZADO")
-    log.info("=" * 60)
+# ─── TAREAS ESPECÍFICAS ──────────────────────────────────────────────────────
 
+def run_diario_oficial():
+    from src.scrapers.diario_oficial import DiarioOficialScraper
+    ejecutar_scrapers([("Diario Oficial (Normativas)", DiarioOficialScraper)], "SCRAPING DIARIO OFICIAL (07:00)")
+
+def run_snifa():
+    from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
+    from src.scrapers.reqSEIA import RequerimientosScraper
+    from src.scrapers.snifa import SancionatoriosScraper
+    from src.scrapers.medidas import MedidasProvisionalesScraper
+    from src.scrapers.pdc import ProgramasCumplimientoScraper
+    from src.scrapers.sanciones import RegistroSancionesScraper
+    
+    lista = [
+        ("SNIFA Sancionatorios",            SancionatoriosScraper),
+        ("SNIFA Fiscalizaciones",           SnifaFiscalizacionScraper),
+        ("SNIFA Requerimientos",            RequerimientosScraper),
+        ("SNIFA Medidas Provisionales",     MedidasProvisionalesScraper),
+        ("SNIFA Programas de Cumplimiento", ProgramasCumplimientoScraper),
+        ("SNIFA Registro Sanciones",        RegistroSancionesScraper),
+    ]
+    ejecutar_scrapers(lista, "SCRAPING SNIFA / SMA")
+
+def run_pertinencias():
+    if not dentro_del_horario(): return
+    from src.scrapers.sea_legal import PertinenciasScraper
+    ejecutar_scrapers([("Pertinencias SEA", PertinenciasScraper)], "SCRAPING PERTINENCIAS (CADA HORA)")
+
+def run_tribunales():
+    if not dentro_del_horario(): return
+    from src.scrapers.primerTribunal import PrimerTribunalScraper
+    from src.scrapers.segundoTribunal import SegundoTribunalScraper
+    from src.scrapers.tercerTribunal import TercerTribunalScraperLegal
+    lista = [
+        ("Primer Tribunal Ambiental",  PrimerTribunalScraper),
+        ("Segundo Tribunal Ambiental", SegundoTribunalScraper),
+        ("Tercer Tribunal Ambiental",  TercerTribunalScraperLegal),
+    ]
+    ejecutar_scrapers(lista, "SCRAPING TRIBUNALES (CADA HORA)")
+
+def run_noticias():
+    if not dentro_del_horario(): return
+    from src.scrapers.mma import MMAScraper
+    from src.scrapers.sbap import SBAPScraper
+    from src.scrapers.sea import SEAScraper
+    from src.scrapers.sernageomin import SernageominScraper
+    from src.scrapers.tribunal2 import TribunalScraper
+    from src.scrapers.sma import SMAScraper
+    from src.scrapers.corteSuprema import CorteSupremaScraper
+    from src.scrapers.tribunal3 import TercerTribunalScraper
+    lista = [
+        ("Tercer Tribunal (Noticias)",   TercerTribunalScraper),
+        ("Corte Suprema",                CorteSupremaScraper),
+        ("SMA",                          SMAScraper),
+        ("MMA",                          MMAScraper),
+        ("SBAP",                         SBAPScraper),
+        ("SEA Noticias",                 SEAScraper),
+        ("Sernageomin",                  SernageominScraper),
+        ("Tribunal Ambiental (Noticias)",TribunalScraper),
+    ]
+    ejecutar_noticias(lista, "SCRAPING NOTICIAS (CADA HORA)")
 
 # ─── Programación horaria ────────────────────────────────────────────────────
 def main():
     log.info("BioNews Scheduler iniciado.")
-    log.info(f"Los scrapers correrán cada hora entre {HORA_INICIO.strftime('%H:%M')} y {HORA_FIN.strftime('%H:%M')}.")
+    
+    # 1. Diario Oficial: 1 vez al día (07:00)
+    schedule.every().day.at("07:00").do(run_diario_oficial)
+    
+    # 2. SNIFA/SMA: 2 veces al día (07:00 y 14:00)
+    schedule.every().day.at("07:00").do(run_snifa)
+    schedule.every().day.at("14:00").do(run_snifa)
+    
+    # 3. Pertinencias: cada hora (dentro del horario)
+    schedule.every().hour.at(":05").do(run_pertinencias)
+    
+    # 4. Noticias: cada hora (dentro del horario)
+    schedule.every().hour.at(":10").do(run_noticias)
+    
+    # 5. Todo lo demás (Tribunales): cada hora (dentro del horario)
+    schedule.every().hour.at(":15").do(run_tribunales)
 
-    # Corre cada hora en punto (ej: 07:00, 08:00, ... 19:00)
-    schedule.every().hour.at(":00").do(run_scrapers_job)
-
-    # Primera ejecución inmediata al arrancar (si es horario válido)
-    log.info("Ejecutando primera pasada al arrancar el scheduler...")
-    run_scrapers_job()
+    log.info("Tareas programadas correctamente.")
+    
+    # Para la primera ejecución si es necesario, pero como ya están 
+    # separados, mejor que corra la programación. Si se quiere forzar al arrancar:
+    # Si la app se inicia en el día, para no esperar a la hora, se puede hacer:
+    if dentro_del_horario():
+        log.info("Ejecución inicial al arrancar...")
+        run_pertinencias()
+        run_tribunales()
+        run_noticias()
 
     while True:
         schedule.run_pending()
-        time.sleep(30)   # revisa cada 30 segundos
-
+        time.sleep(30)
 
 if __name__ == "__main__":
     main()
