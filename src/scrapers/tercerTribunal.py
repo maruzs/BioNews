@@ -140,12 +140,13 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
             caratula = causa.get('cover_title') or "sin caratula"
             estado_procesal = determinar_estado(causa)
             accion = f"https://causas.3ta.cl/causes/{id_causa}"
+            fecha_scraping = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             cursor.execute('''
                 INSERT OR REPLACE INTO Tribunales
-                (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion))
+                (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion, fecha_scraping)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, fecha_scraping))
             
             nuevos_registros += 1
             
@@ -165,7 +166,7 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
         return 0
 
 
-class TercerTribunalScraperLegal:
+class TercerTribunalScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
     def run(self):
@@ -179,9 +180,9 @@ class TercerTribunalScraperLegal:
             ultima_fecha = obtener_ultima_fecha(conn)
             
             if ultima_fecha:
-                print(f"Ultima fecha en BD para el Tercer Tribunal: {ultima_fecha.strftime('%d-%m-%Y')}")
+                print(f"Ultima fecha registrada en BD: {ultima_fecha.strftime('%d-%m-%Y')}")
             else:
-                print("No se encontraron fechas previas. Se procesaran los mas recientes.")
+                print("No se encontraron fechas previas. Se procesaran hasta 10 del ano actual.")
                 
             nuevos = actualizar_tercer_tribunal(conn, ultima_fecha)
             conn.close()
@@ -192,5 +193,5 @@ class TercerTribunalScraperLegal:
 
 
 if __name__ == "__main__":
-    scraper = TercerTribunalScraperLegal()
+    scraper = TercerTribunalScraper()
     scraper.run()

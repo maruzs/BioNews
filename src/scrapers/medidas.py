@@ -8,7 +8,7 @@ import sqlite3
 import os
 import requests
 from bs4 import BeautifulSoup
-
+from datetime import datetime
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
 
@@ -127,17 +127,18 @@ class MedidasProvisionalesScraper:
         for record in nuevos:
             cursor.execute('''
                 INSERT OR REPLACE INTO medidas_provisionales (
-                    expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, estado, detalle_link
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    expediente, nombre_razon_social, unidad_fiscalizable,
+                    categoria, region, estado, detalle_link, fecha_scraping
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
-                record['unidad_fiscalizable'],
                 record['nombre_razon_social'],
+                record['unidad_fiscalizable'],
                 record['categoria'],
                 record['region'],
                 record['estado'],
-                record['detalle_link']
+                record['detalle_link'],
+                datetime.now()
             ))
             print(f"  + {record['expediente']}")
 

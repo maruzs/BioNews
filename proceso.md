@@ -167,37 +167,11 @@ Todo igual por ahora, no cambiar nada
 
 1. Al cerrar sesion la url sigue teniendo lo ultimo que se hizo (ej: https://directory-minute-eight-app.trycloudflare.com/fiscalizaciones)
 
-### Funcionamiento - Tablas (1 - Urgente)
-
-1. En la tabla de pertinencias note que cuando se agregan nuevos registros se agregan al final de la tabla, no al principio como deberia ser. Ademas quiero que de por si la tabla siempre este ordenada por fecha de manera descendente (De mas nueva a mas antigua) por defecto.
-
-2. En general las tablas estan demorando bastante en cargar en la pagina (2-3 segundos para las pertinencias por ejemplo). Esto se puede deber a la cantidad de registros (mas de 25k) y a que probablemente se esten haciendo consultas a la base de datos en tiempo real. Habria que optimizar eso de alguna manera.
-   Podria implementarse un sistema de paginacion para que no se carguen todos los registros de una vez? Y que solo se carguen los primeros 100 registros y de ahi en mas se carguen de 20 en 20 segun el usuario avance? O con un scroll y ahi se vaya cargando?
-3. Los filtros deben ser los mismos que las columnas de las tablas (Expedientes e IDs no), por ejemplo para sancionatorios deberia poder filtrarse en el 'Desplegar filtros' por Expediente, Unidad Fiscalizable, Categoria, Region y Estado (Expediente no)
-4. En el desplegar filtros debe haber una manera de filtrar por un rango de fechas (si es que existen para la tabla).
-
-### Funcionamiento - Scheduler (1 - Urgente)
-
-1. En normativas ya no quiero que se actualice solo a las 7 am, quiero que se actualice una vez al dia a la hora que sea necesario si no hay informacion del dia actual (revisar ultima fecha agregada o algo asi), recuerda que son de lunes a sabado, los domingos no hay normativas.
-2. Revisar Panel administrador para el tema de los horarios del scheduler, quiero que se puedan modificar desde ahi.
-
 ### Interfaz - Visual (2 - Importante)
 
-1. Corregir iconos al cerrar la sidebar, quiero que se utilicen los mismos del dashboard abierto (es decir los que se muestran cuando el menu esta abierto)
+1. El punto rojo del menu lateral (que indica cambios) solo se muestra para noticias y cada vez que salgo de la pagina se reinicia el proceso aunque ya se hayan revisado y no hayan nuevas noticias.
 
-2. El punto rojo del menu lateral (que indica cambios) solo se muestra para noticias y cada vez que salgo de la pagina se reinicia el proceso aunque ya se hayan revisado y no hayan nuevas noticias.
-
-3. Cambiar informacion que se ve en la pestana de la pagina web, el icono es generico y el texto dice web. Quiero que el icono sea una hoja verde y el texto "BioNews"
-
-4. Actualmente la pagina es una copia de otra llamada Ecosinfoambiental, quiero cambiar la interfaz para que sea propia de BioNews. Pero todas las funcionalidades y arquitectura deben ser las mismas, solo la estetica y diseno debe cambiar, eso lo dejo a libre disposicion. (4 - Wishlist, dejar para el final junto a lo de la app movil)
-
-### Panel de administrador: (1 - Urgente)
-
-1. El log de scrapers debe ser para todos los scrapers, actualmente solo tiene para ver los logs de las noticias
-2. Debe haber un boton para scrapear manualmente por area (Noticias, SEA, SNIFA, Normativas)
-3. En la lista de usuarios registrados cuando borro a un usuario no se resetean los indices de los otros, por lo que al crear nuevos usuarios no se ordenan como deberia ser.
-4. Quiero ver cuando fue el ultimo ingreso de cada usuario (ultima vez que hizo login)
-5. Quiero que los horarios del scheduler se puedan modificar desde el panel de administrador
+2. Actualmente la pagina es una copia de otra llamada Ecosinfoambiental, quiero cambiar la interfaz para que sea propia de BioNews. Pero todas las funcionalidades y arquitectura deben ser las mismas, solo la estetica y diseno debe cambiar, eso lo dejo a libre disposicion. (4 - Wishlist, dejar para el final junto a lo de la app movil)
 
 ### App mobil (4 - Wishlist, apartado grande, dejar para el final)
 

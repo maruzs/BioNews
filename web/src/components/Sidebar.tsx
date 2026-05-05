@@ -56,34 +56,7 @@ const Sidebar = () => {
       .then(res => res.json())
       .then(checkUpdates)
       .catch(() => {});
-  }, [token]);
-
-  useEffect(() => {
-    // Clear red dot if path matches and save to localStorage
-    const path = location.pathname;
-    const now = new Date().toISOString();
-    
-    setUpdates(prev => {
-      const next = { ...prev };
-      const markRead = (key: string) => {
-        if (!user) return;
-        next[key] = false;
-        localStorage.setItem(`read_${key}_${user.id}`, now);
-      };
-
-      if (path === '/noticias') markRead('noticias');
-      if (path === '/normativas') markRead('normativas');
-      if (path === '/pertinencias') markRead('pertinencias');
-      if (path === '/fiscalizaciones') markRead('fiscalizaciones');
-      if (path === '/sancionatorios') markRead('sancionatorios');
-      if (path === '/sanciones') markRead('sanciones');
-      if (path === '/programas') markRead('programas');
-      if (path === '/medidas') markRead('medidas');
-      if (path === '/requerimientos') markRead('requerimientos');
-      if (path === '/tribunales') markRead('tribunales');
-      return next;
-    });
-  }, [location.pathname]);
+  }, [token, location.pathname]);
 
   const handleMobileClose = () => {
     if (window.innerWidth <= 768) {

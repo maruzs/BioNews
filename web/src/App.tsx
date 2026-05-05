@@ -56,21 +56,21 @@ function ProtectedLayout() {
           <Route path="/favoritos" element={<ReportLayout key="favoritos" title="Favoritos" description="Tus normativas y proyectos guardados." listTitle="Favoritos" isFavoritesPage={true} />} />
           
           {/* Diario Oficial */}
-          <Route path="/normativas" element={<ReportLayout key="normativas" title="Normativas" description="Visualización de normativas publicadas en el Diario Oficial." listTitle="Normativas" tableName="normativas" />} />
+          <Route path="/normativas" element={<ReportLayout key="normativas" title="Normativas" description="Visualización de normativas publicadas en el Diario Oficial." listTitle="Normativas" tableName="normativas" category="normativas" />} />
           
           {/* SEA */}
-          <Route path="/pertinencias" element={<ReportLayout key="pertinencias" title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" tableName="pertinencias" />} />
+          <Route path="/pertinencias" element={<ReportLayout key="pertinencias" title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" tableName="pertinencias" category="pertinencias" />} />
 
           {/* SMA */}
-          <Route path="/fiscalizaciones" element={<ReportLayout key="fiscalizaciones" title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" tableName="fiscalizaciones" />} />
-          <Route path="/sancionatorios" element={<ReportLayout key="sancionatorios" title="Sancionatorios" description="Reporte de procesos sancionatorios de la SMA." listTitle="Sancionatorios" tableName="sancionatorios" />} />
-          <Route path="/sanciones" element={<ReportLayout key="sanciones" title="Sanciones" description="Registro público de sanciones emitidas." listTitle="Sanciones" tableName="registroSanciones" />} />
-          <Route path="/programas" element={<ReportLayout key="programas" title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" tableName="programasDeCumplimiento" />} />
-          <Route path="/medidas" element={<ReportLayout key="medidas" title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" tableName="medidas_provisionales" />} />
-          <Route path="/requerimientos" element={<ReportLayout key="requerimientos" title="Requerimientos de Ingreso" description="Reporte de requerimientos de ingreso." listTitle="Requerimientos" tableName="requerimientos" />} />
+          <Route path="/fiscalizaciones" element={<ReportLayout key="fiscalizaciones" title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" tableName="fiscalizaciones" category="fiscalizaciones" />} />
+          <Route path="/sancionatorios" element={<ReportLayout key="sancionatorios" title="Sancionatorios" description="Reporte de procesos sancionatorios de la SMA." listTitle="Sancionatorios" tableName="sancionatorios" category="sancionatorios" />} />
+          <Route path="/sanciones" element={<ReportLayout key="sanciones" title="Sanciones" description="Registro público de sanciones emitidas." listTitle="Sanciones" tableName="registroSanciones" category="sanciones" />} />
+          <Route path="/programas" element={<ReportLayout key="programas" title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" tableName="programasDeCumplimiento" category="programas" />} />
+          <Route path="/medidas" element={<ReportLayout key="medidas" title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" tableName="medidas_provisionales" category="medidas" />} />
+          <Route path="/requerimientos" element={<ReportLayout key="requerimientos" title="Requerimientos de Ingreso" description="Reporte de requerimientos de ingreso." listTitle="Requerimientos" tableName="requerimientos" category="requerimientos" />} />
 
           {/* Tribunales */}
-          <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" />} />
+          <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" category="tribunales" />} />
           
           {/* Admin Panel */}
           <Route path="/admin" element={<AdminPanel />} />

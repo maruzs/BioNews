@@ -8,7 +8,7 @@ import sqlite3
 import os
 import requests
 from bs4 import BeautifulSoup
-
+from datetime import datetime
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
 
@@ -132,8 +132,8 @@ class RegistroSancionesScraper:
             cursor.execute('''
                 INSERT OR REPLACE INTO registroSanciones (
                     expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, multa_uta, pago_multa, detalle_link
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    categoria, region, multa_uta, pago_multa, detalle_link, fecha_scraping
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['unidad_fiscalizable'],
@@ -142,7 +142,8 @@ class RegistroSancionesScraper:
                 record['region'],
                 record['multa_uta'],
                 record['pago_multa'],
-                record['detalle_link']
+                record['detalle_link'],
+                datetime.now()
             ))
             print(f"  + {record['expediente']}")
 

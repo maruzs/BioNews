@@ -31,6 +31,7 @@ interface ReportLayoutProps {
   actionField?: string;
   /** Es la página de favoritos */
   isFavoritesPage?: boolean;
+  category?: string;
   children?: React.ReactNode;
 }
 
@@ -134,33 +135,47 @@ const TABLE_ACTION_FIELDS: Record<string, string> = {
 
 import { useAuth } from '../context/AuthContext';
 
-const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTitle, tableName, columnConfig, idField, actionField, isFavoritesPage, children }) => {
+const ReportLayout: React.FC<ReportLayoutProps> = ({ 
+  title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
+}) => {
   const { token, user } = useAuth();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [filterEstados, setFilterEstados] = useState<Set<string>>(new Set()); // Deprecated, replaced by columnFilters
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [activeTab, setActiveTab] = useState('reporte');
 
-  const toggleFilter = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
-    setFn(prev => {
-      const next = new Set(prev);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      return next;
-    });
-  };
-  
-  // Manual favorite form state
-  const [manualFav, setManualFav] = useState({ id: '', nombre: '', fuente: '', accion: '' });
-  
-  // To apply filters only when "APLICAR FILTRO" is clicked
   const [appliedColumnFilters, setAppliedColumnFilters] = useState<Record<string, string>>({});
   const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
+  const [appliedSearch, setAppliedSearch] = useState('');
+
+  // Manual favorite form state
+  const [manualFav, setManualFav] = useState({ id: '', nombre: '', fuente: '', accion: '' });
+
+  const handleManualFavoriteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualFav.id || !manualFav.fuente || !manualFav.nombre) return;
+    
+    try {
+      await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ 
+          id_o_link: manualFav.id, 
+          fuente: manualFav.fuente, 
+          nombre: manualFav.nombre,
+          accion: manualFav.accion
+        })
+      });
+      // Refresh the page or data
+      window.location.reload();
+    } catch(err) {
+      console.error("Error saving manual fav", err);
+    }
+  };
 
   // On mount, apply user preferences if available
   useEffect(() => {
@@ -182,7 +197,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     }
   }, [user, tableName, token]);
 
-  // Determinar campos ID y acción
   const effectiveIdField = idField || (tableName ? TABLE_ID_FIELDS[tableName] : 'link') || 'link';
   const effectiveActionField = actionField || (tableName ? TABLE_ACTION_FIELDS[tableName] : 'link') || 'link';
 
@@ -190,7 +204,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch favorites list first
         const favRes = await fetch('/api/favorites', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -199,7 +212,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
         setFavorites(favSet);
 
         if (isFavoritesPage) {
-          // If on favorites page, just use the fetched favorites data
           const favData = favJson.map((f: any) => ({
             _id: f.id_o_link,
             _nombre: f.nombre,
@@ -261,109 +273,78 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     }
   };
 
-  const handleManualFavoriteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualFav.id || !manualFav.fuente || !manualFav.nombre) return;
-    
-    try {
-      await fetch('/api/favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-          id_o_link: manualFav.id, 
-          fuente: manualFav.fuente, 
-          nombre: manualFav.nombre,
-          accion: manualFav.accion
-        })
-      });
-      // Refresh the page or data
-      window.location.reload();
-    } catch(err) {
-      console.error("Error saving manual fav", err);
+  const filteredData = useMemo(() => {
+    let result = data;
+    if (appliedSearch) {
+      const lowerSearch = appliedSearch.toLowerCase();
+      result = result.filter(item => 
+        Object.values(item).some(val => 
+          val && String(val).toLowerCase().includes(lowerSearch)
+        )
+      );
     }
-  };
-
-  let finalData = data;
-  if (isFavoritesPage) {
-    finalData = data;
-  }
-
-  const filteredData = finalData.filter(item => {
-    // Búsqueda global en todos los campos de texto
-    const matchesSearch = !search || Object.values(item).some(val => 
-      typeof val === 'string' && val.toLowerCase().includes(search.toLowerCase())
-    );
-    
-    // Filtros de columnas
-    const matchesColumns = Object.entries(appliedColumnFilters).every(([field, filterValue]) => {
-      if (!filterValue) return true;
-      const itemVal = item[field];
-      if (!itemVal) return false;
-      
-      const strVal = String(itemVal).toLowerCase();
-      
-      // For categorical fields, check for exact match if it was selected from a dropdown (space separated logic was flawed)
-      const categoricalFields = ['estado', 'Estado', 'Estado_Procesal', 'organismo', 'Tribunal', 'categoria', 'region'];
-      if (categoricalFields.includes(field)) {
-        // If it's a multiple preference (space separated), check for any exact match
-        const selectedOptions = filterValue.toLowerCase().split('  '); // Use double space or just exact match?
-        // Let's use simple logic: if it's one of the unique options, check exact.
-        // Actually, the leak happens because of .includes().
-        // For preference terms, we should match at least one full term.
-        const terms = filterValue.split(';').map(t => t.trim().toLowerCase()).filter(Boolean);
-        if (terms.length > 0) {
-          return terms.some(t => strVal === t || strVal.includes(t));
-        }
+    Object.entries(appliedColumnFilters).forEach(([field, value]) => {
+      if (value) {
+        const lowerValue = value.toLowerCase();
+        result = result.filter(item => {
+          const itemVal = item[field];
+          if (!itemVal) return false;
+          const strVal = String(itemVal).toLowerCase();
+          const terms = value.split(';').map(t => t.trim().toLowerCase()).filter(Boolean);
+          if (terms.length > 1) {
+             return terms.some(t => strVal === t || strVal.includes(t));
+          }
+          return strVal.includes(lowerValue);
+        });
       }
-
-      return strVal.includes(filterValue.toLowerCase());
     });
-
-    // Filtro de rango de fechas
-    let matchesDate = true;
     if (appliedDateRange.start || appliedDateRange.end) {
-      // Intentamos usar activoColumns si ya está computado, o adivinar el campo fecha
       const dateFieldNames = ['fecha', 'Fecha', 'fecha_agregado'];
-      const dateField = dateFieldNames.find(f => f in item);
+      const dateField = dateFieldNames.find(f => data.length > 0 && f in data[0]);
       if (dateField) {
-        const itemDateStr = String(item[dateField] || '');
-        if (itemDateStr) {
-          let itemDate: Date | null = null;
-          if (itemDateStr.includes('-')) {
-            const datePart = itemDateStr.split(' ')[0];
-            const parts = datePart.split('-');
-            if (parts.length === 3) {
-              if (parts[0].length === 4) {
-                itemDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-              } else {
-                itemDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-              }
-            }
-          } else {
-             itemDate = new Date(itemDateStr);
+        result = result.filter(item => {
+          if (!item[dateField]) return false;
+          const itemDate = new Date(item[dateField]);
+          if (isNaN(itemDate.getTime())) return true;
+          let matchesDate = true;
+          if (appliedDateRange.start) {
+            const start = new Date(appliedDateRange.start);
+            if (itemDate < start) matchesDate = false;
           }
-          
-          if (itemDate && !isNaN(itemDate.getTime())) {
-            if (appliedDateRange.start) {
-              const start = new Date(appliedDateRange.start);
-              if (itemDate < start) matchesDate = false;
-            }
-            if (appliedDateRange.end) {
-              const end = new Date(appliedDateRange.end);
-              end.setDate(end.getDate() + 1);
-              if (itemDate >= end) matchesDate = false;
-            }
+          if (appliedDateRange.end) {
+            const end = new Date(appliedDateRange.end);
+            end.setHours(23, 59, 59, 999);
+            if (itemDate > end) matchesDate = false;
           }
-        }
+          return matchesDate;
+        });
       }
     }
-    
-    return matchesSearch && matchesColumns && matchesDate;
-  });
+    return result;
+  }, [data, appliedSearch, appliedColumnFilters, appliedDateRange]);
+
+  const [lastRead, setLastRead] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user && category) {
+      const key = `read_${category}_${user.id}`;
+      setLastRead(localStorage.getItem(key));
+    }
+  }, [user, category]);
+
+  useEffect(() => {
+    return () => {
+      if (user && category) {
+        const key = `read_${category}_${user.id}`;
+        localStorage.setItem(key, new Date().toISOString());
+      }
+    };
+  }, [user, category]);
 
   const handleApplyFilters = () => {
     setAppliedColumnFilters({ ...columnFilters });
     setAppliedDateRange({ ...dateRange });
+    setAppliedSearch(search);
   };
 
   const handleClearFilters = () => {
@@ -372,6 +353,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     setSearch('');
     setAppliedColumnFilters({});
     setAppliedDateRange({ start: '', end: '' });
+    setAppliedSearch('');
   };
 
   const downloadExcel = () => {
@@ -423,7 +405,31 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
 
   const columns: GridColDef[] = useMemo(() => {
     const cols: GridColDef[] = [
-      { field: 'rowNumber', headerName: 'Nº', width: 60, filterable: false },
+      { 
+        field: 'rowNumber', 
+        headerName: 'Nº', 
+        width: 80, 
+        filterable: false,
+        renderCell: (params: GridRenderCellParams) => {
+          const isNew = lastRead && params.row.fecha_scraping && new Date(params.row.fecha_scraping) > new Date(lastRead);
+          return (
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', height: '100%'}}>
+              <span>{params.row.rowNumber}</span>
+              {isNew && (
+                <span style={{ 
+                  backgroundColor: '#22c55e', 
+                  color: 'white', 
+                  fontSize: '9px', 
+                  padding: '2px 5px', 
+                  borderRadius: '10px', 
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }}>NUEVO</span>
+              )}
+            </div>
+          );
+        }
+      },
       { 
         field: 'fav', 
         headerName: 'Fav', 
@@ -455,7 +461,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
         flex: col.flex,
         minWidth: col.minWidth,
         type: isDateField ? 'date' : undefined,
-        valueGetter: isDateField ? (value: any) => {
+        valueGetter: isDateField ? (params: any) => {
+          const value = params.value;
           if (!value) return null;
           const str = String(value);
           // Intentar parseo ISO directo (YYYY-MM-DD)
@@ -502,7 +509,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     });
 
     return cols;
-  }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage]);
+  }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage, lastRead]);
 
   return (
     <div className="report-container">
@@ -559,7 +566,12 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
               {activeColumns
                 .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
                 .map(col => {
-                  const categoricalFields = ['estado', 'Estado', 'Estado_Procesal', 'organismo', 'Tribunal', 'categoria', 'region'];
+                  const categoricalFields = [
+                    'estado', 'Estado', 'Estado_Procesal', 
+                    'organismo', 'Tribunal', 'categoria', 
+                    'region', 'tipo_normativa', 'suborganismo', 
+                    'Tipo_de_Procedimiento', 'materia', 'resultado'
+                  ];
                   const isCategorical = categoricalFields.includes(col.field);
                   
                   if (isCategorical) {
@@ -655,18 +667,33 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
       </div>
 
       <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          localeText={esES.components.MuiDataGrid.defaultProps.localeText}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 100 } },
-          }}
-          pageSizeOptions={[10, 25, 50, 100]}
-          disableRowSelectionOnClick
+        <DataGrid 
+          rows={rows} 
+          columns={columns} 
           loading={loading}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 10 } },
+          }}
+          pageSizeOptions={[10, 25, 50]}
+          disableRowSelectionOnClick
+          localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+          getRowClassName={(params) => {
+            if (!lastRead) return '';
+            const scrapingDate = params.row.fecha_scraping;
+            if (!scrapingDate) return '';
+            return new Date(scrapingDate) > new Date(lastRead) ? 'new-record-highlight' : '';
+          }}
           sx={{
             border: 'none',
+            '& .MuiDataGrid-cell:focus': { outline: 'none' },
+            '& .new-record-highlight': {
+              backgroundColor: 'rgba(34, 197, 94, 0.12)',
+              fontWeight: '500',
+              borderLeft: '5px solid var(--primary)',
+            },
+            '& .MuiDataGrid-row.new-record-highlight:hover': {
+              backgroundColor: 'rgba(34, 197, 94, 0.18)',
+            },
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid #f0f0f0',
             },

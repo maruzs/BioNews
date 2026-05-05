@@ -151,11 +151,11 @@ def run_tribunales():
     if not dentro_del_horario(): return
     from src.scrapers.primerTribunal import PrimerTribunalScraper
     from src.scrapers.segundoTribunal import SegundoTribunalScraper
-    from src.scrapers.tercerTribunal import TercerTribunalScraperLegal
+    from src.scrapers.tercerTribunal import TercerTribunalScraper
     lista = [
         ("Primer Tribunal Ambiental",  PrimerTribunalScraper),
         ("Segundo Tribunal Ambiental", SegundoTribunalScraper),
-        ("Tercer Tribunal Ambiental",  TercerTribunalScraperLegal),
+        ("Tercer Tribunal Ambiental",  TercerTribunalScraper),
     ]
     ejecutar_scrapers(lista, "SCRAPING TRIBUNALES")
 
@@ -165,19 +165,19 @@ def run_noticias():
     from src.scrapers.sbap import SBAPScraper
     from src.scrapers.sea import SEAScraper
     from src.scrapers.sernageomin import SernageominScraper
-    from src.scrapers.tribunal2 import TribunalScraper
+    from src.scrapers.tribunal2 import TribunalScraper as SegundoTribunalNewsScraper
     from src.scrapers.sma import SMAScraper
     from src.scrapers.corteSuprema import CorteSupremaScraper
-    from src.scrapers.tribunal3 import TercerTribunalScraper
+    from src.scrapers.tribunal3 import TercerTribunalNewsScraper
     lista = [
-        ("Tercer Tribunal (Noticias)",   TercerTribunalScraper),
+        ("Tercer Tribunal",              TercerTribunalNewsScraper),
         ("Corte Suprema",                CorteSupremaScraper),
         ("SMA",                          SMAScraper),
         ("MMA",                          MMAScraper),
         ("SBAP",                         SBAPScraper),
-        ("SEA Noticias",                 SEAScraper),
+        ("SEA",                          SEAScraper),
         ("Sernageomin",                  SernageominScraper),
-        ("Tribunal Ambiental (Noticias)",TribunalScraper),
+        ("Segundo Tribunal",             SegundoTribunalNewsScraper),
     ]
     ejecutar_noticias(lista, "SCRAPING NOTICIAS")
 

@@ -75,9 +75,9 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
                         fecha_db = fecha_str
 
                     cursor.execute('''
-                        INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link))
+                        INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now()))
                     
     except Exception as e:
         print(f"Error procesando seccion {tipo_normativa} para la fecha {fecha_str}: {e}")

@@ -105,8 +105,20 @@ const AdminPanel = () => {
 
   const handleManualScrape = async (type: string) => {
     setScraping(type);
+    let url = '';
+    if (type === 'news') url = '/api/scrape/news';
+    if (type === 'sea') url = '/api/scrape/sea';
+    if (type === 'snifa') url = '/api/scrape/snifa';
+    if (type === 'normativas') url = '/api/scrape/normativas';
+    if (type === 'tribunales') url = '/api/scrape/tribunales';
+    
+    if (!url) {
+      setScraping(null);
+      return;
+    }
+
     try {
-      await fetch(`/api/scrape/${type}`, { 
+      await fetch(url, { 
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -235,6 +247,9 @@ const AdminPanel = () => {
           </button>
           <button onClick={() => handleManualScrape('normativas')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Play size={16} /> {scraping === 'normativas' ? '...' : 'Normativas'}
+          </button>
+          <button onClick={() => handleManualScrape('tribunales')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'tribunales' ? '...' : 'Tribunales'}
           </button>
           <button onClick={() => fetchLogs()} className="btn-primary" style={{ padding: '6px 15px' }}>
             Refrescar Logs

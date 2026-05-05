@@ -195,8 +195,8 @@ class SnifaFiscalizacionScraper:
             cursor.execute('''
                 INSERT OR REPLACE INTO fiscalizaciones (
                     expediente, nombre_razon_social, unidad_fiscalizable,
-                    categoria, region, estado, detalle_link
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    categoria, region, estado, detalle_link, fecha_scraping
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['nombre_razon_social'],
@@ -204,7 +204,8 @@ class SnifaFiscalizacionScraper:
                 record['categoria'],
                 record['region'],
                 record['estado'],
-                record['detalle_link']
+                record['detalle_link'],
+                datetime.now()
             ))
             print(f"  + {record['expediente']}")
 

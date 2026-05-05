@@ -2,7 +2,7 @@ from .engine import ScrapingEngine
 from datetime import datetime
 from ..utils.date_parser import parse_fecha
 
-class TercerTribunalScraper:
+class TercerTribunalNewsScraper:
     def __init__(self):
         self.url_base = "https://3ta.cl/category/noticias"
         self.engine = ScrapingEngine()

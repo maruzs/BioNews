@@ -255,11 +255,11 @@ def _run_all_scrapers():
         from src.scrapers.tribunal2 import TribunalScraper
         from src.scrapers.sma import SMAScraper
         from src.scrapers.corteSuprema import CorteSupremaScraper
-        from src.scrapers.tribunal3 import TercerTribunalScraper
+        from src.scrapers.tribunal3 import TercerTribunalNewsScraper
         # Scrapers de datos (tablas especificas)
         from src.scrapers.primerTribunal import PrimerTribunalScraper
         from src.scrapers.segundoTribunal import SegundoTribunalScraper
-        from src.scrapers.tercerTribunal import TercerTribunalScraperLegal
+        from src.scrapers.tercerTribunal import TercerTribunalScraper
         from src.scrapers.diario_oficial import DiarioOficialScraper
         from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
         from src.scrapers.sea_legal import PertinenciasScraper
@@ -274,9 +274,9 @@ def _run_all_scrapers():
 
     # ── Scrapers de datos (escriben directamente en sus tablas) ──────────────
     datos_scrapers = [
-        ("Primer Tribunal Ambiental",  PrimerTribunalScraper),
-        ("Segundo Tribunal Ambiental", SegundoTribunalScraper),
-        ("Tercer Tribunal Ambiental",  TercerTribunalScraperLegal),
+        ("Primer Tribunal",            PrimerTribunalScraper),
+        ("Segundo Tribunal",           SegundoTribunalScraper),
+        ("Tercer Tribunal",            TercerTribunalScraper),
         ("Diario Oficial (Normativas)", DiarioOficialScraper),
         ("Pertinencias SEA",           PertinenciasScraper),
         ("SNIFA Sancionatorios",       SancionatoriosScraper),
@@ -301,12 +301,12 @@ def _run_all_scrapers():
 
     # ── Scrapers de noticias ─────────────────────────────────────────────────
     noticias_scrapers = [
-        ("Tercer Tribunal (Noticias)",    TercerTribunalScraper),
+        ("Tercer Tribunal",               TercerTribunalNewsScraper),
         ("Corte Suprema",                 CorteSupremaScraper),
         ("SMA",                           SMAScraper),
         ("MMA",                           MMAScraper),
         ("SBAP",                          SBAPScraper),
-        ("SEA Noticias",                  SEAScraper),
+        ("SEA",                           SEAScraper),
         ("Sernageomin",                   SernageominScraper),
         ("Segundo Tribunal",              TribunalScraper),
     ]
@@ -333,6 +333,54 @@ def _run_all_scrapers():
 def scrape_all(background_tasks: BackgroundTasks):
     background_tasks.add_task(_run_all_scrapers)
     return {"message": "Scraping iniciado en background."}
+
+@app.post("/api/scrape/tribunales")
+def scrape_tribunales(background_tasks: BackgroundTasks):
+    background_tasks.add_task(_run_tribunales_scrapers)
+    return {"message": "Scraping de tribunales iniciado."}
+
+def _run_tribunales_scrapers():
+    """Función interna que corre solo los scrapers de tribunales legales."""
+    log.info("--- SCRAPING TRIBUNALES MANUAL ---")
+    
+    # 1. Borrar el ultimo registro de cada tribunal para permitir re-scraping manual
+    # try:
+    #     conn = db.get_connection()
+    #     cursor = conn.cursor()
+    #     tribunales = ["Primer Tribunal", "Segundo Tribunal", "Tercer Tribunal"]
+    #     for t in tribunales:
+    #         cursor.execute("DELETE FROM Tribunales WHERE rowid IN (SELECT rowid FROM Tribunales WHERE Tribunal = ? ORDER BY Fecha DESC LIMIT 1)", (t,))
+    #     conn.commit()
+    #     log.info("Limpieza de últimos registros de tribunales completada.")
+    # except Exception as e:
+    #     log.error(f"Error limpiando registros de tribunales: {e}")
+
+    # 2. Ejecutar scrapers
+    try:
+        from src.scrapers.primerTribunal import PrimerTribunalScraper
+        from src.scrapers.segundoTribunal import SegundoTribunalScraper
+        from src.scrapers.tercerTribunal import TercerTribunalScraper
+    except ImportError as e:
+        log.error(f"Error de importación en scrapers tribunales: {e}")
+        return
+
+    scrapers = [
+        ("Primer Tribunal", PrimerTribunalScraper),
+        ("Segundo Tribunal", SegundoTribunalScraper),
+        ("Tercer Tribunal", TercerTribunalScraper),
+    ]
+
+    for nombre, ScraperClass in scrapers:
+        log.info(f"Procesando {nombre}...")
+        try:
+            nuevos = ScraperClass().run()
+            db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
+            log.info(f"{nombre}: {nuevos} nuevas causas.")
+        except Exception as e:
+            db.log_scraper_run(nombre, exito=False, error=str(e))
+            log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
+
+    log.info("--- SCRAPING TRIBUNALES FINALIZADO ---")
 
 def _run_news_scrapers():
     """Función interna que corre solo los scrapers de noticias."""

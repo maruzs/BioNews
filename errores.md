@@ -1,36 +1,16 @@
-# BUGS Y ERRORES IDENTIFICADOS (v4)
-
-Ok, los scrapers estan funcionando perfectamente.
-Al menos en la pestana de administrador todo va bien de manera manual, asumire que funcionan tambien con el scheduler.
+# BUGS Y ERRORES IDENTIFICADOS (v5)
 
 ## ERRORES, BUGS, PROBLEMAS Y CAMBIOS
 
-Aun no se si esta implementado el tema de que las noticias nuevas tengan un color diferente hasta que se salga de la pestana de noticias. (Despues de escribir eso cambie a un usuario normal y no, no esta implementado lo de los colores nuevos)
+El punto rojo de que hay algo nuevo no desaparece cuando salgo de la pestana.
+Por ejemplo hay nuevas pertinencias y se muestra el punto rojo en la sidebar, ingreso y cuando salgo o voy a otra pestana (ejemplo Home) no desaparece el punto rojo, y deberia desaparecer hasta que haya nuevas pertinencias o noticias, etc
 
-1. Que cuando hay noticias nuevas aparte de tener el puntito rojo en la sidebar las ultimas noticias agregadas tengan un color diferente al resto hasta que se salga de la pestana de noticias, en cuyo caso se va a considerar que ya fueron "revisadas" las nuevas.
-2. Lo mismo para las pertinencias y todo lo del SMA
+No esta implementado que las cosas nuevas se vean de un color diferente, esto debe ser para cada usuario, es decir desde la ultima vez que ingreso a la respectiva pestana. Las cosas nuevas deben tener alguna marca o algo que los distinga del resto, una vez que el usuario entra a la pestana se marcan como "vistos" (para ese usuario) y se quita el color diferente. Por ejemplo si hay 2 noticias nuevas, una vista y otra no, se muestra el distintivo en la no vista, y al entrar a la pestana se quita el color diferente de ambas.
 
-## Tribunales
+Se sigue usando el 'scheduler.py' o ahora todo se hace desde server.py? Porque si se sigue usando me di cuenta que el codigo no esta actualizado (creo que solo el de los tribunales) con los nuevos nombres de las funciones y todo eso, revisalo ya que tal vez por eso no se estaba ejecutando cada una hora. Recuerda que cambiamos los nombres de los tribunales en ciertos archivos
 
-En la pestana Tribunales al desplegar filtros, 'Filtrar por Tipo' no es un dropdown, hay que escribir ahi, eso hay que arreglarlo
+## NUEVO
 
-## Panel de administrador
+Dijiste que borraste referencia a archivos obsoletos como tribunal3.py, pero de ahi se obtienen las noticias del tercer tribunal, **revisar**
 
-Implementar un boton en el panel de administrador para comenzar el scrapeo de los tribunales, ya que estaba revisandolos manualmente y en el primer y segundo tribunal no hay causas nuevas, pero en el tercer tribunal si y no se han actualizado (hay una del 4 de mayo pero las ultimas registradas son del 1 de mayo) y necesito ver si es porque no se ha ejecutado el scraper de tribunales o esta fallando, por lo que quiero borrar el ultimo registro de cada uno de los tres tribunales y ejecutar el scraper de tribunales manualmente desde el panel de administrador para ver si se obtienen las causas nuevas correctamente
-
-## Noticias
-
-El filtro por fecha de Noticias requiere que se escriba manualmente (con '/' incluso), quiero que vuelva a ser un calendario, todo lo demas esta perfecto en cuanto a noticias
-
-## Normativas
-
-En normativas al desplegar filtro, el 'Filtrar por Tipo' sigue siendo un cuadro de texto en lugar de un dropdown con los posibles tipos (Normas Generales, Normas Particulares y Boletin Oficial Mineria). Lo mismo para los suborganismos, deberia ser un dropdown con los suborganismos que existen. Por lo demas, todo perfecto en normativas
-
-## SEA - Pertinencias
-
-En los filtros desplegados al escribir por ejemplo en 'Filtrar por Proponente' se demora bastante en escribir cada letra, me imagino que tiene que ver con la enorme cantidad de registros, pero a la vez no tiene mucho sentido ya que solo al clickear 'Aplicar Filtro' deberia ejecutarse la busqueda y no mientras se escribe. (revisar 'Todos los filtros desplegables' para mas detalle de lo que quiero que pase)
-
-## Todos los filtros desplegables
-
-En los filtros desplegados al escribir por ejemplo en 'Filtrar por Proponente' se demora bastante en escribir cada letra, me imagino que tiene que ver con la enorme cantidad de registros, pero a la vez no tiene mucho sentido ya que solo al clickear 'Aplicar Filtro' deberia ejecutarse la busqueda y no mientras se escribe.
-Esto ocurre en todos los filtros desplegables que tienen para escribir texto, me gustaria que solo cuando se apriete 'Enter' o 'Aplicar Filtro' se ejecute la busqueda de manera que la escritura sea mas fluida y no se tenga que esperar a que se escriba cada letra.
+Tiene el mismo nombre la clase de tercerTribunal.py y tribunal3.py, pero uno es para noticias y el otro para las causa, revisar eso!

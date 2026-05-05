@@ -31,6 +31,15 @@ const NewsPage = () => {
     }
   }, [user]);
 
+  // Mark as read on unmount
+  useEffect(() => {
+    return () => {
+      if (user) {
+        localStorage.setItem(`read_noticias_${user.id}`, new Date().toISOString());
+      }
+    };
+  }, [user]);
+
   useEffect(() => {
     if (!token) return;
     fetch('/api/news', {
@@ -74,9 +83,7 @@ const NewsPage = () => {
     const matchesSearch = item.titulo?.toLowerCase().includes(searchWord.toLowerCase()) || 
                           fuenteNormalizada?.toLowerCase().includes(searchWord.toLowerCase());
     
-    // El formato del input ahora es YYYY/MM/DD o YYYY-MM-DD
-    const normalizedFilterDate = filterDate.replace(/\//g, '-');
-    const matchesDate = normalizedFilterDate ? item.fecha.startsWith(normalizedFilterDate) : true;
+    const matchesDate = filterDate ? item.fecha.startsWith(filterDate) : true;
     
     const matchesSource = selectedSources.size > 0 ? selectedSources.has(fuenteNormalizada) : true;
     
@@ -112,8 +119,7 @@ const NewsPage = () => {
           <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px'}}>
             <span style={{fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500}}>Fecha:</span>
             <input 
-              type="text" 
-              placeholder="YYYY/MM/DD"
+              type="date" 
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
               style={{border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', backgroundColor: 'transparent'}}
