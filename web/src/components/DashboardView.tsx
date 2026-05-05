@@ -115,7 +115,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
                 paddingAngle={5}
                 dataKey="count"
               >
-                {stats.by_region.map((entry: any, index: number) => (
+                {stats.by_region.map((_: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -163,7 +163,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
                 dataKey="count"
                 label
               >
-                {stats.by_tribunal.map((entry: any, index: number) => (
+                {stats.by_tribunal.map((_: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -218,7 +218,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
           <ResponsiveContainer>
             <PieChart>
               <Pie data={stats.by_estado} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                {stats.by_estado.map((entry: any, index: number) => (
+                {stats.by_estado.map((_: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
