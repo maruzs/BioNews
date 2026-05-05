@@ -24,8 +24,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    env_file:
-      - .env
     expose:
       - "8000"
     networks:
@@ -48,8 +46,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    env_file:
-      - .env
     networks:
       - bionews-net
     depends_on:

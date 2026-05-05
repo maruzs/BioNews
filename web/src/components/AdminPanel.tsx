@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, Trash2, ShieldOff, Play } from 'lucide-react';
+import { ShieldAlert, Trash2, ShieldOff, Play, Save } from 'lucide-react';
 
 const AdminPanel = () => {
   const { token, user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [scraping, setScraping] = useState(false);
+  const [scraping, setScraping] = useState<string | null>(null);
+  const [schedulerConfig, setSchedulerConfig] = useState<any>({
+    snifa_time_1: "07:00",
+    snifa_time_2: "14:00",
+    pertinencias_interval: 1,
+    noticias_interval: 1,
+    tribunales_interval: 1,
+    hora_inicio: "07:00",
+    hora_fin: "19:00"
+  });
 
   const fetchUsers = async () => {
     try {
@@ -36,12 +45,37 @@ const AdminPanel = () => {
     }
   };
 
+  const fetchSchedulerConfig = async () => {
+    try {
+      const res = await fetch('/api/admin/scheduler', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSchedulerConfig(await res.json());
+      }
+    } catch (err) {}
+  };
+
   useEffect(() => {
     if (user?.role === 'admin') {
       fetchUsers();
       fetchLogs();
+      fetchSchedulerConfig();
     }
   }, [user, token]);
+
+  const saveSchedulerConfig = async () => {
+    try {
+      await fetch('/api/admin/scheduler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(schedulerConfig)
+      });
+      alert('Configuración del scheduler guardada. Los cambios aplicarán en un máximo de 30 segundos.');
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const toggleBlock = async (userId: number, currentBlocked: number) => {
     try {
@@ -69,18 +103,18 @@ const AdminPanel = () => {
     }
   };
 
-  const handleManualScrape = async () => {
-    setScraping(true);
+  const handleManualScrape = async (type: string) => {
+    setScraping(type);
     try {
-      await fetch('/api/scrape/news', { 
+      await fetch(`/api/scrape/${type}`, { 
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchLogs();
+      alert('Scraping iniciado en segundo plano. Los logs se actualizarán cuando finalice.');
     } catch(err) {
       console.error(err);
     }
-    setScraping(false);
+    setScraping(null);
   };
 
   if (user?.role !== 'admin') {
@@ -109,24 +143,26 @@ const AdminPanel = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>Nº</th>
                 <th>Nombre</th>
                 <th>Correo</th>
                 <th>Rol</th>
                 <th>Estado</th>
+                <th>Último Ingreso</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
+              {users.map((u, index) => (
                 <tr key={u.id}>
-                  <td>{u.id}</td>
+                  <td>{index + 1}</td>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.role === 'admin' ? 'Administrador' : 'Usuario'}</td>
                   <td>
                     {u.blocked ? <span style={{color: '#ef4444', fontWeight: 600}}>Bloqueado</span> : <span style={{color: '#10b981', fontWeight: 600}}>Activo</span>}
                   </td>
+                  <td>{formatDate(u.last_login)}</td>
                   <td style={{ display: 'flex', gap: '10px' }}>
                     {u.role !== 'admin' && (
                       <>
@@ -146,16 +182,64 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginTop: '50px' }}>
+        <h2 style={{ fontSize: '20px', color: 'var(--text-dark)', marginBottom: '15px' }}>Configuración del Scheduler</h2>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>SNIFA Horario 1</label>
+              <input type="time" value={schedulerConfig.snifa_time_1} onChange={(e) => setSchedulerConfig({...schedulerConfig, snifa_time_1: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>SNIFA Horario 2</label>
+              <input type="time" value={schedulerConfig.snifa_time_2} onChange={(e) => setSchedulerConfig({...schedulerConfig, snifa_time_2: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Pertinencias (Cada X horas)</label>
+              <input type="number" min="1" max="24" value={schedulerConfig.pertinencias_interval} onChange={(e) => setSchedulerConfig({...schedulerConfig, pertinencias_interval: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Noticias (Cada X horas)</label>
+              <input type="number" min="1" max="24" value={schedulerConfig.noticias_interval} onChange={(e) => setSchedulerConfig({...schedulerConfig, noticias_interval: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Tribunales (Cada X horas)</label>
+              <input type="number" min="1" max="24" value={schedulerConfig.tribunales_interval} onChange={(e) => setSchedulerConfig({...schedulerConfig, tribunales_interval: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Inicio (Diario)</label>
+              <input type="time" value={schedulerConfig.hora_inicio} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_inicio: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Fin (Diario)</label>
+              <input type="time" value={schedulerConfig.hora_fin} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_fin: e.target.value})} className="filter-select" />
+            </div>
+          </div>
+          <button onClick={saveSchedulerConfig} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px' }}>
+            <Save size={18} /> Guardar Configuración
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h2 style={{ fontSize: '20px', color: 'var(--text-dark)' }}>Logs de Scrapers</h2>
-        <button 
-          onClick={handleManualScrape} 
-          disabled={scraping}
-          className="btn-primary" 
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px' }}
-        >
-          <Play size={18} /> {scraping ? 'Iniciando...' : 'Scrapear Noticias Manual'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button onClick={() => handleManualScrape('news')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'news' ? '...' : 'Noticias'}
+          </button>
+          <button onClick={() => handleManualScrape('sea')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'sea' ? '...' : 'SEA'}
+          </button>
+          <button onClick={() => handleManualScrape('snifa')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'snifa' ? '...' : 'SNIFA'}
+          </button>
+          <button onClick={() => handleManualScrape('normativas')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'normativas' ? '...' : 'Normativas'}
+          </button>
+          <button onClick={() => fetchLogs()} className="btn-primary" style={{ padding: '6px 15px' }}>
+            Refrescar Logs
+          </button>
+        </div>
       </div>
       
       <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'hidden', marginTop: '15px' }}>

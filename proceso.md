@@ -202,6 +202,3 @@ Todo igual por ahora, no cambiar nada
 ### App mobil (4 - Wishlist, apartado grande, dejar para el final)
 
 Quiero crear una app mobil que sea lo mas parecida a la pagina web, con las mismas funcionalidades, etc. Esta app sera utilizada en un celular android, por lo que me interesa que se pueda utilizar de manera offline (es decir, que se pueda ver la informacion sin internet) y que se actualice automaticamente cuando haya internet.
-
-Persistencia de Notificaciones (Punto Rojo):
-lo dejaste con localStorage, eso permite que cada usuario tenga su punto rojo para las cosas que no haya visto y se hayan actualizado?

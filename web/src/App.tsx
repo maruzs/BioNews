@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import NewsPage from './components/NewsPage';
@@ -14,7 +14,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 function ProtectedLayout() {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  
   if (!user) return <Navigate to="/" />;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="app-container">
@@ -35,10 +42,10 @@ function ProtectedLayout() {
             {dropdownOpen && (
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', zIndex: 100 }}>
                 {user.role === 'admin' && (
-                  <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); window.location.href='/admin'; }}>Panel de Admin</div>
+                  <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); navigate('/admin'); }}>Panel de Admin</div>
                 )}
-                <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); window.location.href='/perfil'; }}>Perfil y Preferencias</div>
-                <div style={{ padding: '10px 15px', cursor: 'pointer', color: '#ef4444' }} onClick={logout}>Cerrar Sesión</div>
+                <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); navigate('/perfil'); }}>Perfil y Preferencias</div>
+                <div style={{ padding: '10px 15px', cursor: 'pointer', color: '#ef4444' }} onClick={handleLogout}>Cerrar Sesión</div>
               </div>
             )}
           </div>

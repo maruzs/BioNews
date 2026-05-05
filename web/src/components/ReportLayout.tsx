@@ -141,8 +141,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [filterEstados, setFilterEstados] = useState<Set<string>>(new Set());
-  const [filterOrganismos, setFilterOrganismos] = useState<Set<string>>(new Set());
+  const [filterEstados, setFilterEstados] = useState<Set<string>>(new Set()); // Deprecated, replaced by columnFilters
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [activeTab, setActiveTab] = useState('reporte');
 
   const toggleFilter = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
@@ -158,23 +159,24 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
   const [manualFav, setManualFav] = useState({ id: '', nombre: '', fuente: '', accion: '' });
   
   // To apply filters only when "APLICAR FILTRO" is clicked
-  const [appliedFilters, setAppliedFilters] = useState({ estados: new Set<string>(), organismos: new Set<string>() });
+  const [appliedColumnFilters, setAppliedColumnFilters] = useState<Record<string, string>>({});
+  const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
 
   // On mount, apply user preferences if available
   useEffect(() => {
     if (token && user?.preferences) {
       try {
         const prefs = JSON.parse(user.preferences);
-        let defaultOrgs = new Set<string>();
+        let initialFilters: Record<string, string> = {};
         if (tableName === 'normativas' && prefs.normativas?.length > 0) {
-          defaultOrgs = new Set(prefs.normativas);
+          initialFilters['organismo'] = prefs.normativas.join(' ');
         } else if (['fiscalizaciones', 'sancionatorios', 'registroSanciones', 'programasDeCumplimiento', 'medidas_provisionales', 'requerimientos'].includes(tableName || '') && prefs.sma?.length > 0) {
-          defaultOrgs = new Set(prefs.sma);
+          initialFilters['categoria'] = prefs.sma.join(' ');
         }
         
-        if (defaultOrgs.size > 0) {
-          setFilterOrganismos(defaultOrgs);
-          setAppliedFilters(prev => ({ ...prev, organismos: defaultOrgs }));
+        if (Object.keys(initialFilters).length > 0) {
+          setColumnFilters(initialFilters);
+          setAppliedColumnFilters(initialFilters);
         }
       } catch (e) {}
     }
@@ -281,37 +283,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     }
   };
 
-  // Determinar qué campo usar para estado y organismo en filtros
-  const estadoField = useMemo(() => {
-    if (!data.length) return '';
-    if ('estado' in data[0]) return 'estado';
-    if ('Estado' in data[0]) return 'Estado';
-    if ('Estado_Procesal' in data[0]) return 'Estado_Procesal';
-    return '';
-  }, [data]);
-
-  const organismoField = useMemo(() => {
-    if (!data.length) return '';
-    if ('Tribunal' in data[0]) return 'Tribunal';
-    if ('organismo' in data[0]) return 'organismo';
-    if ('categoria' in data[0]) return 'categoria'; // Now uses categoria instead of region for SMA
-    if ('_fuente' in data[0]) return '_fuente';
-    return '';
-  }, [data]);
-
-  const uniqueEstados = useMemo(() => {
-    if (!estadoField) return [];
-    return Array.from(new Set(data.map(item => item[estadoField]).filter(Boolean)));
-  }, [data, estadoField]);
-
-  const uniqueOrganismos = useMemo(() => {
-    if (!organismoField) return [];
-    return Array.from(new Set(data.map(item => item[organismoField]).filter(Boolean)));
-  }, [data, organismoField]);
-
   let finalData = data;
   if (isFavoritesPage) {
-    // Ya no es necesario filtrar de data porque ya contiene solo los favoritos
     finalData = data;
   }
 
@@ -320,21 +293,75 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
     const matchesSearch = !search || Object.values(item).some(val => 
       typeof val === 'string' && val.toLowerCase().includes(search.toLowerCase())
     );
-    const matchesEstado = appliedFilters.estados.size === 0 || (estadoField && appliedFilters.estados.has(item[estadoField]));
-    const matchesOrganismo = appliedFilters.organismos.size === 0 || (organismoField && appliedFilters.organismos.has(item[organismoField]));
     
-    return matchesSearch && matchesEstado && matchesOrganismo;
+    // Filtros de columnas
+    const matchesColumns = Object.entries(appliedColumnFilters).every(([field, filterValue]) => {
+      if (!filterValue) return true;
+      const itemVal = item[field];
+      if (!itemVal) return false;
+      
+      const terms = filterValue.toLowerCase().split(' ').filter(Boolean);
+      const strVal = String(itemVal).toLowerCase();
+      
+      if (terms.length > 0) {
+        return terms.some(t => strVal.includes(t));
+      }
+      return strVal.includes(filterValue.toLowerCase());
+    });
+
+    // Filtro de rango de fechas
+    let matchesDate = true;
+    if (appliedDateRange.start || appliedDateRange.end) {
+      // Intentamos usar activoColumns si ya está computado, o adivinar el campo fecha
+      const dateFieldNames = ['fecha', 'Fecha', 'fecha_agregado'];
+      const dateField = dateFieldNames.find(f => f in item);
+      if (dateField) {
+        const itemDateStr = String(item[dateField] || '');
+        if (itemDateStr) {
+          let itemDate: Date | null = null;
+          if (itemDateStr.includes('-')) {
+            const datePart = itemDateStr.split(' ')[0];
+            const parts = datePart.split('-');
+            if (parts.length === 3) {
+              if (parts[0].length === 4) {
+                itemDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+              } else {
+                itemDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+              }
+            }
+          } else {
+             itemDate = new Date(itemDateStr);
+          }
+          
+          if (itemDate && !isNaN(itemDate.getTime())) {
+            if (appliedDateRange.start) {
+              const start = new Date(appliedDateRange.start);
+              if (itemDate < start) matchesDate = false;
+            }
+            if (appliedDateRange.end) {
+              const end = new Date(appliedDateRange.end);
+              end.setDate(end.getDate() + 1);
+              if (itemDate >= end) matchesDate = false;
+            }
+          }
+        }
+      }
+    }
+    
+    return matchesSearch && matchesColumns && matchesDate;
   });
 
   const handleApplyFilters = () => {
-    setAppliedFilters({ estados: filterEstados, organismos: filterOrganismos });
+    setAppliedColumnFilters({ ...columnFilters });
+    setAppliedDateRange({ ...dateRange });
   };
 
   const handleClearFilters = () => {
-    setFilterEstados(new Set());
-    setFilterOrganismos(new Set());
+    setColumnFilters({});
+    setDateRange({ start: '', end: '' });
     setSearch('');
-    setAppliedFilters({ estados: new Set(), organismos: new Set() });
+    setAppliedColumnFilters({});
+    setAppliedDateRange({ start: '', end: '' });
   };
 
   const downloadExcel = () => {
@@ -509,29 +536,21 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
         {filtersOpen && (
           <div className="filter-dropdowns">
             <div className="filter-grid" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {estadoField && uniqueEstados.length > 0 && (
-                <div style={{ flex: '1 1 250px' }}>
-                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Estado</h4>
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
-                    {uniqueEstados.map((est, i) => (
-                      <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                        <input type="checkbox" checked={filterEstados.has(est)} onChange={() => toggleFilter(setFilterEstados, est)} />
-                        {est}
-                      </label>
-                    ))}
+              {activeColumns
+                .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
+                .map(col => (
+                  <div key={col.field} style={{ flex: '1 1 200px' }}>
+                    <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
+                    <input type="text" className="filter-select" value={columnFilters[col.field] || ''} onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} placeholder={`Buscar ${col.headerName.toLowerCase()}`} />
                   </div>
-                </div>
-              )}
-              {organismoField && uniqueOrganismos.length > 0 && (
-                <div style={{ flex: '1 1 250px' }}>
-                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {organismoField === 'Tribunal' ? 'Tribunal' : organismoField === 'categoria' ? 'Categoría' : 'Organismo'}</h4>
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
-                    {uniqueOrganismos.map((org, i) => (
-                      <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                        <input type="checkbox" checked={filterOrganismos.has(org)} onChange={() => toggleFilter(setFilterOrganismos, org)} />
-                        {org}
-                      </label>
-                    ))}
+              ))}
+              {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
+                <div style={{ flex: '1 1 300px' }}>
+                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Rango de Fechas</h4>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input type="date" className="filter-select" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
+                    <span style={{ alignSelf: 'center' }}>-</span>
+                    <input type="date" className="filter-select" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
                   </div>
                 </div>
               )}
@@ -599,9 +618,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({ title, description, listTit
           columns={columns}
           localeText={esES.components.MuiDataGrid.defaultProps.localeText}
           initialState={{
-            pagination: { paginationModel: { pageSize: 10 } },
+            pagination: { paginationModel: { pageSize: 100 } },
           }}
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 25, 50, 100]}
           disableRowSelectionOnClick
           loading={loading}
           sx={{

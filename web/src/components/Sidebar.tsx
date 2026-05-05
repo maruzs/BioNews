@@ -5,7 +5,8 @@ import {
   CalendarCheck, UserSquare2,
   UserSearch, MoreHorizontal, Gavel, 
   FileCheck, Edit3, LogIn, Scale, 
-  ChevronDown, ChevronUp, Menu
+  ChevronDown, ChevronUp, Menu,
+  BookOpen, Leaf, Search
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,6 +16,36 @@ const Sidebar = () => {
   const location = useLocation();
   const { token } = useAuth();
   
+  const checkUpdates = (data: any[]) => {
+    const hasUpdates = (fuenteKeys: string[], category: string) => {
+      const categoryLogs = data.filter(log => fuenteKeys.includes(log.fuente) && log.nuevos_registros > 0);
+      if (categoryLogs.length === 0) return false;
+      
+      const lastRead = localStorage.getItem(`read_${category}`);
+      if (!lastRead) return true;
+
+      // Check if any log's ultimo_exito is newer than lastRead
+      return categoryLogs.some(log => new Date(log.ultimo_exito) > new Date(lastRead));
+    };
+
+    const newsLogs = data.filter(log => (log.fuente.includes('Noticias') || log.fuente === 'MMA' || log.fuente === 'SMA' || log.fuente === 'Corte Suprema' || log.fuente === 'Sernageomin' || log.fuente === 'SBAP') && log.nuevos_registros > 0);
+    const lastReadNews = localStorage.getItem('read_noticias');
+    const newsHasUpdate = newsLogs.length > 0 && (!lastReadNews || newsLogs.some(log => new Date(log.ultimo_exito) > new Date(lastReadNews)));
+
+    setUpdates({
+      noticias: newsHasUpdate,
+      normativas: hasUpdates(['Diario Oficial (Normativas)'], 'normativas'),
+      pertinencias: hasUpdates(['Pertinencias SEA'], 'pertinencias'),
+      fiscalizaciones: hasUpdates(['SNIFA Fiscalizaciones'], 'fiscalizaciones'),
+      sancionatorios: hasUpdates(['SNIFA Sancionatorios'], 'sancionatorios'),
+      sanciones: hasUpdates(['SNIFA Registro Sanciones'], 'sanciones'),
+      programas: hasUpdates(['SNIFA Programas de Cumplimiento'], 'programas'),
+      medidas: hasUpdates(['SNIFA Medidas Provisionales'], 'medidas'),
+      requerimientos: hasUpdates(['SNIFA Requerimientos'], 'requerimientos'),
+      tribunales: hasUpdates(['Primer Tribunal Ambiental', 'Segundo Tribunal Ambiental', 'Tercer Tribunal Ambiental'], 'tribunales')
+    });
+  };
+
   useEffect(() => {
     if (!token) return;
     fetch('/api/logs', {
@@ -23,43 +54,32 @@ const Sidebar = () => {
       }
     })
       .then(res => res.json())
-      .then((data: any[]) => {
-        const hasUpdates = (fuenteKeys: string[]) => {
-          return data.some(log => fuenteKeys.includes(log.fuente) && log.nuevos_registros > 0);
-        };
-        
-        // Simplified mapping based on scraper names in backend
-        setUpdates({
-          noticias: data.some(log => (log.fuente.includes('Noticias') || log.fuente === 'MMA' || log.fuente === 'SMA' || log.fuente === 'Corte Suprema' || log.fuente === 'Sernageomin' || log.fuente === 'SBAP') && log.nuevos_registros > 0),
-          normativas: hasUpdates(['Diario Oficial (Normativas)']),
-          pertinencias: hasUpdates(['Pertinencias SEA']),
-          fiscalizaciones: hasUpdates(['SNIFA Fiscalizaciones']),
-          sancionatorios: hasUpdates(['SNIFA Sancionatorios']),
-          sanciones: hasUpdates(['SNIFA Registro Sanciones']),
-          programas: hasUpdates(['SNIFA Programas de Cumplimiento']),
-          medidas: hasUpdates(['SNIFA Medidas Provisionales']),
-          requerimientos: hasUpdates(['SNIFA Requerimientos']),
-          tribunales: hasUpdates(['Primer Tribunal Ambiental', 'Segundo Tribunal Ambiental', 'Tercer Tribunal Ambiental'])
-        });
-      })
+      .then(checkUpdates)
       .catch(() => {});
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    // Clear red dot if path matches
+    // Clear red dot if path matches and save to localStorage
     const path = location.pathname;
+    const now = new Date().toISOString();
+    
     setUpdates(prev => {
       const next = { ...prev };
-      if (path === '/noticias') next.noticias = false;
-      if (path === '/normativas') next.normativas = false;
-      if (path === '/pertinencias') next.pertinencias = false;
-      if (path === '/fiscalizaciones') next.fiscalizaciones = false;
-      if (path === '/sancionatorios') next.sancionatorios = false;
-      if (path === '/sanciones') next.sanciones = false;
-      if (path === '/programas') next.programas = false;
-      if (path === '/medidas') next.medidas = false;
-      if (path === '/requerimientos') next.requerimientos = false;
-      if (path === '/tribunales') next.tribunales = false;
+      const markRead = (key: string) => {
+        next[key] = false;
+        localStorage.setItem(`read_${key}`, now);
+      };
+
+      if (path === '/noticias') markRead('noticias');
+      if (path === '/normativas') markRead('normativas');
+      if (path === '/pertinencias') markRead('pertinencias');
+      if (path === '/fiscalizaciones') markRead('fiscalizaciones');
+      if (path === '/sancionatorios') markRead('sancionatorios');
+      if (path === '/sanciones') markRead('sanciones');
+      if (path === '/programas') markRead('programas');
+      if (path === '/medidas') markRead('medidas');
+      if (path === '/requerimientos') markRead('requerimientos');
+      if (path === '/tribunales') markRead('tribunales');
       return next;
     });
   }, [location.pathname]);
@@ -118,7 +138,7 @@ const Sidebar = () => {
 
         {/* Diario Oficial */}
         <div className="menu-category" onClick={() => toggleSection('diario')} title="Diario Oficial">
-          {!collapsed ? <span>Diario Oficial</span> : <span className="cat-icon">🏛️</span>}
+          {!collapsed ? <span>Diario Oficial</span> : <BookOpen size={20} className="icon" />}
           {!collapsed && (openSections.diario ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
         </div>
         {(!collapsed && openSections.diario) && (
@@ -132,7 +152,7 @@ const Sidebar = () => {
 
         {/* SEA */}
         <div className="menu-category" onClick={() => toggleSection('sea')} title="SEA">
-          {!collapsed ? <span>SEA</span> : <span className="cat-icon">🌱</span>}
+          {!collapsed ? <span>SEA</span> : <Leaf size={20} className="icon" />}
           {!collapsed && (openSections.sea ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
         </div>
         {(!collapsed && openSections.sea) && (
@@ -146,7 +166,7 @@ const Sidebar = () => {
 
         {/* SMA */}
         <div className="menu-category" onClick={() => toggleSection('sma')} title="SMA">
-          {!collapsed ? <span>SMA</span> : <span className="cat-icon">🔍</span>}
+          {!collapsed ? <span>SMA</span> : <Search size={20} className="icon" />}
           {!collapsed && (openSections.sma ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
         </div>
         {(!collapsed && openSections.sma) && (
@@ -180,7 +200,7 @@ const Sidebar = () => {
 
         {/* Tribunales */}
         <div className="menu-category" onClick={() => toggleSection('tribunales')} title="Tribunales ambientales">
-          {!collapsed ? <span>Tribunales ambientales</span> : <span className="cat-icon">⚖️</span>}
+          {!collapsed ? <span>Tribunales ambientales</span> : <Scale size={20} className="icon" />}
           {!collapsed && (openSections.tribunales ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
         </div>
         {(!collapsed && openSections.tribunales) && (

@@ -50,7 +50,6 @@ COPY server.py .
 COPY scheduler.py .
 COPY startScraping.py .
 COPY src/ ./src/
-COPY .env .env
 
 # Crear directorio para datos
 RUN mkdir -p /app/data /app/logs

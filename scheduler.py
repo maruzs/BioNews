@@ -1,19 +1,14 @@
 """
 scheduler.py  –  BioNews Automated Scraping Scheduler
 ======================================================
-Corre los scrapers según la programación definida:
-- Diario Oficial: 1 vez al día (07:00)
-- SNIFA/SMA: 2 veces al día (07:00 y 14:00)
-- Pertinencias: cada 1 hora
-- Noticias: cada 1 hora
-- Todo lo demás (Tribunales): cada 1 hora
-Nota: Las tareas de "cada 1 hora" solo se ejecutan entre las 07:00 y las 19:00.
+Corre los scrapers según la programación definida y configurable mediante data/scheduler.json.
 """
 
 import schedule
 import time
 import logging
 import traceback
+import json
 from datetime import datetime, time as dtime
 from pathlib import Path
 
@@ -32,13 +27,41 @@ logging.basicConfig(
 )
 log = logging.getLogger("bionews.scheduler")
 
-# ─── Rango horario permitido (7am – 7pm) ────────────────────────────────────
-HORA_INICIO = dtime(7, 0)
-HORA_FIN    = dtime(19, 0)
+CONFIG_PATH = Path("data/scheduler.json")
+DEFAULT_CONFIG = {
+    "snifa_time_1": "07:00",
+    "snifa_time_2": "14:00",
+    "pertinencias_interval": 1,
+    "noticias_interval": 1,
+    "tribunales_interval": 1,
+    "hora_inicio": "07:00",
+    "hora_fin": "19:00"
+}
+
+def load_config():
+    if not CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "w") as f:
+            json.dump(DEFAULT_CONFIG, f)
+        return DEFAULT_CONFIG
+    try:
+        with open(CONFIG_PATH, "r") as f:
+            return json.load(f)
+    except:
+        return DEFAULT_CONFIG
+
+def parse_time(time_str):
+    try:
+        h, m = map(int, time_str.split(':'))
+        return dtime(h, m)
+    except:
+        return dtime(7, 0)
 
 def dentro_del_horario() -> bool:
+    config = load_config()
     ahora = datetime.now().time()
-    return HORA_INICIO <= ahora <= HORA_FIN
+    inicio = parse_time(config.get("hora_inicio", "07:00"))
+    fin = parse_time(config.get("hora_fin", "19:00"))
+    return inicio <= ahora <= fin
 
 def get_db():
     try:
@@ -49,7 +72,6 @@ def get_db():
         return None
 
 def ejecutar_scrapers(scrapers_list, msg_inicio):
-    """Ejecuta una lista de scrapers de datos"""
     log.info("=" * 40)
     log.info(msg_inicio)
     log.info("=" * 40)
@@ -63,7 +85,6 @@ def ejecutar_scrapers(scrapers_list, msg_inicio):
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
             
 def ejecutar_noticias(scrapers_list, msg_inicio):
-    """Ejecuta una lista de scrapers de noticias"""
     log.info("=" * 40)
     log.info(msg_inicio)
     log.info("=" * 40)
@@ -82,11 +103,26 @@ def ejecutar_noticias(scrapers_list, msg_inicio):
         except Exception:
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
 
-# ─── TAREAS ESPECÍFICAS ──────────────────────────────────────────────────────
-
-def run_diario_oficial():
+def check_diario_oficial():
+    # Only run between 7 and 19
+    if not dentro_del_horario(): return
+    weekday = datetime.now().weekday()
+    if weekday == 6: # Sunday
+        return
+    today_str = datetime.now().strftime("%d-%m-%Y")
+    db = get_db()
+    if db:
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("SELECT 1 FROM normativas WHERE fecha = ? LIMIT 1", (today_str,))
+                if cursor.fetchone():
+                    log.info("Diario Oficial ya tiene registros para hoy. Saltando...")
+                    return
+            except:
+                pass
     from src.scrapers.diario_oficial import DiarioOficialScraper
-    ejecutar_scrapers([("Diario Oficial (Normativas)", DiarioOficialScraper)], "SCRAPING DIARIO OFICIAL (07:00)")
+    ejecutar_scrapers([("Diario Oficial (Normativas)", DiarioOficialScraper)], "SCRAPING DIARIO OFICIAL (DINAMICO)")
 
 def run_snifa():
     from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
@@ -109,7 +145,7 @@ def run_snifa():
 def run_pertinencias():
     if not dentro_del_horario(): return
     from src.scrapers.sea_legal import PertinenciasScraper
-    ejecutar_scrapers([("Pertinencias SEA", PertinenciasScraper)], "SCRAPING PERTINENCIAS (CADA HORA)")
+    ejecutar_scrapers([("Pertinencias SEA", PertinenciasScraper)], "SCRAPING PERTINENCIAS")
 
 def run_tribunales():
     if not dentro_del_horario(): return
@@ -121,7 +157,7 @@ def run_tribunales():
         ("Segundo Tribunal Ambiental", SegundoTribunalScraper),
         ("Tercer Tribunal Ambiental",  TercerTribunalScraperLegal),
     ]
-    ejecutar_scrapers(lista, "SCRAPING TRIBUNALES (CADA HORA)")
+    ejecutar_scrapers(lista, "SCRAPING TRIBUNALES")
 
 def run_noticias():
     if not dentro_del_horario(): return
@@ -143,40 +179,49 @@ def run_noticias():
         ("Sernageomin",                  SernageominScraper),
         ("Tribunal Ambiental (Noticias)",TribunalScraper),
     ]
-    ejecutar_noticias(lista, "SCRAPING NOTICIAS (CADA HORA)")
+    ejecutar_noticias(lista, "SCRAPING NOTICIAS")
 
-# ─── Programación horaria ────────────────────────────────────────────────────
+def setup_schedule():
+    schedule.clear()
+    config = load_config()
+    log.info(f"Configurando scheduler con parametros: {config}")
+    
+    # Diario Oficial: every hour (check_diario_oficial checks if it's needed)
+    schedule.every().hour.at(":05").do(check_diario_oficial)
+    
+    # SNIFA
+    schedule.every().day.at(config.get("snifa_time_1", "07:00")).do(run_snifa)
+    schedule.every().day.at(config.get("snifa_time_2", "14:00")).do(run_snifa)
+    
+    # The others
+    p_interval = int(config.get("pertinencias_interval", 1))
+    n_interval = int(config.get("noticias_interval", 1))
+    t_interval = int(config.get("tribunales_interval", 1))
+    
+    schedule.every(p_interval).hours.at(":10").do(run_pertinencias)
+    schedule.every(n_interval).hours.at(":15").do(run_noticias)
+    schedule.every(t_interval).hours.at(":20").do(run_tribunales)
+
+last_mtime = 0
 def main():
+    global last_mtime
     log.info("BioNews Scheduler iniciado.")
     
-    # 1. Diario Oficial: 1 vez al día (07:00)
-    schedule.every().day.at("07:00").do(run_diario_oficial)
+    setup_schedule()
     
-    # 2. SNIFA/SMA: 2 veces al día (07:00 y 14:00)
-    schedule.every().day.at("07:00").do(run_snifa)
-    schedule.every().day.at("14:00").do(run_snifa)
-    
-    # 3. Pertinencias: cada hora (dentro del horario)
-    schedule.every().hour.at(":05").do(run_pertinencias)
-    
-    # 4. Noticias: cada hora (dentro del horario)
-    schedule.every().hour.at(":10").do(run_noticias)
-    
-    # 5. Todo lo demás (Tribunales): cada hora (dentro del horario)
-    schedule.every().hour.at(":15").do(run_tribunales)
-
-    log.info("Tareas programadas correctamente.")
-    
-    # Para la primera ejecución si es necesario, pero como ya están 
-    # separados, mejor que corra la programación. Si se quiere forzar al arrancar:
-    # Si la app se inicia en el día, para no esperar a la hora, se puede hacer:
-    if dentro_del_horario():
-        log.info("Ejecución inicial al arrancar...")
-        run_pertinencias()
-        run_tribunales()
-        run_noticias()
+    if CONFIG_PATH.exists():
+        last_mtime = CONFIG_PATH.stat().st_mtime
 
     while True:
+        try:
+            mtime = CONFIG_PATH.stat().st_mtime if CONFIG_PATH.exists() else 0
+            if mtime != last_mtime:
+                last_mtime = mtime
+                log.info("Detectado cambio en configuracion. Reconfigurando...")
+                setup_schedule()
+        except Exception as e:
+            pass
+            
         schedule.run_pending()
         time.sleep(30)
 

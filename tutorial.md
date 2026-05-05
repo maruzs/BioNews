@@ -110,3 +110,8 @@ Cuando hagas mejoras en tu computador principal y quieras pasarlas al servidor:
    docker compose up -d --build
    ```
    Al agregar `--build`, Docker detectará los cambios en tu código y reconstruirá la aplicación en pocos segundos aplicando tus últimas mejoras.
+
+Iniciar servidor
+nohup cloudflared tunnel --url http://localhost:3080 > cloudflared.log 2>1 &
+ver IP
+cat cloudflared.log | grep trycloudflare.com

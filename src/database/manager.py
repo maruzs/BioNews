@@ -73,10 +73,16 @@ class DatabaseManager:
                     password_hash TEXT,
                     role TEXT,
                     blocked INTEGER DEFAULT 0,
-                    preferences TEXT
+                    preferences TEXT,
+                    last_login TIMESTAMP
                 )
             """)
-                
+            
+            # Migración: Agregar last_login a users
+            cursor.execute("PRAGMA table_info(users)")
+            user_columns = [col[1] for col in cursor.fetchall()]
+            if 'last_login' not in user_columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_login TIMESTAMP")
             # Tabla para logs de scrapers
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS scraper_logs (
@@ -160,7 +166,14 @@ class DatabaseManager:
             cursor.execute(f'PRAGMA table_info("{table_name}")')
             columns = [col[1] for col in cursor.fetchall()]
             
-            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT ?', (limit,))
+            # Sort by date if possible
+            order_by = ""
+            if "Fecha" in columns:
+                order_by = ' ORDER BY "Fecha" DESC'
+            elif "fecha" in columns:
+                order_by = ' ORDER BY "fecha" DESC'
+
+            cursor.execute(f'SELECT * FROM "{table_name}"{order_by} LIMIT ?', (limit,))
             rows = cursor.fetchall()
             
             # Devolver como lista de diccionarios
@@ -260,9 +273,15 @@ class DatabaseManager:
     def get_all_users(self):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, name, email, role, blocked, preferences FROM users")
+            cursor.execute("SELECT id, name, email, role, blocked, preferences, last_login FROM users")
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def update_user_last_login(self, user_id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (datetime.now(), user_id))
+            conn.commit()
 
     def update_user_status(self, user_id, blocked):
         with self.get_connection() as conn:

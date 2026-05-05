@@ -94,6 +94,7 @@ def login(req: LoginRequest):
     if user.get("blocked"):
         raise HTTPException(status_code=403, detail="Cuenta bloqueada")
         
+    db.update_user_last_login(user["id"])
     token_data = {"sub": str(user["id"]), "email": user["email"], "role": user["role"], "name": user["name"], "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30)}
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
     return {"access_token": token, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"], "preferences": user["preferences"]}}
@@ -141,6 +142,33 @@ def admin_block_user(user_id: int, req: dict, admin = Depends(get_current_admin)
 @app.delete("/api/admin/users/{user_id}")
 def admin_delete_user(user_id: int, admin = Depends(get_current_admin)):
     db.delete_user(user_id)
+    return {"success": True}
+
+@app.get("/api/admin/scheduler")
+def get_scheduler_config(admin = Depends(get_current_admin)):
+    import json
+    from pathlib import Path
+    config_path = Path("data/scheduler.json")
+    if config_path.exists():
+        with open(config_path, "r") as f:
+            return json.load(f)
+    return {
+        "snifa_time_1": "07:00",
+        "snifa_time_2": "14:00",
+        "pertinencias_interval": 1,
+        "noticias_interval": 1,
+        "tribunales_interval": 1,
+        "hora_inicio": "07:00",
+        "hora_fin": "19:00"
+    }
+
+@app.post("/api/admin/scheduler")
+def update_scheduler_config(req: dict, admin = Depends(get_current_admin)):
+    import json
+    from pathlib import Path
+    config_path = Path("data/scheduler.json")
+    with open(config_path, "w") as f:
+        json.dump(req, f)
     return {"success": True}
 
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
@@ -353,6 +381,59 @@ def _run_news_scrapers():
 def scrape_news(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
     background_tasks.add_task(_run_news_scrapers)
     return {"message": "Scraping de noticias iniciado en background."}
+
+def _run_sea_scrapers():
+    from src.scrapers.sea_legal import PertinenciasScraper
+    try:
+        nuevos = PertinenciasScraper().run()
+        db.log_scraper_run("Pertinencias SEA", exito=True, nuevos=nuevos)
+    except Exception as e:
+        db.log_scraper_run("Pertinencias SEA", exito=False, error=str(e))
+
+@app.post("/api/scrape/sea")
+def scrape_sea(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    background_tasks.add_task(_run_sea_scrapers)
+    return {"message": "Scraping de SEA iniciado en background."}
+
+def _run_snifa_scrapers():
+    from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
+    from src.scrapers.reqSEIA import RequerimientosScraper
+    from src.scrapers.snifa import SancionatoriosScraper
+    from src.scrapers.medidas import MedidasProvisionalesScraper
+    from src.scrapers.pdc import ProgramasCumplimientoScraper
+    from src.scrapers.sanciones import RegistroSancionesScraper
+    scrapers = [
+        ("SNIFA Sancionatorios", SancionatoriosScraper),
+        ("SNIFA Fiscalizaciones", SnifaFiscalizacionScraper),
+        ("SNIFA Requerimientos", RequerimientosScraper),
+        ("SNIFA Medidas Provisionales", MedidasProvisionalesScraper),
+        ("SNIFA Programas de Cumplimiento", ProgramasCumplimientoScraper),
+        ("SNIFA Registro Sanciones", RegistroSancionesScraper)
+    ]
+    for nombre, ScraperClass in scrapers:
+        try:
+            nuevos = ScraperClass().run()
+            db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
+        except Exception as e:
+            db.log_scraper_run(nombre, exito=False, error=str(e))
+
+@app.post("/api/scrape/snifa")
+def scrape_snifa(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    background_tasks.add_task(_run_snifa_scrapers)
+    return {"message": "Scraping de SNIFA iniciado en background."}
+
+def _run_normativas_scrapers():
+    from src.scrapers.diario_oficial import DiarioOficialScraper
+    try:
+        nuevos = DiarioOficialScraper().run()
+        db.log_scraper_run("Diario Oficial (Normativas)", exito=True, nuevos=nuevos)
+    except Exception as e:
+        db.log_scraper_run("Diario Oficial (Normativas)", exito=False, error=str(e))
+
+@app.post("/api/scrape/normativas")
+def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    background_tasks.add_task(_run_normativas_scrapers)
+    return {"message": "Scraping de Normativas iniciado en background."}
 
 
 # ─── Health check ──────────────────────────────────────────────────────────────
