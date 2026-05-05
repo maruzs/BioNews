@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface NewsItem {
   link: string;
@@ -18,10 +19,17 @@ const NewsPage = () => {
   const [filterDate, setFilterDate] = useState('');
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
+  const { token } = useAuth();
+
   // Here we would normally fetch from our FastAPI backend, e.g. http://localhost:8000/api/news
   // For the initial design iteration, we'll use dummy data if the API is not up yet
   useEffect(() => {
-    fetch('/api/news')
+    if (!token) return;
+    fetch('/api/news', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
       .then(data => {
         setNews(data);
@@ -97,12 +105,12 @@ const NewsPage = () => {
             />
           </div>
 
-          <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px'}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px'}}>
             <input 
               type="date" 
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              style={{border: 'none', outline: 'none', color: 'var(--text-dark)'}}
+              style={{border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', minHeight: '24px', backgroundColor: 'transparent'}}
             />
           </div>
         </div>

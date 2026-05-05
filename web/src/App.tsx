@@ -1,69 +1,102 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import NewsPage from './components/NewsPage';
-import { Bell } from 'lucide-react';
 import ReportLayout from './components/ReportLayout';
+import Home from './components/Home';
+import Landing from './components/Landing';
+import Login from './components/Login';
+import Register from './components/Register';
+import AdminPanel from './components/AdminPanel';
+import Profile from './components/Profile';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Placeholder for Home
-const HomePlaceholder = () => (
-  <div style={{padding: 40, textAlign: 'center', color: '#6b7280'}}>
-    <h2>Home</h2>
-    <p>Página de inicio (en construcción)</p>
-  </div>
-);
+function ProtectedLayout() {
+  const { user, logout } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  if (!user) return <Navigate to="/" />;
+
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <main className="main-content">
+        <div className="top-header">
+          <div className="top-header-spacer"></div>
+          <div className="top-header-actions" style={{ position: 'relative' }}>
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'white', padding: '5px 15px', borderRadius: '30px', border: '1px solid var(--border)' }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <span style={{ fontWeight: 500, color: 'var(--text-dark)' }}>{user.name}</span>
+            </div>
+            {dropdownOpen && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', zIndex: 100 }}>
+                {user.role === 'admin' && (
+                  <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); window.location.href='/admin'; }}>Panel de Admin</div>
+                )}
+                <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); window.location.href='/perfil'; }}>Perfil y Preferencias</div>
+                <div style={{ padding: '10px 15px', cursor: 'pointer', color: '#ef4444' }} onClick={logout}>Cerrar Sesión</div>
+              </div>
+            )}
+          </div>
+        </div>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/noticias" element={<NewsPage />} />
+          <Route path="/favoritos" element={<ReportLayout key="favoritos" title="Favoritos" description="Tus normativas y proyectos guardados." listTitle="Favoritos" isFavoritesPage={true} />} />
+          
+          {/* Diario Oficial */}
+          <Route path="/normativas" element={<ReportLayout key="normativas" title="Normativas" description="Visualización de normativas publicadas en el Diario Oficial." listTitle="Normativas" tableName="normativas" />} />
+          
+          {/* SEA */}
+          <Route path="/pertinencias" element={<ReportLayout key="pertinencias" title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" tableName="pertinencias" />} />
+
+          {/* SMA */}
+          <Route path="/fiscalizaciones" element={<ReportLayout key="fiscalizaciones" title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" tableName="fiscalizaciones" />} />
+          <Route path="/sancionatorios" element={<ReportLayout key="sancionatorios" title="Sancionatorios" description="Reporte de procesos sancionatorios de la SMA." listTitle="Sancionatorios" tableName="sancionatorios" />} />
+          <Route path="/sanciones" element={<ReportLayout key="sanciones" title="Sanciones" description="Registro público de sanciones emitidas." listTitle="Sanciones" tableName="registroSanciones" />} />
+          <Route path="/programas" element={<ReportLayout key="programas" title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" tableName="programasDeCumplimiento" />} />
+          <Route path="/medidas" element={<ReportLayout key="medidas" title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" tableName="medidas_provisionales" />} />
+          <Route path="/requerimientos" element={<ReportLayout key="requerimientos" title="Requerimientos de Ingreso" description="Reporte de requerimientos de ingreso." listTitle="Requerimientos" tableName="requerimientos" />} />
+
+          {/* Tribunales */}
+          <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" />} />
+          
+          {/* Admin Panel */}
+          <Route path="/admin" element={<AdminPanel />} />
+          
+          {/* Profile */}
+          <Route path="/perfil" element={<Profile />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function AppRoutes() {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>Cargando...</div>;
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/*" element={user ? <ProtectedLayout /> : <Landing />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        <Sidebar />
-        <main className="main-content">
-          <div className="top-header">
-            <div className="top-header-spacer"></div>
-            <div className="top-header-actions">
-              <div className="notification-bell">
-                <Bell size={20} />
-                <span className="notification-badge">115</span>
-              </div>
-            </div>
-          </div>
-          <Routes>
-            <Route path="/" element={<HomePlaceholder />} />
-            <Route path="/noticias" element={<NewsPage />} />
-            <Route path="/favoritos" element={<ReportLayout title="Favoritos" description="Tus normativas y proyectos guardados." listTitle="Favoritos" isFavoritesPage={true} />} />
-            
-            {/* Diario Oficial */}
-            <Route path="/normativas" element={<ReportLayout title="Normativas" description="Visualización de normativas publicadas en el Diario Oficial." listTitle="Normativas" filterFn={(item) => item.fuente === 'Diario Oficial'} />} />
-            
-            {/* SEA */}
-            <Route path="/proyectos-evaluados" element={<ReportLayout title="Proyectos Evaluados" description="Reporte de proyectos evaluados en el SEA." listTitle="Proyectos Evaluados" filterFn={(item) => item.fuente === 'SEA'} />} />
-            <Route path="/pertinencias" element={<ReportLayout title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" filterFn={(item) => item.fuente === 'SEA Pertinencias'} />} />
-            <Route path="/participacion" element={<ReportLayout title="Participación Ciudadana" description="Reporte de procesos de participación ciudadana." listTitle="Participaciones" filterFn={(item) => !!(item.tipo && item.tipo.includes('Participacion'))} />} />
-
-            {/* SMA */}
-            <Route path="/fiscalizaciones" element={<ReportLayout title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" filterFn={(item) => !!(item.tipo && item.tipo.includes('Fiscalizacion'))} />} />
-            <Route path="/sancionatorios" element={<ReportLayout title="Sancionatorios" description="Reporte de procesos sancionatorios de la SMA." listTitle="Sancionatorios" filterFn={(item) => !!(item.tipo && item.tipo.includes('Sancionatorio'))} />} />
-            <Route path="/sanciones" element={<ReportLayout title="Sanciones" description="Reporte de sanciones emitidas." listTitle="Sanciones" filterFn={(item) => !!(item.tipo && item.tipo.includes('Sancion'))} />} />
-            <Route path="/seguimiento" element={<ReportLayout title="Seguimiento Ambiental" description="Reporte de seguimiento ambiental." listTitle="Seguimientos" filterFn={(item) => !!(item.tipo && item.tipo.includes('Seguimiento'))} />} />
-            <Route path="/programas" element={<ReportLayout title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" filterFn={(item) => !!(item.tipo && item.tipo.includes('Programa'))} />} />
-            <Route path="/medidas" element={<ReportLayout title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" filterFn={(item) => !!(item.tipo && item.tipo.includes('Medida'))} />} />
-            <Route path="/requerimientos" element={<ReportLayout title="Requerimientos de Ingreso" description="Reporte de requerimientos de ingreso." listTitle="Requerimientos" filterFn={(item) => !!(item.tipo && item.tipo.includes('Ingreso SEIA'))} />} />
-
-            {/* Tribunales */}
-            <Route path="/tribunales" element={
-              <ReportLayout title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" filterFn={(item) => item.fuente.includes('TA') || item.fuente.includes('Tribunal') || item.fuente.includes('Corte')}>
-                <div className="extra-filters">
-                  <span className="filter-label">Tribunal:</span>
-                  <label className="filter-checkbox"><input type="checkbox" /> Primer Tribunal</label>
-                  <label className="filter-checkbox"><input type="checkbox" /> Segundo Tribunal</label>
-                  <label className="filter-checkbox"><input type="checkbox" /> Tercer Tribunal</label>
-                </div>
-              </ReportLayout>
-            } />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
