@@ -115,3 +115,6 @@ Iniciar servidor
 nohup cloudflared tunnel --url http://localhost:3080 > cloudflared.log 2>1 &
 ver IP
 cat cloudflared.log | grep trycloudflare.com
+
+nohup cloudflared tunnel --url http://localhost:3080 > cloudflare.log 2>&1 &
+cat cloudflare.log | grep -o 'https://[a-zA-Z0-9-]\+\.trycloudflare\.com'
