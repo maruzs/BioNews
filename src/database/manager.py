@@ -110,8 +110,9 @@ class DatabaseManager:
                         VALUES (?, ?, ?, ?, ?, ?)
                         ON CONFLICT(link) DO UPDATE SET 
                             titulo=excluded.titulo,
+                            fecha=excluded.fecha,
+                            imagen=excluded.imagen,
                             fecha_scraping=excluded.fecha_scraping
-                        WHERE noticias.titulo != excluded.titulo
                     """, (
                         item['link'], 
                         item['titulo'], 

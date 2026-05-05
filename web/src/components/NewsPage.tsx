@@ -8,21 +8,29 @@ interface NewsItem {
   fecha: string;
   imagen: string;
   fuente: string;
+  fecha_scraping: string;
 }
 
 const NewsPage = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastRead, setLastRead] = useState<string | null>(null);
 
   // Filter States
   const [searchWord, setSearchWord] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  // Here we would normally fetch from our FastAPI backend, e.g. http://localhost:8000/api/news
-  // For the initial design iteration, we'll use dummy data if the API is not up yet
+  useEffect(() => {
+    // Capture the last read timestamp BEFORE Sidebar updates it
+    if (user) {
+      const stored = localStorage.getItem(`read_noticias_${user.id}`);
+      setLastRead(stored);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!token) return;
     fetch('/api/news', {
@@ -37,35 +45,19 @@ const NewsPage = () => {
       })
       .catch(err => {
         console.error("API error, using fallback data", err);
-        // Fallback data for design viewing without python backend running
-        setNews([
-          {
-            link: "#",
-            titulo: "Min. Medioambiente - Aprueban nuevo reglamento de evaluación ambiental estratégica",
-            fecha: "2026-04-29",
-            imagen: "logo_diario.jpg",
-            fuente: "Diario Oficial"
-          },
-          {
-            link: "#",
-            titulo: "Corte Suprema ratifica fallo sobre humedales urbanos",
-            fecha: "2026-04-28",
-            imagen: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop",
-            fuente: "Corte Suprema"
-          },
-          {
-            link: "#",
-            titulo: "Nuevo programa de cumplimiento para empresa minera en la región de Antofagasta",
-            fecha: "2026-04-27",
-            imagen: "logo_sernageomin.png",
-            fuente: "Sernageomin"
-          }
-        ]);
+        setNews([]);
         setLoading(false);
       });
-  }, []);
+  }, [token]);
 
-  const uniqueSources = useMemo(() => Array.from(new Set(news.map(item => item.fuente).filter(Boolean))), [news]);
+  const uniqueSources = useMemo(() => {
+    const sources = Array.from(new Set(news.map(item => {
+      // Normalización para el filtro visual si existen registros viejos
+      if (item.fuente === 'Tribunal Ambiental') return 'Segundo Tribunal';
+      return item.fuente;
+    }).filter(Boolean)));
+    return sources.sort();
+  }, [news]);
 
   const handleSourceChange = (source: string) => {
     setSelectedSources(prev => {
@@ -77,13 +69,25 @@ const NewsPage = () => {
   };
 
   const filteredNews = news.filter(item => {
+    const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
+    
     const matchesSearch = item.titulo?.toLowerCase().includes(searchWord.toLowerCase()) || 
-                          item.fuente?.toLowerCase().includes(searchWord.toLowerCase());
-    const matchesDate = filterDate ? item.fecha.startsWith(filterDate) : true;
-    const matchesSource = selectedSources.size > 0 ? selectedSources.has(item.fuente) : true;
+                          fuenteNormalizada?.toLowerCase().includes(searchWord.toLowerCase());
+    
+    // El formato del input ahora es YYYY/MM/DD o YYYY-MM-DD
+    const normalizedFilterDate = filterDate.replace(/\//g, '-');
+    const matchesDate = normalizedFilterDate ? item.fecha.startsWith(normalizedFilterDate) : true;
+    
+    const matchesSource = selectedSources.size > 0 ? selectedSources.has(fuenteNormalizada) : true;
     
     return matchesSearch && matchesDate && matchesSource;
   });
+
+  const isNew = (item: NewsItem) => {
+    if (!lastRead) return true;
+    if (!item.fecha_scraping) return false;
+    return new Date(item.fecha_scraping) > new Date(lastRead);
+  };
 
   return (
     <div>
@@ -106,11 +110,13 @@ const NewsPage = () => {
           </div>
 
           <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px'}}>
+            <span style={{fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500}}>Fecha:</span>
             <input 
-              type="date" 
+              type="text" 
+              placeholder="YYYY/MM/DD"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              style={{border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', minHeight: '24px', backgroundColor: 'transparent'}}
+              style={{border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', backgroundColor: 'transparent'}}
             />
           </div>
         </div>
@@ -138,28 +144,53 @@ const NewsPage = () => {
             {filteredNews.length === 0 ? (
               <p className="empty-state" style={{gridColumn: '1 / -1', textAlign: 'center'}}>No se encontraron noticias con estos filtros.</p>
             ) : (
-              filteredNews.map((item, idx) => (
-                <div key={idx} className="card">
-                  <img 
-                    src={item.imagen.startsWith('http') ? item.imagen : `/assets/${item.imagen}`} 
-                    alt={item.fuente} 
-                    className="card-img"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop';
-                    }}
-                  />
-                  <div className="card-content">
-                    <div className="card-source">{item.fuente}</div>
-                    <div className="card-title">{item.titulo}</div>
-                    <div className="card-meta">
-                      <span>{item.fecha}</span>
+              filteredNews.map((item, idx) => {
+                const itemIsNew = isNew(item);
+                const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
+                
+                return (
+                  <div key={idx} className={`card ${itemIsNew ? 'new-highlight' : ''}`} style={itemIsNew ? {
+                    border: '2px solid var(--primary)',
+                    boxShadow: '0 0 15px rgba(34, 197, 94, 0.2)',
+                    position: 'relative'
+                  } : {}}>
+                    {itemIsNew && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-10px',
+                        right: '10px',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        padding: '2px 10px',
+                        borderRadius: '10px',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        zIndex: 10
+                      }}>
+                        NUEVA
+                      </div>
+                    )}
+                    <img 
+                      src={item.imagen && item.imagen.startsWith('http') ? item.imagen : (item.imagen ? `/assets/${item.imagen}` : '/assets/placeholder.jpg')} 
+                      alt={fuenteNormalizada} 
+                      className="card-img"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop';
+                      }}
+                    />
+                    <div className="card-content">
+                      <div className="card-source">{fuenteNormalizada}</div>
+                      <div className="card-title">{item.titulo}</div>
+                      <div className="card-meta">
+                        <span>{item.fecha}</span>
+                      </div>
+                      <a href={item.link} target="_blank" rel="noreferrer" className="card-action">
+                        Leer más
+                      </a>
                     </div>
-                    <a href={item.link} target="_blank" rel="noreferrer" className="card-action">
-                      Leer más
-                    </a>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

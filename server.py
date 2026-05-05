@@ -308,7 +308,7 @@ def _run_all_scrapers():
         ("SBAP",                          SBAPScraper),
         ("SEA Noticias",                  SEAScraper),
         ("Sernageomin",                   SernageominScraper),
-        ("Tribunal Ambiental (Noticias)", TribunalScraper),
+        ("Segundo Tribunal",              TribunalScraper),
     ]
 
     log.info("--- SCRAPING NOTICIAS ---")
@@ -357,7 +357,7 @@ def _run_news_scrapers():
         ("SBAP",                          SBAPScraper),
         ("SEA Noticias",                  SEAScraper),
         ("Sernageomin",                   SernageominScraper),
-        ("Tribunal Ambiental (Noticias)", TribunalScraper),
+        ("Segundo Tribunal",              TribunalScraper),
     ]
 
     log.info("--- SCRAPING NOTICIAS MANUAL ---")

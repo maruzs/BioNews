@@ -17,7 +17,7 @@ def obtener_ultima_fecha(conn):
     """
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Primer'")
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Primer Tribunal'")
         filas = cursor.fetchall()
         
         if not filas:
@@ -28,7 +28,11 @@ def obtener_ultima_fecha(conn):
             fecha_str = fila[0]
             if fecha_str:
                 try:
-                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    # Intentamos ISO primero
+                    if '-' in fecha_str and len(fecha_str.split('-')[0]) == 4:
+                        dt = datetime.strptime(fecha_str, "%Y-%m-%d")
+                    else:
+                        dt = datetime.strptime(fecha_str, "%d-%m-%Y")
                     fechas_validas.append(dt)
                 except ValueError:
                     continue
@@ -91,7 +95,8 @@ def procesar_nuevos_registros(causas, conn, ultima_fecha_db):
         fecha_str = fecha_raw.split(' ')[0] if fecha_raw else ''
         try:
             dt = datetime.strptime(fecha_str, "%d-%m-%Y")
-            causas_procesadas.append((dt, fecha_str, causa))
+            fecha_iso = dt.strftime("%Y-%m-%d")
+            causas_procesadas.append((dt, fecha_iso, causa))
         except ValueError:
             continue
             
@@ -107,7 +112,7 @@ def procesar_nuevos_registros(causas, conn, ultima_fecha_db):
             continue
             
         caratula = causa.get('caratula', '')
-        tribunal = 'Primer'
+        tribunal = 'Primer Tribunal'
         tipo_procedimiento = causa.get('tipoCausa', '')
         
         estado_raw = causa.get('estado', '')

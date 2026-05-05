@@ -16,7 +16,7 @@ def obtener_ultima_fecha(conn):
     """
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Segundo'")
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Segundo Tribunal'")
         filas = cursor.fetchall()
         
         if not filas:
@@ -27,7 +27,11 @@ def obtener_ultima_fecha(conn):
             fecha_str = fila[0]
             if fecha_str:
                 try:
-                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    # Intentamos ISO primero
+                    if '-' in fecha_str and len(fecha_str.split('-')[0]) == 4:
+                        dt = datetime.strptime(fecha_str, "%Y-%m-%d")
+                    else:
+                        dt = datetime.strptime(fecha_str, "%d-%m-%Y")
                     fechas_validas.append(dt)
                 except ValueError:
                     continue
@@ -113,9 +117,9 @@ def procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha_db):
         if not fecha_ms:
             continue
             
-        fecha_str = datetime.fromtimestamp(fecha_ms / 1000.0).strftime('%d-%m-%Y')
+        fecha_str = datetime.fromtimestamp(fecha_ms / 1000.0).strftime('%Y-%m-%d')
         try:
-            dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+            dt = datetime.strptime(fecha_str, "%Y-%m-%d")
             causas_procesadas.append((dt, fecha_str, causa, id_causa))
         except ValueError:
             continue
@@ -132,7 +136,7 @@ def procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha_db):
             continue
             
         caratula = causa.get('descripcion', '')
-        tribunal = 'Segundo'
+        tribunal = 'Segundo Tribunal'
         
         procedimiento_obj = causa.get('procedimiento', {})
         tipo_procedimiento = procedimiento_obj.get('name', '') if procedimiento_obj else ''

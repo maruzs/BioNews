@@ -21,9 +21,9 @@ MAPEO_ROLES = {
 }
 
 MAPEO_CORTES = {
-    1: "Primer",
-    2: "Segundo",
-    3: "Tercer"
+    1: "Primer Tribunal",
+    2: "Segundo Tribunal",
+    3: "Tercer Tribunal"
 }
 
 
@@ -33,7 +33,7 @@ def obtener_ultima_fecha(conn):
     """
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Tercer'")
+        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Tercer Tribunal'")
         filas = cursor.fetchall()
         
         if not filas:
@@ -44,7 +44,11 @@ def obtener_ultima_fecha(conn):
             fecha_str = fila[0]
             if fecha_str:
                 try:
-                    dt = datetime.strptime(fecha_str, "%d-%m-%Y")
+                    # Intentamos ISO primero
+                    if '-' in fecha_str and len(fecha_str.split('-')[0]) == 4:
+                        dt = datetime.strptime(fecha_str, "%Y-%m-%d")
+                    else:
+                        dt = datetime.strptime(fecha_str, "%d-%m-%Y")
                     fechas_validas.append(dt)
                 except ValueError:
                     continue
@@ -103,7 +107,7 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
             fecha_raw = created_at.split('T')[0]
             try:
                 dt = datetime.strptime(fecha_raw, "%Y-%m-%d")
-                fecha_str = dt.strftime("%d-%m-%Y")
+                fecha_str = dt.strftime("%Y-%m-%d")
                 causas_procesadas.append((dt, fecha_str, causa))
             except ValueError:
                 continue
@@ -130,7 +134,7 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
             tipo_procedimiento = rol_info[0]
             letra_rol = rol_info[1]
             
-            tribunal = MAPEO_CORTES.get(court_id, "Tercer")
+            tribunal = MAPEO_CORTES.get(court_id, "Tercer Tribunal")
             rol = f"{letra_rol}-{role_number}-{anio}"
             
             caratula = causa.get('cover_title') or "sin caratula"

@@ -19,6 +19,11 @@ def parse_fecha(fecha_str):
             d, m, a = match_num.groups()
             return f"{a}-{m.zfill(2)}-{d.zfill(2)}"
 
+        # Formato ISO: 2026-04-20
+        match_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", fecha_str)
+        if match_iso:
+            return match_iso.group(0)
+
         # Formato Texto: 15 abril 2026
         match_txt = re.search(r"(\d+)\s+([a-z]+)\s+(\d{4})", fecha_str)
         if match_txt:
@@ -29,4 +34,4 @@ def parse_fecha(fecha_str):
     except:
         pass
         
-    return datetime.now().strftime("%Y-%m-%d")
+    return fecha_str # Retornar el original si no podemos parsearlo, en lugar de forzar hoy

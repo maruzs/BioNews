@@ -7,7 +7,7 @@ class TribunalScraper:
         self.engine = ScrapingEngine()
 
     def get_latest_news(self):
-        print(f"Iniciando scraping en Tribunal Ambiental: {self.url}", flush=True)
+        print(f"Iniciando scraping en Segundo Tribunal: {self.url}", flush=True)
         # Esperamos al contenedor principal del loop de noticias
         soup = self.engine.get_soup(self.url, wait_for_selector=".elementor-loop-container")
         
@@ -43,11 +43,11 @@ class TribunalScraper:
                     "fecha": parse_fecha(fecha_raw),
                     "link": link,
                     "imagen": img_url,
-                    "fuente": "Tribunal Ambiental"
+                    "fuente": "Segundo Tribunal"
                 })
             except Exception as e:
-                print(f"Error procesando noticia del Tribunal: {e}", flush=True)
+                print(f"Error procesando noticia del Segundo Tribunal: {e}", flush=True)
                 continue
 
-        print(f"Se encontraron {len(news_list)} noticias en Tribunal Ambiental", flush=True)
+        print(f"Se encontraron {len(news_list)} noticias en Segundo Tribunal", flush=True)
         return news_list
