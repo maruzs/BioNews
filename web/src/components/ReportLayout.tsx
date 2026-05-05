@@ -462,10 +462,13 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         flex: col.flex,
         minWidth: col.minWidth,
         type: isDateField ? 'date' : undefined,
-        valueGetter: isDateField ? (params: any) => {
-          const value = params.value;
-          if (!value) return null;
-          const str = String(value);
+        valueGetter: isDateField ? (value: any, row: any) => {
+          let val = value;
+          if (!val && row) {
+            val = row.fecha || row.Fecha || row.FECHA || row.fecha_agregado;
+          }
+          if (!val) return null;
+          const str = String(val);
           // Intentar parseo ISO directo (YYYY-MM-DD)
           if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
             return new Date(str.split(' ')[0] + 'T00:00:00');
