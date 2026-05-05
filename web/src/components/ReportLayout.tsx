@@ -4,6 +4,8 @@ import { Search, ChevronDown, ChevronUp, Trash2, LayoutDashboard, Download, Hear
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
+import { useAuth } from '../context/AuthContext';
+import DashboardView from './DashboardView';
 
 export interface LegalItem {
   [key: string]: any;
@@ -133,7 +135,6 @@ const TABLE_ACTION_FIELDS: Record<string, string> = {
   normativas: 'accion',
 };
 
-import { useAuth } from '../context/AuthContext';
 
 const ReportLayout: React.FC<ReportLayoutProps> = ({ 
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
@@ -528,10 +529,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-light)', border: '1px solid var(--border)', borderRadius: '12px', marginTop: '20px' }}>
-          <h2>Dashboards en proceso</h2>
-          <p>Próximamente visualizarás métricas detalladas aquí.</p>
-        </div>
+        <DashboardView tableName={tableName || ''} title={title} />
       ) : (
         <>
           <div className="filter-section">

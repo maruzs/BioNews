@@ -243,6 +243,13 @@ def get_scraper_logs(user = Depends(get_current_user)):
     # We could restrict detailed logs to admin, but the simple ones are needed.
     return db.get_scraper_logs()
 
+@app.get("/api/stats/{table_name}")
+def get_stats(table_name: str, user = Depends(get_current_user)):
+    stats = db.get_stats(table_name)
+    if not stats:
+        return {"error": "Tabla no encontrada o sin estadísticas"}
+    return stats
+
 # ─── SCRAPING ENDPOINTS ───────────────────────────────────────────────────────
 def _run_all_scrapers():
     """Función interna que corre todos los scrapers secuencialmente."""

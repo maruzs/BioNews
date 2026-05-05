@@ -338,3 +338,107 @@ class DatabaseManager:
             cursor.execute("SELECT * FROM scraper_logs ORDER BY ultimo_intento DESC")
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def get_stats(self, table_name):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            stats = {}
+            
+            # Verificar si la tabla existe
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+            if not cursor.fetchone():
+                return None
+
+            # Total count
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            stats['total'] = cursor.fetchone()[0]
+            
+            if table_name == 'normativas':
+                # Normativas por organismo
+                cursor.execute("SELECT organismo, COUNT(*) as count FROM normativas WHERE organismo IS NOT NULL GROUP BY organismo ORDER BY count DESC LIMIT 15")
+                stats['by_organismo'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                
+                # Normativas por año y tipo
+                cursor.execute("""
+                    SELECT 
+                        CASE 
+                            WHEN fecha LIKE '____-__-__' THEN substr(fecha, 1, 4)
+                            ELSE substr(fecha, -4)
+                        END as anio, 
+                        tipo_normativa, COUNT(*) as count 
+                    FROM normativas 
+                    WHERE (fecha LIKE '%-%-%' OR fecha LIKE '%/%/%')
+                    GROUP BY anio, tipo_normativa
+                    ORDER BY anio DESC
+                """)
+                rows = cursor.fetchall()
+                stats['by_year_type'] = [dict(zip(['anio', 'tipo', 'count'], row)) for row in rows if len(row[0]) == 4]
+
+            elif table_name == 'fiscalizaciones':
+                # Fiscalizaciones por region
+                cursor.execute("SELECT region, COUNT(*) as count FROM fiscalizaciones WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC")
+                stats['by_region'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                
+                # Fiscalizaciones por tipo (categoria)
+                cursor.execute("SELECT categoria, COUNT(*) as count FROM fiscalizaciones WHERE categoria IS NOT NULL GROUP BY categoria ORDER BY count DESC")
+                stats['by_tipo'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+
+                # Fiscalizaciones por año
+                cursor.execute("""
+                    SELECT 
+                        substr(expediente, instr(expediente, '-20') + 1, 4) as anio,
+                        COUNT(*) as count
+                    FROM fiscalizaciones
+                    WHERE expediente LIKE '%-20__-%'
+                    GROUP BY anio
+                    ORDER BY anio DESC
+                """)
+                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in cursor.fetchall()]
+
+            elif table_name == 'medidas_provisionales':
+                # Medidas por region
+                cursor.execute("SELECT region, COUNT(*) as count FROM medidas_provisionales WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC")
+                stats['by_region'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                
+                # Medidas por estado
+                cursor.execute("SELECT estado, COUNT(*) as count FROM medidas_provisionales WHERE estado IS NOT NULL GROUP BY estado ORDER BY count DESC")
+                stats['by_estado'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+
+                # Medidas por año
+                cursor.execute("""
+                    SELECT 
+                        substr(expediente, instr(expediente, '-20') + 1, 4) as anio,
+                        COUNT(*) as count
+                    FROM medidas_provisionales
+                    WHERE expediente LIKE '%-20__-%'
+                    GROUP BY anio
+                    ORDER BY anio DESC
+                """)
+                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in cursor.fetchall()]
+
+            elif table_name == 'Tribunales':
+                # Causas por tribunal
+                cursor.execute("SELECT Tribunal, COUNT(*) as count FROM Tribunales WHERE Tribunal IS NOT NULL GROUP BY Tribunal ORDER BY count DESC")
+                stats['by_tribunal'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                
+                # Causas por año
+                cursor.execute("""
+                    SELECT 
+                        CASE 
+                            WHEN Fecha LIKE '____-__-__' THEN substr(Fecha, 1, 4)
+                            ELSE substr(Fecha, -4)
+                        END as anio, 
+                        COUNT(*) as count 
+                    FROM Tribunales 
+                    WHERE Fecha IS NOT NULL
+                    GROUP BY anio
+                    ORDER BY anio DESC
+                """)
+                rows = cursor.fetchall()
+                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in rows if len(row[0]) == 4]
+                
+                # Causas por tipo de procedimiento
+                cursor.execute("SELECT Tipo_de_Procedimiento, COUNT(*) as count FROM Tribunales WHERE Tipo_de_Procedimiento IS NOT NULL GROUP BY Tipo_de_Procedimiento ORDER BY count DESC")
+                stats['by_procedimiento'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+
+            return stats
