@@ -10,6 +10,7 @@ import Register from './components/Register';
 import AdminPanel from './components/AdminPanel';
 import Profile from './components/Profile';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationsProvider } from './context/NotificationsContext';
 
 function ProtectedLayout() {
   const { user, logout } = useAuth();
@@ -75,13 +76,13 @@ function ProtectedLayout() {
           {/* SMA */}
           <Route path="/fiscalizaciones" element={<ReportLayout key="fiscalizaciones" title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" tableName="fiscalizaciones" category="fiscalizaciones" />} />
           <Route path="/sancionatorios" element={<ReportLayout key="sancionatorios" title="Sancionatorios" description="Reporte de procesos sancionatorios de la SMA." listTitle="Sancionatorios" tableName="sancionatorios" category="sancionatorios" />} />
-          <Route path="/sanciones" element={<ReportLayout key="sanciones" title="Sanciones" description="Registro público de sanciones emitidas." listTitle="Sanciones" tableName="registroSanciones" category="sanciones" />} />
-          <Route path="/programas" element={<ReportLayout key="programas" title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" tableName="programasDeCumplimiento" category="programas" />} />
-          <Route path="/medidas" element={<ReportLayout key="medidas" title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" tableName="medidas_provisionales" category="medidas" />} />
+          <Route path="/sanciones" element={<ReportLayout key="sanciones" title="Sanciones" description="Registro público de sanciones emitidas." listTitle="Sanciones" tableName="registroSanciones" category="registroSanciones" />} />
+          <Route path="/programas" element={<ReportLayout key="programas" title="Programas de Cumplimiento" description="Reporte de programas de cumplimiento (PdC)." listTitle="Programas" tableName="programasDeCumplimiento" category="programasDeCumplimiento" />} />
+          <Route path="/medidas" element={<ReportLayout key="medidas" title="Medidas Provisionales" description="Reporte de medidas provisionales dictadas." listTitle="Medidas" tableName="medidas_provisionales" category="medidas_provisionales" />} />
           <Route path="/requerimientos" element={<ReportLayout key="requerimientos" title="Requerimientos de Ingreso" description="Reporte de requerimientos de ingreso." listTitle="Requerimientos" tableName="requerimientos" category="requerimientos" />} />
 
           {/* Tribunales */}
-          <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" category="tribunales" />} />
+          <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" category="Tribunales" />} />
           
           {/* Admin Panel */}
           <Route path="/admin" element={<AdminPanel />} />
@@ -111,9 +112,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <NotificationsProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

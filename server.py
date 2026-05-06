@@ -14,10 +14,11 @@ import json
 import jwt
 import datetime
 import bcrypt
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request
+import asyncio
+from typing import Optional, List
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 from src.database.manager import DatabaseManager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -34,6 +35,59 @@ app.add_middleware(
 )
 
 db = DatabaseManager()
+
+# ─── WEBSOCKET MANAGER ──────────────────────────────────────────────────────
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                # Connection might be closed
+                continue
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/notifications/{token}")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    # Verify token
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Mantener conexión abierta, podemos recibir mensajes de latido si es necesario
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+async def notify_new_content(category_slug: str, item_id: str = None):
+    """Función para notificar a los clientes vía WebSocket."""
+    await manager.broadcast({
+        "type": "new_content",
+        "category": category_slug,
+        "item_id": item_id,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
 
 # ─── AUTHENTICATION SETUP ───────────────────────────────────────────────────
 SECRET_KEY = "bionews_super_secret_key_change_in_prod"
@@ -171,11 +225,39 @@ def update_scheduler_config(req: dict, admin = Depends(get_current_admin)):
         json.dump(req, f)
     return {"success": True}
 
+@app.get("/api/config/notifications")
+def get_notifications_config():
+    from pathlib import Path
+    import json
+    config_path = Path("data/scheduler.json")
+    if config_path.exists():
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            return {"interval": config.get("notification_interval", 15)}
+    return {"interval": 15}
+
+last_test_call = None
+
+@app.get("/api/test/status")
+def test_status():
+    global last_test_call
+    now = datetime.datetime.now()
+    if last_test_call is None:
+        elapsed = 0
+    else:
+        elapsed = (now - last_test_call).total_seconds()
+    last_test_call = now
+    log.info(f"API Test Status: transcurridos {elapsed:.1f} segundos.")
+    return {"elapsed": elapsed}
+
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
-def get_news():
-    news = db.get_latest_news(limit=100)
-    return [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news]
+def get_news(user = Depends(get_current_user)):
+    news_rows = db.get_latest_news(limit=100)
+    # Convertir a dicts
+    news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
+    # Agregar flag is_new
+    return db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
 
 # ─── TABLAS ESPECIFICAS ─────────────────────────────────────────────────────
 @app.get("/api/data/{table_name}")
@@ -183,7 +265,9 @@ def get_table_data(table_name: str, limit: int = 1000, user = Depends(get_curren
     """Endpoint genérico para obtener datos de cualquier tabla permitida."""
     try:
         data = db.get_table_data(table_name, limit=limit)
-        return data
+        # category_slug suele ser igual al table_name, excepto casos especiales
+        category_slug = table_name
+        return db.get_items_with_new_flag(user["sub"], category_slug, data)
     except ValueError as e:
         return {"error": str(e)}
 
@@ -250,6 +334,28 @@ def get_stats(table_name: str, user = Depends(get_current_user)):
         return {"error": "Tabla no encontrada o sin estadísticas"}
     return stats
 
+# ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+@app.get("/api/notifications/status")
+def get_notification_status(user = Depends(get_current_user)):
+    return db.get_notification_status(user["sub"])
+
+@app.post("/api/notifications/exit")
+def post_notification_exit(req: dict, user = Depends(get_current_user)):
+    category = req.get("category")
+    if not category:
+        raise HTTPException(status_code=400, detail="Category is required")
+    db.update_category_exit(user["sub"], category)
+    return {"success": True}
+
+@app.post("/api/notifications/view-item")
+def post_notification_view_item(req: dict, user = Depends(get_current_user)):
+    category = req.get("category")
+    item_id = req.get("item_id")
+    if not category or not item_id:
+        raise HTTPException(status_code=400, detail="Category and item_id are required")
+    db.mark_item_viewed(user["sub"], item_id, category)
+    return {"success": True}
+
 # ─── SCRAPING ENDPOINTS ───────────────────────────────────────────────────────
 def _run_all_scrapers():
     """Función interna que corre todos los scrapers secuencialmente."""
@@ -295,6 +401,19 @@ def _run_all_scrapers():
     ]
 
     log.info("--- SCRAPING DATOS ---")
+    mapping = {
+        "Primer Tribunal": "Tribunales",
+        "Segundo Tribunal": "Tribunales",
+        "Tercer Tribunal": "Tribunales",
+        "Diario Oficial (Normativas)": "normativas",
+        "Pertinencias SEA": "pertinencias",
+        "SNIFA Sancionatorios": "sancionatorios",
+        "SNIFA Fiscalizaciones": "fiscalizaciones",
+        "SNIFA Requerimientos": "requerimientos",
+        "SNIFA Medidas Provisionales": "medidas_provisionales",
+        "SNIFA Programas de Cumplimiento": "programasDeCumplimiento",
+        "SNIFA Registro Sanciones": "registroSanciones",
+    }
     for nombre, ScraperClass in datos_scrapers:
         log.info(f"Procesando: {nombre}...")
         try:
@@ -302,6 +421,10 @@ def _run_all_scrapers():
             nuevos = scraper.run()
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
             log.info(f"{nombre}: {nuevos} nuevos registros.")
+            if nuevos > 0:
+                cat = mapping.get(nombre)
+                if cat:
+                    asyncio.run(notify_new_content(cat))
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
             log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
@@ -327,6 +450,8 @@ def _run_all_scrapers():
                 nuevas = db.save_news(items)
                 db.log_scraper_run(nombre, exito=True, nuevos=nuevas)
                 log.info(f"{nombre}: {nuevas} nuevas noticias.")
+                if nuevas > 0:
+                    asyncio.run(notify_new_content("noticias"))
             else:
                 db.log_scraper_run(nombre, exito=True, nuevos=0)
                 log.info(f"{nombre}: sin noticias nuevas.")
@@ -399,7 +524,7 @@ def _run_news_scrapers():
         from src.scrapers.tribunal2 import TribunalScraper
         from src.scrapers.sma import SMAScraper
         from src.scrapers.corteSuprema import CorteSupremaScraper
-        from src.scrapers.tribunal3 import TercerTribunalScraper
+        from src.scrapers.tribunal3 import TercerTribunalNewsScraper as TercerTribunalScraper
     except ImportError as e:
         log.error(f"Error de importación al iniciar scrapers: {e}")
         return

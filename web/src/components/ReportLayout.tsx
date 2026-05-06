@@ -5,6 +5,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 import DashboardView from './DashboardView';
 
 export interface LegalItem {
@@ -118,9 +119,9 @@ const TABLE_ID_FIELDS: Record<string, string> = {
   medidas_provisionales: 'expediente',
   requerimientos: 'expediente',
   programasDeCumplimiento: 'expediente',
-  Tribunales: 'Rol',
+  Tribunales: 'Accion',
   pertinencias: 'Expediente',
-  // normativas: removed to fallback to composite ID
+  normativas: 'accion',
 };
 
 const TABLE_ACTION_FIELDS: Record<string, string> = {
@@ -140,6 +141,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
 }) => {
   const { token, user } = useAuth();
+  const { markExit, markItemViewed } = useNotifications();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,7 +224,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           }));
           setData(favData);
         } else if (tableName) {
-          const res = await fetch(`/api/data/${tableName}?limit=50000`, {
+          const res = await fetch(`/api/data/${tableName}?limit=5000`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
@@ -324,21 +326,14 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     return result;
   }, [data, appliedSearch, appliedColumnFilters, appliedDateRange]);
 
-  const [lastRead, setLastRead] = useState<string | null>(null);
-
   useEffect(() => {
-    if (user && category) {
-      const key = `read_${category}_${user.id}`;
-      setLastRead(localStorage.getItem(key));
-    }
-  }, [user, category]);
-
-  useEffect(() => {
-    if (user && category) {
-      const key = `read_${category}_${user.id}`;
-      localStorage.setItem(key, new Date().toISOString());
-    }
-  }, [user, category]);
+    // Al desmontar la página de la categoría, registrar la salida en la DB
+    return () => {
+      if (category && !isFavoritesPage) {
+        markExit(category);
+      }
+    };
+  }, [category, isFavoritesPage, markExit]);
 
   const handleApplyFilters = () => {
     setAppliedColumnFilters({ ...columnFilters });
@@ -410,7 +405,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         width: 80, 
         filterable: false,
         renderCell: (params: GridRenderCellParams) => {
-          const isNew = lastRead && params.row.fecha_scraping && new Date(params.row.fecha_scraping) > new Date(lastRead);
+          const isNew = params.row.is_new;
           return (
             <div style={{display: 'flex', alignItems: 'center', gap: '8px', height: '100%'}}>
               <span>{params.row.rowNumber}</span>
@@ -502,8 +497,31 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       renderCell: (params: GridRenderCellParams) => {
         const link = isFavoritesPage ? params.row._action : (params.row[effectiveActionField] || '');
         if (!link) return null;
+        
+        const handleActionClick = () => {
+          if (category && !isFavoritesPage) {
+            const itemId = params.row[effectiveIdField] || '';
+            markItemViewed(category, String(itemId));
+            
+            // Actualizar estado local para quitar etiqueta "Nuevo" inmediatamente
+            setData(prev => prev.map(item => {
+              const currentId = item[effectiveIdField] || '';
+              if (String(currentId) === String(itemId)) {
+                return { ...item, is_new: false };
+              }
+              return item;
+            }));
+          }
+        };
+
         return (
-          <a href={link} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', display: 'flex', alignItems: 'center', height: '100%'}}>
+          <a 
+            href={link} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{color: 'var(--primary)', display: 'flex', alignItems: 'center', height: '100%'}}
+            onClick={handleActionClick}
+          >
             <Eye size={20} />
           </a>
         );
@@ -511,7 +529,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     });
 
     return cols;
-  }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage, lastRead]);
+  }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage]);
 
   return (
     <div className="report-container">
@@ -658,6 +676,26 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       <div className="list-header">
         <h2 className="list-title">Listado de {listTitle}</h2>
         <div className="list-meta" style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+          {!isFavoritesPage && category && (
+            <button 
+              onClick={async () => {
+                await markExit(category);
+                setData(prev => prev.map(item => ({ ...item, is_new: false })));
+              }}
+              className="btn-mark-read"
+              style={{
+                fontSize: '12px',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid var(--primary)',
+                color: 'var(--primary)',
+                background: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Marcar todo como leído
+            </button>
+          )}
           <span>Total de registros: {filteredData.length}</span>
           <button onClick={downloadExcel} style={{display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600}}>
             <Download size={16} /> Descargar XLSX
@@ -677,10 +715,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           disableRowSelectionOnClick
           localeText={esES.components.MuiDataGrid.defaultProps.localeText}
           getRowClassName={(params) => {
-            if (!lastRead) return '';
-            const scrapingDate = params.row.fecha_scraping;
-            if (!scrapingDate) return '';
-            return new Date(scrapingDate) > new Date(lastRead) ? 'new-record-highlight' : '';
+            return params.row.is_new ? 'new-record-highlight' : '';
           }}
           sx={{
             border: 'none',

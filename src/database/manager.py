@@ -94,6 +94,33 @@ class DatabaseManager:
                     nuevos_registros INTEGER
                 )
             """)
+
+            # --- NUEVAS TABLAS PARA NOTIFICACIONES ---
+            
+            # Tabla para rastrear la última vez que el usuario salió de una categoría
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_category_views (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    category_slug TEXT,
+                    last_exit_at TIMESTAMP,
+                    UNIQUE(user_id, category_slug),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """)
+
+            # Tabla para rastrear ítems individuales vistos por el usuario
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_item_views (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    item_id_or_link TEXT,
+                    category_slug TEXT,
+                    viewed_at TIMESTAMP,
+                    UNIQUE(user_id, item_id_or_link, category_slug),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """)
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
@@ -442,3 +469,135 @@ class DatabaseManager:
                 stats['by_procedimiento'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
 
             return stats
+
+    # ─── NOTIFICACIONES Y VISTOS ──────────────────────────────────────────────
+
+    def update_category_exit(self, user_id, category_slug):
+        """Actualiza el momento en que el usuario salió de una categoría."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO user_category_views (user_id, category_slug, last_exit_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id, category_slug) DO UPDATE SET
+                    last_exit_at = excluded.last_exit_at
+            """, (user_id, category_slug, datetime.now()))
+            conn.commit()
+
+    def mark_item_viewed(self, user_id, item_id_or_link, category_slug):
+        """Marca un ítem específico como visto por el usuario."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR IGNORE INTO user_item_views (user_id, item_id_or_link, category_slug, viewed_at)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, item_id_or_link, category_slug, datetime.now()))
+            conn.commit()
+
+    def get_user_category_last_exit(self, user_id, category_slug):
+        """Obtiene el timestamp de la última salida de una categoría."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = ? AND category_slug = ?", (user_id, category_slug))
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+    def get_viewed_items_ids(self, user_id, category_slug):
+        """Obtiene la lista de IDs de ítems vistos en una categoría."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT item_id_or_link FROM user_item_views WHERE user_id = ? AND category_slug = ?", (user_id, category_slug))
+            return [row[0] for row in cursor.fetchall()]
+
+    def get_notification_status(self, user_id):
+        """
+        Calcula qué categorías tienen contenido nuevo para la sidebar.
+        Regla: tiene contenido nuevo si hay algún ítem con created_at > last_exit_at
+        y no está marcado como visto individualmente.
+        """
+        categories = [
+            "noticias", "normativas", "pertinencias", "fiscalizaciones", 
+            "sancionatorios", "registroSanciones", "programasDeCumplimiento", 
+            "medidas_provisionales", "requerimientos", "Tribunales"
+        ]
+        
+        status = {}
+        for cat in categories:
+            has_new = self._check_if_category_has_new(user_id, cat)
+            status[cat] = has_new
+        return status
+
+    def _check_if_category_has_new(self, user_id, category_slug):
+        last_exit = self.get_user_category_last_exit(user_id, category_slug)
+        viewed_ids = self.get_viewed_items_ids(user_id, category_slug)
+        
+        table_mapping = {
+            "noticias": "noticias",
+            "normativas": "normativas",
+            "pertinencias": "pertinencias",
+            "fiscalizaciones": "fiscalizaciones",
+            "sancionatorios": "sancionatorios",
+            "registroSanciones": "registroSanciones",
+            "programasDeCumplimiento": "programasDeCumplimiento",
+            "medidas_provisionales": "medidas_provisionales",
+            "requerimientos": "requerimientos",
+            "Tribunales": "Tribunales"
+        }
+        
+        table = table_mapping.get(category_slug)
+        if not table: return False
+        
+        # Obtener columna de fecha de creacion/scraping
+        date_col = "fecha_scraping"
+        id_col = "link" if category_slug == "noticias" else ("Expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "pertinencias", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else ("Accion" if category_slug == "Tribunales" else ("accion" if category_slug == "normativas" else "id")))
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Si last_exit es NULL, consideramos todo nuevo.
+            if last_exit is None:
+                if viewed_ids:
+                    placeholders = ', '.join(['?'] * len(viewed_ids))
+                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
+                else:
+                    cursor.execute(f'SELECT 1 FROM "{table}" LIMIT 1')
+            else:
+                if viewed_ids:
+                    placeholders = ', '.join(['?'] * len(viewed_ids))
+                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE {date_col} > ? AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
+                else:
+                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE {date_col} > ? LIMIT 1', (last_exit,))
+            
+            return cursor.fetchone() is not None
+
+    def get_items_with_new_flag(self, user_id, category_slug, items):
+        """Agrega el flag 'is_new' a cada ítem de la lista."""
+        last_exit = self.get_user_category_last_exit(user_id, category_slug)
+        viewed_ids = set(self.get_viewed_items_ids(user_id, category_slug))
+        
+        id_col = "link" if category_slug == "noticias" else ("Expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "pertinencias", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else ("Accion" if category_slug == "Tribunales" else ("accion" if category_slug == "normativas" else "id")))
+        date_col = "fecha_scraping"
+
+        for item in items:
+            item_id = str(item.get(id_col) or item.get("id_o_link") or "")
+            
+            # Si el ítem ya fue visto individualmente, no es nuevo
+            if item_id in viewed_ids:
+                item['is_new'] = False
+                continue
+                
+            # Si el usuario nunca ha salido de la categoría, todo lo que tenga fecha es nuevo
+            if last_exit is None:
+                item['is_new'] = True
+                continue
+
+            # Priorizar fecha_scraping, luego Fecha/fecha del registro
+            item_date = item.get(date_col) or item.get("Fecha") or item.get("fecha")
+            
+            if not item_date:
+                item['is_new'] = False
+            else:
+                # Comparación de strings (ISO 8601 compatible)
+                item['is_new'] = str(item_date) > str(last_exit)
+        
+        return items

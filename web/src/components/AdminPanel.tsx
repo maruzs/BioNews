@@ -14,7 +14,8 @@ const AdminPanel = () => {
     noticias_interval: 1,
     tribunales_interval: 1,
     hora_inicio: "07:00",
-    hora_fin: "19:00"
+    hora_fin: "19:00",
+    notification_interval: 15
   });
 
   const fetchUsers = async () => {
@@ -225,6 +226,10 @@ const AdminPanel = () => {
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Fin (Diario)</label>
               <input type="time" value={schedulerConfig.hora_fin} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_fin: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Polling Notificaciones (Segundos)</label>
+              <input type="number" min="5" max="3600" value={schedulerConfig.notification_interval} onChange={(e) => setSchedulerConfig({...schedulerConfig, notification_interval: parseInt(e.target.value)})} className="filter-select" />
             </div>
           </div>
           <button onClick={saveSchedulerConfig} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px' }}>

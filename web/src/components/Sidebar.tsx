@@ -10,14 +10,15 @@ import {
   User, LogOut, Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [updates, setUpdates] = useState<Record<string, boolean>>({});
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { token, user, logout } = useAuth();
+  const { categoryStatus } = useNotifications();
   const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Click outside to close
@@ -31,48 +32,6 @@ const Sidebar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
-  const checkUpdates = (data: any[]) => {
-    const hasUpdates = (fuenteKeys: string[], category: string) => {
-      const categoryLogs = data.filter(log => fuenteKeys.includes(log.fuente) && log.nuevos_registros > 0);
-      if (categoryLogs.length === 0) return false;
-      
-      const lastRead = localStorage.getItem(`read_${category}_${user?.id}`);
-      if (!lastRead) return true;
-
-      // Check if any log's ultimo_exito is newer than lastRead
-      return categoryLogs.some(log => new Date(log.ultimo_exito) > new Date(lastRead));
-    };
-
-    const newsLogs = data.filter(log => (log.fuente.includes('Noticias') || log.fuente === 'MMA' || log.fuente === 'SMA' || log.fuente === 'Corte Suprema' || log.fuente === 'Sernageomin' || log.fuente === 'SBAP') && log.nuevos_registros > 0);
-    const lastReadNews = localStorage.getItem(`read_noticias_${user?.id}`);
-    const newsHasUpdate = newsLogs.length > 0 && (!lastReadNews || newsLogs.some(log => new Date(log.ultimo_exito) > new Date(lastReadNews)));
-
-    setUpdates({
-      noticias: newsHasUpdate,
-      normativas: hasUpdates(['Diario Oficial (Normativas)'], 'normativas'),
-      pertinencias: hasUpdates(['Pertinencias SEA'], 'pertinencias'),
-      fiscalizaciones: hasUpdates(['SNIFA Fiscalizaciones'], 'fiscalizaciones'),
-      sancionatorios: hasUpdates(['SNIFA Sancionatorios'], 'sancionatorios'),
-      sanciones: hasUpdates(['SNIFA Registro Sanciones'], 'sanciones'),
-      programas: hasUpdates(['SNIFA Programas de Cumplimiento'], 'programas'),
-      medidas: hasUpdates(['SNIFA Medidas Provisionales'], 'medidas'),
-      requerimientos: hasUpdates(['SNIFA Requerimientos'], 'requerimientos'),
-      tribunales: hasUpdates(['Primer Tribunal Ambiental', 'Segundo Tribunal Ambiental', 'Tercer Tribunal Ambiental'], 'tribunales')
-    });
-  };
-
-  useEffect(() => {
-    if (!token) return;
-    fetch('/api/logs', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-      .then(res => res.json())
-      .then(checkUpdates)
-      .catch(() => {});
-  }, [token, location.pathname]);
 
   const handleMobileClose = () => {
     if (window.innerWidth <= 768) {
@@ -163,7 +122,7 @@ const Sidebar = () => {
         <NavLink onClick={handleMobileClose} to="/noticias" className={({isActive}) => `menu-item ${isActive ? 'active' : ''}`} title="Noticias">
           <Newspaper size={20} className="icon" />
           {!collapsed && <span>Noticias</span>}
-          {!collapsed && <Dot show={updates.noticias} />}
+          {!collapsed && <Dot show={categoryStatus.noticias} />}
         </NavLink>
         
         <NavLink onClick={handleMobileClose} to="/favoritos" className={({isActive}) => `menu-item ${isActive ? 'active' : ''}`} title="Mis Favoritos">
@@ -180,7 +139,7 @@ const Sidebar = () => {
           <ul className="submenu">
             <NavLink onClick={handleMobileClose} to="/normativas" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Normativas">
               <CalendarCheck size={18} /> {!collapsed && "Normativas"}
-              {!collapsed && <Dot show={updates.normativas} />}
+              {!collapsed && <Dot show={categoryStatus.normativas} />}
             </NavLink>
           </ul>
         )}
@@ -194,7 +153,7 @@ const Sidebar = () => {
           <ul className="submenu">
             <NavLink onClick={handleMobileClose} to="/pertinencias" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Pertinencias">
               <UserSquare2 size={18} /> {!collapsed && "Pertinencias"}
-              {!collapsed && <Dot show={updates.pertinencias} />}
+              {!collapsed && <Dot show={categoryStatus.pertinencias} />}
             </NavLink>
           </ul>
         )}
@@ -208,27 +167,27 @@ const Sidebar = () => {
           <ul className="submenu">
             <NavLink onClick={handleMobileClose} to="/fiscalizaciones" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Fiscalizaciones">
               <UserSearch size={18} /> {!collapsed && "Fiscalizaciones"}
-              {!collapsed && <Dot show={updates.fiscalizaciones} />}
+              {!collapsed && <Dot show={categoryStatus.fiscalizaciones} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/sancionatorios" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Sancionatorios">
               <MoreHorizontal size={18} /> {!collapsed && "Sancionatorios"}
-              {!collapsed && <Dot show={updates.sancionatorios} />}
+              {!collapsed && <Dot show={categoryStatus.sancionatorios} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/sanciones" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Sanciones">
               <Gavel size={18} /> {!collapsed && "Sanciones"}
-              {!collapsed && <Dot show={updates.sanciones} />}
+              {!collapsed && <Dot show={categoryStatus.registroSanciones} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/programas" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Programas de cumplimiento">
               <FileCheck size={18} /> {!collapsed && "Programas"}
-              {!collapsed && <Dot show={updates.programas} />}
+              {!collapsed && <Dot show={categoryStatus.programasDeCumplimiento} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/medidas" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Medidas provisionales">
               <Edit3 size={18} /> {!collapsed && "Medidas"}
-              {!collapsed && <Dot show={updates.medidas} />}
+              {!collapsed && <Dot show={categoryStatus.medidas_provisionales} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/requerimientos" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Requerimientos de ingreso">
               <LogIn size={18} /> {!collapsed && "Requerimientos"}
-              {!collapsed && <Dot show={updates.requerimientos} />}
+              {!collapsed && <Dot show={categoryStatus.requerimientos} />}
             </NavLink>
           </ul>
         )}
@@ -242,7 +201,7 @@ const Sidebar = () => {
           <ul className="submenu">
             <NavLink onClick={handleMobileClose} to="/tribunales" className={({isActive}) => `submenu-item ${isActive ? 'active' : ''}`} title="Tribunales Ambientales">
               <Scale size={18} /> {!collapsed && "Tribunales"}
-              {!collapsed && <Dot show={updates.tribunales} />}
+              {!collapsed && <Dot show={categoryStatus.Tribunales} />}
             </NavLink>
           </ul>
         )}

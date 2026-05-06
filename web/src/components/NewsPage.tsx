@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 interface NewsItem {
   link: string;
@@ -9,34 +10,26 @@ interface NewsItem {
   imagen: string;
   fuente: string;
   fecha_scraping: string;
+  is_new: boolean;
 }
 
 const NewsPage = () => {
+  const { token, user } = useAuth();
+  const { markExit, markItemViewed } = useNotifications();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastRead, setLastRead] = useState<string | null>(null);
 
   // Filter States
   const [searchWord, setSearchWord] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
-  const { token, user } = useAuth();
-
   useEffect(() => {
-    // Capture the last read timestamp BEFORE Sidebar updates it
-    if (user) {
-      const stored = localStorage.getItem(`read_noticias_${user.id}`);
-      setLastRead(stored);
-    }
-  }, [user]);
-
-  // Mark as read on mount
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`read_noticias_${user.id}`, new Date().toISOString());
-    }
-  }, [user]);
+    // Al desmontar la página de noticias, registrar la salida en la DB
+    return () => {
+      markExit('noticias');
+    };
+  }, [markExit]);
 
   useEffect(() => {
     if (!token) return;
@@ -88,16 +81,30 @@ const NewsPage = () => {
     return matchesSearch && matchesDate && matchesSource;
   });
 
-  const isNew = (item: NewsItem) => {
-    if (!lastRead) return true;
-    if (!item.fecha_scraping) return false;
-    return new Date(item.fecha_scraping) > new Date(lastRead);
-  };
-
   return (
     <div>
-      <div className="header">
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="page-title">Noticias Recientes</h1>
+        <button 
+          onClick={async () => {
+            await markExit('noticias');
+            setNews(prev => prev.map(item => ({ ...item, is_new: false })));
+          }}
+          className="btn-mark-read"
+          style={{
+            fontSize: '13px',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: '1px solid var(--primary)',
+            color: 'var(--primary)',
+            background: 'white',
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Marcar todo como leído
+        </button>
       </div>
 
       <div className="news-filters" style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
@@ -149,7 +156,7 @@ const NewsPage = () => {
               <p className="empty-state" style={{gridColumn: '1 / -1', textAlign: 'center'}}>No se encontraron noticias con estos filtros.</p>
             ) : (
               filteredNews.map((item, idx) => {
-                const itemIsNew = isNew(item);
+                const itemIsNew = item.is_new;
                 const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
                 
                 return (
@@ -188,7 +195,16 @@ const NewsPage = () => {
                       <div className="card-meta">
                         <span>{item.fecha}</span>
                       </div>
-                      <a href={item.link} target="_blank" rel="noreferrer" className="card-action">
+                      <a 
+                        href={item.link} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="card-action"
+                        onClick={() => {
+                          markItemViewed('noticias', item.link);
+                          setNews(prev => prev.map(n => n.link === item.link ? { ...n, is_new: false } : n));
+                        }}
+                      >
                         Leer más
                       </a>
                     </div>
