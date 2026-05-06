@@ -35,29 +35,30 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       refreshStatus();
 
       // Fetch polling interval and start polling
-      let intervalId: any;
+      let timeoutId: any;
       
-      const startPolling = async () => {
+      const poll = async () => {
         try {
           const configRes = await fetch('/api/config/notifications');
           const config = await configRes.json();
-          const intervalMs = (config.interval || 15) * 1000;
+          const intervalSeconds = config.interval || 15;
           
-          intervalId = setInterval(() => {
-            refreshStatus();
-          }, intervalMs);
+          await refreshStatus();
+          
+          // Call test API to log elapsed time in server console
+          fetch('/api/test/status').catch(() => {});
+          
+          timeoutId = setTimeout(poll, intervalSeconds * 1000);
         } catch (error) {
-          console.error("Error fetching notification config, falling back to 15s:", error);
-          intervalId = setInterval(() => {
-            refreshStatus();
-          }, 15000);
+          console.error("Error in polling loop:", error);
+          timeoutId = setTimeout(poll, 15000);
         }
       };
 
-      startPolling();
+      poll();
 
       return () => {
-        if (intervalId) clearInterval(intervalId);
+        if (timeoutId) clearTimeout(timeoutId);
       };
     } else {
       setCategoryStatus({});
@@ -73,7 +74,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ category })
+        body: JSON.stringify({ category }),
+        keepalive: true
       });
       if (res.ok) {
         setCategoryStatus(prev => ({ ...prev, [category]: false }));
@@ -92,7 +94,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ category, item_id: itemId })
+        body: JSON.stringify({ category, item_id: itemId }),
+        keepalive: true
       });
       // No actualizamos categoryStatus aquí necesariamente, 
       // el punto rojo solo se quita al entrar/salir de la categoría según la regla.

@@ -620,3 +620,39 @@ def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_cur
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+# ─── BACKGROUND SCHEDULER MONITOR ─────────────────────────────────────────────
+async def scheduler_monitor():
+    """Tarea que monitorea el scheduler.json y loguea ejecuciones de prueba."""
+    last_checked_minute = ""
+    while True:
+        try:
+            from pathlib import Path
+            import json
+            config_path = Path("data/scheduler.json")
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                
+                now = datetime.datetime.now()
+                current_time = now.strftime("%H:%M")
+                
+                # Solo loguear una vez por minuto
+                if current_time != last_checked_minute:
+                    # Tiempos de SNIFA
+                    if current_time == config.get("snifa_time_1"):
+                        log.info(f"TEST: Se ejecuto el scheduler a las {current_time} (SNIFA 1)")
+                    if current_time == config.get("snifa_time_2"):
+                        log.info(f"TEST: Se ejecuto el scheduler a las {current_time} (SNIFA 2)")
+                    
+                    # Otras horas de prueba que el usuario ponga en el JSON pueden ser monitoreadas aqui
+                    last_checked_minute = current_time
+        except Exception as e:
+            log.error(f"Error en scheduler_monitor: {e}")
+        
+        await asyncio.sleep(30) # Verificar cada 30 segundos
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(scheduler_monitor())
+    log.info("BioNews Backend Started. Scheduler monitor active.")

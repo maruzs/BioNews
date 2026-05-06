@@ -570,6 +570,26 @@ class DatabaseManager:
             
             return cursor.fetchone() is not None
 
+    def _normalize_date(self, date_val):
+        """Normaliza una fecha a string ISO YYYY-MM-DD HH:MM:SS para comparación."""
+        if not date_val: return ""
+        str_val = str(date_val).strip()
+        
+        # Caso 1: DD/MM/YYYY o DD-MM-YYYY
+        if "/" in str_val or ("-" in str_val and len(str_val.split("-")[0]) != 4):
+            sep = "/" if "/" in str_val else "-"
+            parts = str_val.split(" ")[0].split(sep)
+            if len(parts) == 3:
+                # Asumimos DD-MM-YYYY si la primera parte es <= 31
+                try:
+                    d, m, y = parts[0], parts[1], parts[2]
+                    if len(y) == 2: y = "20" + y
+                    return f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+                except: pass
+        
+        # Caso 2: Ya es YYYY-MM-DD...
+        return str_val
+
     def get_items_with_new_flag(self, user_id, category_slug, items):
         """Agrega el flag 'is_new' a cada ítem de la lista."""
         last_exit = self.get_user_category_last_exit(user_id, category_slug)
@@ -577,6 +597,8 @@ class DatabaseManager:
         
         id_col = "link" if category_slug == "noticias" else ("Expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "pertinencias", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else ("Accion" if category_slug == "Tribunales" else ("accion" if category_slug == "normativas" else "id")))
         date_col = "fecha_scraping"
+
+        norm_last_exit = self._normalize_date(last_exit)
 
         for item in items:
             item_id = str(item.get(id_col) or item.get("id_o_link") or "")
@@ -597,7 +619,7 @@ class DatabaseManager:
             if not item_date:
                 item['is_new'] = False
             else:
-                # Comparación de strings (ISO 8601 compatible)
-                item['is_new'] = str(item_date) > str(last_exit)
+                norm_item_date = self._normalize_date(item_date)
+                item['is_new'] = norm_item_date > norm_last_exit
         
         return items

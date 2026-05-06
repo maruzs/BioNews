@@ -227,9 +227,14 @@ const AdminPanel = () => {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Fin (Diario)</label>
               <input type="time" value={schedulerConfig.hora_fin} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_fin: e.target.value})} className="filter-select" />
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Polling Notificaciones (Segundos)</label>
-              <input type="number" min="5" max="3600" value={schedulerConfig.notification_interval} onChange={(e) => setSchedulerConfig({...schedulerConfig, notification_interval: parseInt(e.target.value)})} className="filter-select" />
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Testeo (Ejecución Terminal)</label>
+              <input 
+                type="time" 
+                value={schedulerConfig.test_time || ''} 
+                onChange={(e) => setSchedulerConfig({...schedulerConfig, test_time: e.target.value})} 
+                className="filter-select"
+              />
             </div>
           </div>
           <button onClick={saveSchedulerConfig} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px' }}>
