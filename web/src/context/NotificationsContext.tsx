@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 interface NotificationsContextType {
@@ -13,7 +13,6 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token, user } = useAuth();
   const [categoryStatus, setCategoryStatus] = useState<Record<string, boolean>>({});
-  const socketRef = useRef<WebSocket | null>(null);
 
   const refreshStatus = useCallback(async () => {
     if (!token) return;
@@ -35,16 +34,16 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       refreshStatus();
 
       // Fetch polling interval and start polling
-      let timeoutId: any;
-      
+      let timeoutId: number | undefined;
+
       const poll = async () => {
         try {
           const configRes = await fetch('/api/config/notifications');
           const config = await configRes.json();
           const intervalSeconds = config.interval || 15;
-          
+
           await refreshStatus();
-          
+
           timeoutId = setTimeout(poll, intervalSeconds * 1000);
         } catch (error) {
           console.error("Error in polling loop:", error);
@@ -67,7 +66,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const res = await fetch('/api/notifications/exit', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -87,7 +86,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await fetch('/api/notifications/view-item', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },

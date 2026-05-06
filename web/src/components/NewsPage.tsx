@@ -14,7 +14,7 @@ interface NewsItem {
 }
 
 const NewsPage = () => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const { markExit, markItemViewed } = useNotifications();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,14 +70,14 @@ const NewsPage = () => {
 
   const filteredNews = news.filter(item => {
     const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
-    
-    const matchesSearch = item.titulo?.toLowerCase().includes(searchWord.toLowerCase()) || 
-                          fuenteNormalizada?.toLowerCase().includes(searchWord.toLowerCase());
-    
+
+    const matchesSearch = item.titulo?.toLowerCase().includes(searchWord.toLowerCase()) ||
+      fuenteNormalizada?.toLowerCase().includes(searchWord.toLowerCase());
+
     const matchesDate = filterDate ? item.fecha.startsWith(filterDate) : true;
-    
+
     const matchesSource = selectedSources.size > 0 ? selectedSources.has(fuenteNormalizada) : true;
-    
+
     return matchesSearch && matchesDate && matchesSource;
   });
 
@@ -85,7 +85,7 @@ const NewsPage = () => {
     <div>
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="page-title">Noticias Recientes</h1>
-        <button 
+        <button
           onClick={async () => {
             await markExit('noticias');
             setNews(prev => prev.map(item => ({ ...item, is_new: false })));
@@ -107,58 +107,58 @@ const NewsPage = () => {
         </button>
       </div>
 
-      <div className="news-filters" style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-        
-        <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-          <div className="search-bar" style={{flex: 1, minWidth: '250px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', display: 'flex', alignItems: 'center'}}>
-            <Search size={18} color="var(--primary)" style={{marginRight: '10px'}} />
-            <input 
-              type="text" 
-              placeholder="Buscar por palabras clave..." 
+      <div className="news-filters" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: '250px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', display: 'flex', alignItems: 'center' }}>
+            <Search size={18} color="var(--primary)" style={{ marginRight: '10px' }} />
+            <input
+              type="text"
+              placeholder="Buscar por palabras clave..."
               value={searchWord}
               onChange={(e) => setSearchWord(e.target.value)}
-              style={{border: 'none', outline: 'none', width: '100%'}}
+              style={{ border: 'none', outline: 'none', width: '100%' }}
             />
           </div>
 
-          <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px'}}>
-            <span style={{fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500}}>Fecha:</span>
-            <input 
-              type="date" 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500 }}>Fecha:</span>
+            <input
+              type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              style={{border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', backgroundColor: 'transparent'}}
+              style={{ border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', backgroundColor: 'transparent' }}
             />
           </div>
         </div>
 
-        <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-          <span className="filter-label" style={{fontWeight: 600, color: 'var(--text-dark)'}}>Filtrar por Organismo:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+          <span className="filter-label" style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Filtrar por Organismo:</span>
           {uniqueSources.map(source => (
-            <label key={source} className="filter-checkbox" style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 12px', borderRadius: '20px', border: '1px solid var(--border)'}}>
-              <input 
-                type="checkbox" 
+            <label key={source} className="filter-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 12px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+              <input
+                type="checkbox"
                 checked={selectedSources.has(source)}
                 onChange={() => handleSourceChange(source)}
-              /> 
+              />
               {source}
             </label>
           ))}
         </div>
       </div>
-      
+
       <div className="content-wrapper">
         {loading ? (
           <p className="empty-state">Cargando noticias...</p>
         ) : (
           <div className="news-grid">
             {filteredNews.length === 0 ? (
-              <p className="empty-state" style={{gridColumn: '1 / -1', textAlign: 'center'}}>No se encontraron noticias con estos filtros.</p>
+              <p className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No se encontraron noticias con estos filtros.</p>
             ) : (
               filteredNews.map((item, idx) => {
                 const itemIsNew = item.is_new;
                 const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
-                
+
                 return (
                   <div key={idx} className={`card ${itemIsNew ? 'new-highlight' : ''}`} style={itemIsNew ? {
                     border: '2px solid var(--primary)',
@@ -181,9 +181,9 @@ const NewsPage = () => {
                         NUEVA
                       </div>
                     )}
-                    <img 
-                      src={item.imagen && item.imagen.startsWith('http') ? item.imagen : (item.imagen ? `/assets/${item.imagen}` : '/assets/placeholder.jpg')} 
-                      alt={fuenteNormalizada} 
+                    <img
+                      src={item.imagen && item.imagen.startsWith('http') ? item.imagen : (item.imagen ? `/assets/${item.imagen}` : '/assets/placeholder.jpg')}
+                      alt={fuenteNormalizada}
                       className="card-img"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=200&fit=crop';
@@ -195,10 +195,10 @@ const NewsPage = () => {
                       <div className="card-meta">
                         <span>{item.fecha}</span>
                       </div>
-                      <a 
-                        href={item.link} 
-                        target="_blank" 
-                        rel="noreferrer" 
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noreferrer"
                         className="card-action"
                         onClick={() => {
                           markItemViewed('noticias', item.link);

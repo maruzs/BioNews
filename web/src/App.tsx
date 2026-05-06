@@ -17,7 +17,7 @@ function ProtectedLayout() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -42,12 +42,12 @@ function ProtectedLayout() {
         <div className="top-header">
           <div className="top-header-spacer"></div>
           <div className="top-header-actions" style={{ position: 'relative' }} ref={dropdownRef}>
-            <div 
+            <div
               style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'white', padding: '5px 15px', borderRadius: '30px', border: '1px solid var(--border)' }}
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
               <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                {user.name.charAt(0).toUpperCase()}
+                {user.name.charAt(0)?.toUpperCase()}
               </div>
               <span style={{ fontWeight: 500, color: 'var(--text-dark)' }}>{user.name}</span>
             </div>
@@ -66,10 +66,10 @@ function ProtectedLayout() {
           <Route path="/" element={<Home />} />
           <Route path="/noticias" element={<NewsPage />} />
           <Route path="/favoritos" element={<ReportLayout key="favoritos" title="Favoritos" description="Tus normativas y proyectos guardados." listTitle="Favoritos" isFavoritesPage={true} />} />
-          
+
           {/* Diario Oficial */}
           <Route path="/normativas" element={<ReportLayout key="normativas" title="Normativas" description="Visualización de normativas publicadas en el Diario Oficial." listTitle="Normativas" tableName="normativas" category="normativas" />} />
-          
+
           {/* SEA */}
           <Route path="/pertinencias" element={<ReportLayout key="pertinencias" title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" tableName="pertinencias" category="pertinencias" />} />
 
@@ -83,10 +83,10 @@ function ProtectedLayout() {
 
           {/* Tribunales */}
           <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" category="Tribunales" />} />
-          
+
           {/* Admin Panel */}
           <Route path="/admin" element={<AdminPanel />} />
-          
+
           {/* Profile */}
           <Route path="/perfil" element={<Profile />} />
         </Routes>
@@ -97,8 +97,8 @@ function ProtectedLayout() {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
-  
-  if (loading) return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>Cargando...</div>;
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Cargando...</div>;
 
   return (
     <Routes>
