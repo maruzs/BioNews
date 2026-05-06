@@ -1,0 +1,86 @@
+@startuml flujoNotificaciones
+title "BioNews - Flujo de notificaciones (punto rojo + distintivo Nuevo)"
+
+actor Usuario
+
+box "Frontend (React + TS)" #LightBlue
+  participant "Sidebar.tsx" as Sidebar
+  participant "NewsPage / NormativasPage" as ListPage
+  participant "Detalle (Leer más / Acción)" as Detail
+  participant "WebSocket client" as WSClient
+end box
+
+box "Backend (FastAPI + SQLite)" #LightGreen
+  participant "API REST" as API
+  participant "WebSocket Server" as WSServer
+end box
+
+box "Base de Datos" #LightYellow
+  database "SQLite (data.db)" as DB
+  note right of DB
+    Tablas:
+    - users
+    - noticias / normativas / ...
+    - user_category_views
+    - user_item_views
+  end note
+end box
+
+== 1. Login (cross-device) ==
+Usuario -> Sidebar: Ingresa credenciales
+Sidebar -> API: POST /login
+API -> DB: Verifica usuario
+DB --> API: user_id, jwt
+API --> Sidebar: token + datos iniciales
+Sidebar -> API: GET /estado-notificaciones (puntos rojos)
+API -> DB: Consulta user_category_views + fechas de items nuevos
+DB --> API: categorías con novedades no vistas
+API --> Sidebar: lista de puntos rojos
+Sidebar -> Sidebar: Muestra puntos rojos según DB
+
+== 2. Entrar a una categoría (ej: Noticias) ==
+Usuario -> Sidebar: Click en "Noticias"
+Sidebar -> API: POST /categoria/entrada {categoria: "noticias"}
+note right of API
+  Según regla: al entrar quita punto rojo,
+  pero los distintivos "Nuevo" se quitan al SALIR.
+  Por tanto, aquí NO actualizamos last_exit_at.
+  Solo se registra entrada para control local.
+end note
+API --> Sidebar: {ok}
+Sidebar -> ListPage: Navega a /noticias
+ListPage -> API: GET /items?categoria=noticias
+API -> DB: Obtiene items con fecha_creacion
+API -> DB: Obtiene last_exit_at de user_category_views para ese usuario
+API -> DB: Obtiene items_vistos de user_item_views
+DB --> API: datos combinados
+API --> ListPage: items + flag "nuevo"
+ListPage -> ListPage: Muestra etiquetas verdes "Nuevo"
+
+== 3. Hacer clic en "Leer más" de un ítem ==
+Usuario -> ListPage: Click en "Leer más" del ítem X
+ListPage -> API: POST /item/visto {item_id, categoria}
+API -> DB: Inserta en user_item_views (si no existe)
+API --> ListPage: {ok}
+ListPage -> ListPage: Elimina etiqueta "Nuevo" solo de ese ítem
+
+== 4. Salir de la categoría (volver a Home) ==
+Usuario -> ListPage: Click en "Home" (o cambia de sección)
+ListPage -> API: POST /categoria/salida {categoria: "noticias"}
+API -> DB: Actualiza user_category_views.last_exit_at = ahora
+API --> ListPage: {ok}
+note right
+  Esto hace que TODOS los ítems de esta categoría
+  pierdan el distintivo "Nuevo" en futuras visitas.
+end note
+ListPage -> Sidebar: Navega a Home
+
+== 5. Tiempo real (nuevo ítem insertado por scraper) ==
+Scraper -> API: POST /nuevo-item (vía interno)
+API -> DB: Inserta nuevo registro en tabla correspondiente
+API -> WSServer: Emite evento "nuevo_contenido" con categoria e item_id
+WSServer -> WSClient: WebSocket broadcast
+WSClient -> Sidebar: Actualiza punto rojo de esa categoría
+WSClient -> ListPage: Si el usuario está en esa categoría, agrega fila con etiqueta "Nuevo"
+
+@enduml
