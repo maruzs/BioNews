@@ -45,9 +45,6 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
           
           await refreshStatus();
           
-          // Call test API to log elapsed time in server console
-          fetch('/api/test/status').catch(() => {});
-          
           timeoutId = setTimeout(poll, intervalSeconds * 1000);
         } catch (error) {
           console.error("Error in polling loop:", error);
