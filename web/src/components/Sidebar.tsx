@@ -1,20 +1,36 @@
-import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { NavLink, useLocation, Link, useNavigate } from 'react-router-dom';
 import { 
   Home, Heart, Newspaper,
   CalendarCheck, UserSquare2,
   UserSearch, MoreHorizontal, Gavel, 
   FileCheck, Edit3, LogIn, Scale, 
   ChevronDown, ChevronUp, Menu,
-  BookOpen, Leaf, Search
+  BookOpen, Leaf, Search,
+  User, LogOut, Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [updates, setUpdates] = useState<Record<string, boolean>>({});
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
-  const { token, user } = useAuth();
+  const navigate = useNavigate();
+  const { token, user, logout } = useAuth();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (window.innerWidth <= 768 && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        setCollapsed(true);
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const checkUpdates = (data: any[]) => {
     const hasUpdates = (fuenteKeys: string[], category: string) => {
@@ -82,16 +98,61 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside ref={sidebarRef} className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
-        {!collapsed && (
-          <div className="sidebar-logo-text">
-            <span className="logo-bio">Bio</span><span className="logo-news">News</span>
-          </div>
-        )}
         <button className="burger-menu-btn" onClick={() => setCollapsed(!collapsed)}>
           <Menu size={24} color="var(--primary)" />
         </button>
+        
+        <Link to="/" className="sidebar-logo-text" style={{ textDecoration: 'none', display: (collapsed && window.innerWidth > 768) ? 'none' : 'flex' }}>
+          <span className="logo-bio">Bio</span>
+          {(window.innerWidth <= 768 || !collapsed) && <span className="logo-news">News</span>}
+        </Link>
+
+        {/* Mobile Session Icon */}
+        <div className="mobile-only" style={{ position: 'relative' }}>
+          <div 
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            style={{ 
+              width: '32px', height: '32px', borderRadius: '50%', 
+              backgroundColor: 'var(--primary)', color: 'white', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              fontWeight: 'bold', cursor: 'pointer' 
+            }}
+          >
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
+          {userMenuOpen && (
+            <div style={{ 
+              position: 'absolute', top: '100%', right: 0, marginTop: '10px', 
+              background: 'white', border: '1px solid var(--border)', 
+              borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+              width: '180px', zIndex: 100 
+            }}>
+              <div style={{ padding: '10px 15px', fontSize: '14px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>{user?.name}</div>
+              {user?.role === 'admin' && (
+                <div 
+                  style={{ padding: '10px 15px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)' }} 
+                  onClick={() => { setUserMenuOpen(false); setCollapsed(true); navigate('/admin'); }}
+                >
+                  <Settings size={14} /> Panel de Admin
+                </div>
+              )}
+              <div 
+                style={{ padding: '10px 15px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }} 
+                onClick={() => { setUserMenuOpen(false); setCollapsed(true); navigate('/perfil'); }}
+              >
+                <User size={14} /> Perfil
+              </div>
+              <div 
+                style={{ padding: '10px 15px', cursor: 'pointer', fontSize: '14px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }} 
+                onClick={() => { logout(); navigate('/'); }}
+              >
+                <LogOut size={14} /> Cerrar Sesión
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <div className="sidebar-menu">
         <NavLink onClick={handleMobileClose} to="/" className={({isActive}) => `menu-item ${isActive ? 'active' : ''}`} title="Home">

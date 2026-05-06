@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import NewsPage from './components/NewsPage';
 import ReportLayout from './components/ReportLayout';
@@ -15,7 +15,18 @@ function ProtectedLayout() {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   if (!user) return <Navigate to="/" />;
 
   const handleLogout = () => {
@@ -29,7 +40,7 @@ function ProtectedLayout() {
       <main className="main-content">
         <div className="top-header">
           <div className="top-header-spacer"></div>
-          <div className="top-header-actions" style={{ position: 'relative' }}>
+          <div className="top-header-actions" style={{ position: 'relative' }} ref={dropdownRef}>
             <div 
               style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'white', padding: '5px 15px', borderRadius: '30px', border: '1px solid var(--border)' }}
               onClick={() => setDropdownOpen(!dropdownOpen)}

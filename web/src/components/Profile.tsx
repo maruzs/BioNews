@@ -68,15 +68,15 @@ const Profile = () => {
 
       <div style={{ marginTop: '30px', background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: '20px', color: 'var(--text-dark)', marginBottom: '15px' }}>Información Personal</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '15px', marginBottom: '30px' }}>
+        <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '15px', marginBottom: '30px' }}>
           <strong style={{ color: 'var(--text-light)' }}>Nombre:</strong>
-          <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.name}</span>
+          <span className="profile-value" style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.name}</span>
           
           <strong style={{ color: 'var(--text-light)' }}>Correo:</strong>
-          <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.email}</span>
+          <span className="profile-value" style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.email}</span>
           
           <strong style={{ color: 'var(--text-light)' }}>Rol:</strong>
-          <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span>
+          <span className="profile-value" style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span>
         </div>
 
         <h2 style={{ fontSize: '20px', color: 'var(--text-dark)', marginBottom: '15px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>Preferencias de Filtrado (Opcional)</h2>

@@ -31,13 +31,11 @@ const NewsPage = () => {
     }
   }, [user]);
 
-  // Mark as read on unmount
+  // Mark as read on mount
   useEffect(() => {
-    return () => {
-      if (user) {
-        localStorage.setItem(`read_noticias_${user.id}`, new Date().toISOString());
-      }
-    };
+    if (user) {
+      localStorage.setItem(`read_noticias_${user.id}`, new Date().toISOString());
+    }
   }, [user]);
 
   useEffect(() => {
@@ -163,7 +161,7 @@ const NewsPage = () => {
                     {itemIsNew && (
                       <div style={{
                         position: 'absolute',
-                        top: '-10px',
+                        top: '10px',
                         right: '10px',
                         background: 'var(--primary)',
                         color: 'white',

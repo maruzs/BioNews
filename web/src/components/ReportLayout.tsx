@@ -334,12 +334,10 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   }, [user, category]);
 
   useEffect(() => {
-    return () => {
-      if (user && category) {
-        const key = `read_${category}_${user.id}`;
-        localStorage.setItem(key, new Date().toISOString());
-      }
-    };
+    if (user && category) {
+      const key = `read_${category}_${user.id}`;
+      localStorage.setItem(key, new Date().toISOString());
+    }
   }, [user, category]);
 
   const handleApplyFilters = () => {

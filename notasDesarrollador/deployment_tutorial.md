@@ -19,6 +19,7 @@ rm -rf ~/BioNews
 ## 2. Preparación del Proyecto
 
 ### Clonar el Repositorio
+
 Ubícate en tu carpeta personal (`~`) y clona el proyecto:
 
 ```bash
@@ -28,6 +29,7 @@ cd BioNews
 ```
 
 ### Crear Directorios de Persistencia
+
 Crea las carpetas necesarias para que la base de datos y los logs persistan fuera de Docker:
 
 ```bash
@@ -43,7 +45,8 @@ Desde **tu computadora con Windows** (donde tienes el archivo `data.db`), abre u
 # Comando para enviar la base de datos al servidor desde Windows
 scp "C:\Users\maria\Desktop\BioNews\data\data.db" maruzs@192.168.1.26:~/BioNews/data/data.db
 ```
-*Te pedirá la contraseña del usuario `maruzs`.*
+
+_Te pedirá la contraseña del usuario `maruzs`._
 
 ## 4. Despliegue con Docker
 
@@ -54,6 +57,7 @@ docker compose up -d --build
 ```
 
 Esto levantará 3 servicios:
+
 1.  **bionews-api**: El backend en FastAPI (puerto 8000 interno).
 2.  **bionews-scheduler**: El robot que ejecuta los scrapers cada hora.
 3.  **bionews-web**: El frontend en React servido por Nginx (puerto 3080).
@@ -63,6 +67,7 @@ Esto levantará 3 servicios:
 Para exponer tu servidor local a internet sin necesidad de un dominio propio, utilizaremos los túneles temporales de Cloudflare.
 
 ### Iniciar el Túnel en Segundo Plano
+
 Ejecuta el siguiente comando para iniciar el túnel de forma persistente (incluso si cierras la sesión SSH):
 
 ```bash
@@ -70,6 +75,7 @@ nohup cloudflared tunnel --url http://localhost:3080 > ~/BioNews/cloudflared.log
 ```
 
 ### Obtener la URL Generada
+
 Para saber cuál es la dirección web que Cloudflare te asignó, ejecuta:
 
 ```bash
@@ -86,3 +92,13 @@ grep -o 'https://[a-zA-Z0-9-]\+\.trycloudflare\.com' ~/BioNews/cloudflared.log |
   docker compose up -d --build
   ```
 - **Ver logs del túnel**: `tail -f ~/BioNews/cloudflared.log`
+
+**Matar cloudfare previo**
+
+1. ver PID -> ps aux | grep cloudflared
+2. matar con -> kill -9 [PID]
+
+**Actualizar cambios hechos al codigo**
+docker compose down
+git pull origin master (tiene que haberse hecho commit y push previamente)
+docker compose up -d --build

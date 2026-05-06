@@ -169,3 +169,12 @@ Todo igual por ahora, no cambiar nada
 ### App mobil (4 - Wishlist, apartado grande, dejar para el final)
 
 Quiero crear una app mobil que sea lo mas parecida a la pagina web, con las mismas funcionalidades, etc. Esta app sera utilizada en un celular android, por lo que me interesa que se pueda utilizar de manera offline (es decir, que se pueda ver la informacion sin internet) y que se actualice automaticamente cuando haya internet.
+
+## Siguiente version/actualizacion
+
+1. Mejorar Dashboards
+2. Implementar DGA
+3. Implementar consultas publicas
+4. Auth para usuarios
+5. Notificaciones
+6. App movil

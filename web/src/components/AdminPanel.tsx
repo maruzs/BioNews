@@ -151,7 +151,7 @@ const AdminPanel = () => {
 
       <div style={{ marginTop: '30px' }}>
         <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'var(--text-dark)' }}>Usuarios Registrados</h2>
-        <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'hidden' }}>
+        <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -257,7 +257,7 @@ const AdminPanel = () => {
         </div>
       </div>
       
-      <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'hidden', marginTop: '15px' }}>
+      <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'auto', marginTop: '15px' }}>
         <table className="data-table">
           <thead>
             <tr>
