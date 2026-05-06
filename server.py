@@ -236,19 +236,19 @@ def get_notifications_config():
             return {"interval": config.get("notification_interval", 15)}
     return {"interval": 15}
 
-last_test_call = None
+#last_test_call = None
 
-@app.get("/api/test/status")
-def test_status():
-    global last_test_call
-    now = datetime.datetime.now()
-    if last_test_call is None:
-        elapsed = 0
-    else:
-        elapsed = (now - last_test_call).total_seconds()
-    last_test_call = now
-    log.info(f"API Test Status: transcurridos {elapsed:.1f} segundos.")
-    return {"elapsed": elapsed}
+#@app.get("/api/test/status")
+#def test_status():
+#    global last_test_call
+#    now = datetime.datetime.now()
+#    if last_test_call is None:
+#        elapsed = 0
+#    else:
+#        elapsed = (now - last_test_call).total_seconds()
+#    last_test_call = now
+#    log.info(f"API Test Status: transcurridos {elapsed:.1f} segundos.")
+#    return {"elapsed": elapsed}
 
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
@@ -640,12 +640,16 @@ async def scheduler_monitor():
                 # Solo loguear una vez por minuto
                 if current_time != last_checked_minute:
                     # Tiempos de SNIFA
-                    if current_time == config.get("snifa_time_1"):
-                        log.info(f"TEST: Se ejecuto el scheduler a las {current_time} (SNIFA 1)")
-                    if current_time == config.get("snifa_time_2"):
-                        log.info(f"TEST: Se ejecuto el scheduler a las {current_time} (SNIFA 2)")
+                    if current_time == config.get("snifa_time_1") or current_time == config.get("snifa_time_2"):
+                        horario = "1" if current_time == config.get("snifa_time_1") else "2"
+                        log.info(f"ALERTA: Iniciando scrapeo programado de SNIFA (Horario {horario}) a las {current_time}")
+                        # Ejecutar en background sin bloquear el monitor
+                        asyncio.to_thread(_run_snifa_scrapers)
+
+                    # Hora de testeo específica solicitada por el usuario
+                    if current_time == config.get("test_time"):
+                        log.info(f"Testeo ejecutado a las {current_time}")
                     
-                    # Otras horas de prueba que el usuario ponga en el JSON pueden ser monitoreadas aqui
                     last_checked_minute = current_time
         except Exception as e:
             log.error(f"Error en scheduler_monitor: {e}")

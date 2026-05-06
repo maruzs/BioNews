@@ -15,7 +15,8 @@ const AdminPanel = () => {
     tribunales_interval: 1,
     hora_inicio: "07:00",
     hora_fin: "19:00",
-    notification_interval: 15
+    notification_interval: 15,
+    test_time: ""
   });
 
   const fetchUsers = async () => {
