@@ -25,9 +25,9 @@ const NewsPage = () => {
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    setCategoryActive('noticias');
+    setCategoryActive('noticias', true);
     return () => {
-      setCategoryActive(null);
+      setCategoryActive('noticias', false);
     };
   }, [setCategoryActive]);
 

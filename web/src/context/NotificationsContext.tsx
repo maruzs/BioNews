@@ -8,8 +8,8 @@ interface NotificationsContextType {
   markExit: (category: string) => Promise<void>;
   markItemViewed: (category: string, itemId: string) => Promise<void>;
   markAllRead: (category: string) => Promise<void>;
-  /** Registra qué categoría está viendo el usuario actualmente */
-  setCategoryActive: (category: string | null) => void;
+  /** Notifica que el usuario entró o salió de una vista de categoría */
+  setCategoryActive: (category: string, isActive: boolean) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
@@ -17,9 +17,10 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token, user } = useAuth();
   const [categoryStatus, setCategoryStatus] = useState<Record<string, boolean>>({});
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const lastCategoryRef = useRef<string | null>(null);
+  
+  // Ref para rastrear qué categorías están "vivas" en el DOM actualmente
+  const mountedCategories = useRef<Set<string>>(new Set());
 
   const refreshStatus = useCallback(async () => {
     if (!token) return;
@@ -51,7 +52,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [token]);
 
-  // Conectar al SSE stream para recibir eventos push cuando el scraper termina
+  // Conectar al SSE stream
   useEffect(() => {
     if (!token || !user) {
       if (eventSourceRef.current) {
@@ -68,19 +69,16 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
-
       const es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
       eventSourceRef.current = es;
-
       es.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'new_content' && data.category) {
             setCategoryStatus(prev => ({ ...prev, [data.category]: true }));
           }
-        } catch { /* ignore parse errors */ }
+        } catch { /* ignore */ }
       };
-
       es.onerror = () => {
         es.close();
         eventSourceRef.current = null;
@@ -96,7 +94,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         eventSourceRef.current = null;
       }
     };
-  }, [token, user]);
+  }, [token, user, refreshStatus]);
 
   const markExit = useCallback(async (category: string) => {
     if (!token) return;
@@ -118,27 +116,20 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [token]);
 
-  // Manejar el cambio de categoría activa con un delay para evitar falsas salidas en remounts
-  useEffect(() => {
-    const prev = lastCategoryRef.current;
-    const current = activeCategory;
-
-    if (prev && prev !== current) {
-      // Salimos de prev. Esperamos un poco antes de marcar exit de verdad.
-      const timer = setTimeout(() => {
-        // Verificamos si seguimos fuera de esa categoría
-        setActiveCategory(now => {
-          if (now !== prev) {
-            markExit(prev);
-          }
-          return now;
-        });
-      }, 1500); // 1.5s de gracia para remounts y navegación rápida
-      return () => clearTimeout(timer);
+  const setCategoryActive = useCallback((category: string, isActive: boolean) => {
+    if (isActive) {
+      mountedCategories.current.add(category);
+    } else {
+      mountedCategories.current.delete(category);
+      // Esperar un poco para confirmar que el usuario realmente salió y no fue un re-mount de React
+      setTimeout(() => {
+        if (!mountedCategories.current.has(category)) {
+          console.log(`[Notifications] Marcando salida genuina de ${category}`);
+          markExit(category);
+        }
+      }, 600);
     }
-    
-    lastCategoryRef.current = current;
-  }, [activeCategory, markExit]);
+  }, [markExit]);
 
   const markItemViewed = useCallback(async (category: string, itemId: string) => {
     if (!token) return;
@@ -177,20 +168,16 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [token]);
 
-  const setCategoryActive = useCallback((category: string | null) => {
-    setActiveCategory(category);
-  }, []);
-
-  // Manejar cierre de pestaña
+  // Manejar cierre de pestaña/navegador para todas las categorías activas
   useEffect(() => {
     const handleUnload = () => {
-      if (activeCategory) {
-        markExit(activeCategory);
-      }
+      mountedCategories.current.forEach(cat => {
+        markExit(cat);
+      });
     };
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [activeCategory, markExit]);
+  }, [markExit]);
 
   return (
     <NotificationsContext.Provider value={{ 

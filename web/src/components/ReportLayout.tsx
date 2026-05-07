@@ -250,9 +250,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   // Registrar esta categoría como activa en el contexto global
   useEffect(() => {
     if (category && !isFavoritesPage) {
-      setCategoryActive(category);
+      setCategoryActive(category, true);
       return () => {
-        setCategoryActive(null);
+        setCategoryActive(category, false);
       };
     }
   }, [category, isFavoritesPage, setCategoryActive]);

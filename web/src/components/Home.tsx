@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Search, ExternalLink, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationsContext';
 
 interface ScraperLog {
   fuente: string;
@@ -34,7 +33,6 @@ const TABLE_LABELS: Record<string, string> = {
 
 const Home = () => {
   const { token } = useAuth();
-  const { setCategoryActive } = useNotifications();
   const [logs, setLogs] = useState<ScraperLog[]>([]);
 
   // Search state
@@ -47,9 +45,6 @@ const Home = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    setCategoryActive(null);
-  }, [setCategoryActive]);
 
   const fetchLogs = () => {
     if (!token) return;
