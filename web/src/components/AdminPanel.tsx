@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert, Trash2, ShieldOff, Play, Save } from 'lucide-react';
+import { useNotifications } from '../context/NotificationsContext';
 
 const AdminPanel = () => {
   const { token, user } = useAuth();
+  const { setCategoryActive } = useNotifications();
   const [users, setUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [scraping, setScraping] = useState<string | null>(null);
@@ -59,6 +61,7 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
+    setCategoryActive(null);
     if (user?.role === 'admin') {
       fetchUsers();
       fetchLogs();

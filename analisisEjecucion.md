@@ -1,18 +1,41 @@
-## Notificaciones de items nuevos
+# ANALISIS EJECUCION Y CORRECCIONES
 
-Si hay cosas nuevas (ya sea por ejecucion programada o manual) solo se muestra el punto rojo cuando refresco la pagina con F5, adems las tablas no tienen etiqueta de 'nuevo', noticias tampoco. Deben aparecer apenas se detectan las novedades, ya sea desde la ejecucion programada o desde una ejecucion manual y deben desaperecer cuando salgo de la categoria (por ejemplo voy a otra pagina del navegador) o cuando salgo de la sesion (cierro sesion o cierro el navegador). La etiqueta de 'Nuevo' deben tenerla los items que recien fueron agregados a la bd, ademas de que deben tener un borde verde para las noticias. El 'Marcar todo como leido' debe funcionar igual, y tambien cuando doy click en la accion "Ver mas" de la noticia o en la columna 'Accion' de las tablas debera desaparecer la etiqueta de nuevo para ese item.
-Las notificaciones no son en tiempo real, son basadas en si los scrapers obtuvieron algo nuevo.
+## EJECUCION ULTIMO CODIGO DADO
 
-## Otros
+Se muestran aun las etiquetas 'Nuevo'
+No desaparecen todas al salir de la categoria, tampoco el punto rojo del menú lateral.
+Ambos deben desaparecer al salir de la categoria (Puedes hacer si quieres que eso sea solo si pasa x tiempo fuera de la categoria, lo dejo a tu criterio)
+Si desaparece la etiqueta 'Nuevo' del item si clickeo su accion
+TODOS LOS REGISTROS DE LAS TABLAS TIENEN NUEVO
 
-Paginación en Servidor: Actualmente el frontend carga todos los registros (hasta el límite de 1000). Para tablas muy grandes, se recomienda implementar paginación real desde la API.
+Si estoy en una categoria donde todos eran 'Nuevo' y doy F5 dejan de tener todos la etiqueta, eso esta bien, pero deberia ser tambien cuando salgo de la categoria.
 
-Búsqueda Global: Implementar una barra de búsqueda que consulte todas las tablas simultáneamente desde el Home.
+Funciona el Marcar todo como leido
 
-Borrar toda la tabla sanciones para descargarla completa nuevamente pero esta vez si con pago_multa
+## ANALISIS
 
-Normativas no debe estar ordenada por ficha_id, si no que por fecha de la mas nueva a la mas vieja
+Apenas INGRESO a una categoria (ej: Normativas) me sale lo siguiente:
 
-Eliminación de Polling: Migrar la lógica de NotificationsContext.tsx para evitar llamadas constantes a la API. Implementar una carga bajo demanda cuando el usuario cambia de categoría o una actualización manual.
+```bash
+2026-05-07 18:02:16,896 [INFO] POST /api/notifications/exit: User 11 saliendo de normativas
+2026-05-07 18:02:16,897 [INFO] POST /api/notifications/exit: User 11 saliendo de normativas
+INFO: 127.0.0.1:58673 - "POST /api/notifications/exit HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58681 - "GET /api/favorites HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58685 - "GET /api/favorites HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58682 - "POST /api/notifications/exit HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58679 - "POST /api/notifications/exit HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58688 - "GET /api/data/normativas?limit=5000 HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58691 - "GET /api/data/normativas?limit=5000 HTTP/1.1" 200 OK
+INFO: 127.0.0.1:58694 - "GET /api/notifications/status/normativas HTTP/1.1" 200 OK
+```
 
-Persistencia de "Visto": Asegurar que las etiquetas "Nuevo" y el punto rojo desaparezcan de forma persistente no solo en la sesión actual, sino entre dispositivos del mismo usuario.
+o cuando clickeo 'pertinencias' en la sidebar
+
+```bash
+2026-05-07 18:03:03,312 [INFO] POST /api/notifications/exit: User 11 saliendo de pertinencias
+2026-05-07 18:03:03,312 [INFO] POST /api/notifications/exit: User 11 saliendo de pertinencias
+```
+
+## MODIFICACIONES A HACER
+
+Puede que debido a que lo marca como salida apenas ingreso a una categoría, no se muestren las etiquetas 'nuevo' como debieran.

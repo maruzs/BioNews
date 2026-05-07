@@ -15,9 +15,11 @@ import jwt
 import datetime
 import bcrypt
 import asyncio
+from asyncio import Queue
 from typing import Optional, List
 from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from src.database.manager import DatabaseManager
 
@@ -36,56 +38,53 @@ app.add_middleware(
 
 db = DatabaseManager()
 
-# ─── WEBSOCKET MANAGER ──────────────────────────────────────────────────────
+# ─── SSE NOTIFICATION MANAGER ───────────────────────────────────────────────
+class SSEManager:
+    """Gestiona colas SSE por cliente. Cada cliente tiene su propia Queue."""
+    def __init__(self):
+        self._clients: List[Queue] = []
+
+    def add_client(self) -> Queue:
+        q: Queue = asyncio.Queue()
+        self._clients.append(q)
+        return q
+
+    def remove_client(self, q: Queue):
+        if q in self._clients:
+            self._clients.remove(q)
+
+    async def broadcast(self, data: dict):
+        msg = f"data: {json.dumps(data)}\n\n"
+        dead = []
+        for q in self._clients:
+            try:
+                await q.put(msg)
+            except Exception:
+                dead.append(q)
+        for q in dead:
+            self.remove_client(q)
+
+sse_manager = SSEManager()
+
+# Mantener el ConnectionManager/WebSocket por compatibilidad (no se usa activamente)
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
-
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-
     async def broadcast(self, message: dict):
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                # Connection might be closed
-                continue
-
+        pass  # Deprecated: usar SSE
 manager = ConnectionManager()
 
-@app.websocket("/ws/notifications/{token}")
-async def websocket_endpoint(websocket: WebSocket, token: str):
-    # Verify token
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if not user_id:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-    except Exception:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    await manager.connect(websocket)
-    try:
-        while True:
-            # Mantener conexión abierta, podemos recibir mensajes de latido si es necesario
-            data = await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
 async def notify_new_content(category_slug: str, item_id: str = None):
-    """Función para notificar a los clientes vía WebSocket."""
-    await manager.broadcast({
+    """Notifica a los clientes vía SSE cuando hay contenido nuevo."""
+    await sse_manager.broadcast({
         "type": "new_content",
         "category": category_slug,
-        "item_id": item_id,
         "timestamp": datetime.datetime.now().isoformat()
     })
 
@@ -284,6 +283,64 @@ def get_options(user = Depends(get_current_user)):
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/api/search")
+def global_search(q: str = "", user = Depends(get_current_user)):
+    """Búsqueda global en todas las tablas."""
+    if not q or len(q.strip()) < 2:
+        return {"results": {}, "total": 0}
+    
+    q = q.strip()
+    results = {}
+    total = 0
+    LIMIT_PER_TABLE = 50
+    
+    # Configuración de cada tabla: (nombre_tabla, campos_a_buscar, campo_titulo, campo_id, campo_accion)
+    search_config = [
+        ("fiscalizaciones",       ["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("sancionatorios",        ["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("registroSanciones",     ["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("programasDeCumplimiento",["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("medidas_provisionales", ["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("requerimientos",        ["expediente", "nombre_razon_social", "unidad_fiscalizable"], "unidad_fiscalizable", "expediente", "detalle_link"),
+        ("normativas",            ["normativa", "organismo", "suborganismo"], "normativa", "accion", "accion"),
+        ("noticias",              ["titulo", "fuente"], "titulo", "link", "link"),
+        ("Tribunales",            ["Rol", "Caratula"], "Caratula", "Rol", "Accion"),
+        ("pertinencias",          ["Expediente", "Nombre_de_Proyecto", "Proponente"], "Nombre_de_Proyecto", "Expediente", "Accion"),
+    ]
+    
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        for table, fields, title_field, id_field, action_field in search_config:
+            try:
+                where_clauses = " OR ".join([f'LOWER("{f}") LIKE ?' for f in fields])
+                params = [f'%{q.lower()}%'] * len(fields)
+                cursor.execute(
+                    f'SELECT * FROM "{table}" WHERE {where_clauses} LIMIT {LIMIT_PER_TABLE}',
+                    params
+                )
+                rows = cursor.fetchall()
+                if not rows:
+                    continue
+                # Obtener nombres de columnas
+                col_names = [desc[0] for desc in cursor.description]
+                table_results = []
+                for row in rows:
+                    d = dict(zip(col_names, row))
+                    table_results.append({
+                        "id": str(d.get(id_field, "")),
+                        "titulo": str(d.get(title_field, ""))[:120],
+                        "accion": d.get(action_field, ""),
+                        "extra": d.get("expediente") or d.get("Expediente") or d.get("fecha") or d.get("Fecha") or "",
+                        "_raw": d
+                    })
+                if table_results:
+                    results[table] = table_results
+                    total += len(table_results)
+            except Exception:
+                pass  # Tabla sin datos o error, ignorar
+    
+    return {"results": results, "total": total, "query": q}
+
 # ─── FAVORITES ───────────────────────────────────────────────────────────────
 @app.get("/api/favorites")
 def get_favorites(fuente: str = None, user = Depends(get_current_user)):
@@ -325,6 +382,12 @@ def get_stats(table_name: str, user = Depends(get_current_user)):
 def get_notification_status(user = Depends(get_current_user)):
     return db.get_notification_status(user["sub"])
 
+@app.get("/api/notifications/status/{category}")
+def get_notification_status_single(category: str, user = Depends(get_current_user)):
+    """Verifica si una categoría específica tiene ítems nuevos."""
+    has_new = db._check_if_category_has_new(user["sub"], category)
+    return {"has_new": has_new, "category": category}
+
 @app.post("/api/notifications/exit")
 def post_notification_exit(req: dict, user = Depends(get_current_user)):
     category = req.get("category")
@@ -334,6 +397,15 @@ def post_notification_exit(req: dict, user = Depends(get_current_user)):
     db.update_category_exit(user["sub"], category)
     return {"success": True}
 
+@app.delete("/api/notifications/reset")
+def reset_notification_history(user = Depends(get_current_user)):
+    """Borra el historial de last_exit_at del usuario → todo vuelve a aparecer como 'nuevo'."""
+    with db.get_connection() as conn:
+        conn.execute("DELETE FROM user_category_views WHERE user_id = ?", (user["sub"],))
+        conn.execute("DELETE FROM user_item_views WHERE user_id = ?", (user["sub"],))
+        conn.commit()
+    return {"success": True, "message": "Historial de notificaciones reseteado"}
+
 @app.post("/api/notifications/view-item")
 def post_notification_view_item(req: dict, user = Depends(get_current_user)):
     category = req.get("category")
@@ -342,6 +414,45 @@ def post_notification_view_item(req: dict, user = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Category and item_id are required")
     db.mark_item_viewed(user["sub"], item_id, category)
     return {"success": True}
+
+@app.get("/api/notifications/stream")
+async def notification_stream(request: Request, token: str = ""):
+    """SSE stream: el cliente se conecta una vez y recibe eventos push cuando hay contenido nuevo."""
+    if not token:
+        raise HTTPException(status_code=401, detail="No token")
+    try:
+        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    q = sse_manager.add_client()
+
+    async def event_generator():
+        try:
+            # Enviar keepalive inicial
+            yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+            while True:
+                # Esperar evento o keepalive cada 25 segundos
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=25.0)
+                    yield msg
+                except asyncio.TimeoutError:
+                    # keepalive para mantener la conexión
+                    yield ": keepalive\n\n"
+                if await request.is_disconnected():
+                    break
+        finally:
+            sse_manager.remove_client(q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 # ─── SCRAPING ENDPOINTS ───────────────────────────────────────────────────────
 def _run_all_scrapers():
@@ -485,6 +596,8 @@ def _run_tribunales_scrapers():
             nuevos = ScraperClass().run()
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
             log.info(f"{nombre}: {nuevos} nuevas causas.")
+            if nuevos > 0:
+                asyncio.run(notify_new_content("Tribunales"))
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
             log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
@@ -528,6 +641,8 @@ def _run_news_scrapers():
                 nuevas = db.save_news(items)
                 db.log_scraper_run(nombre, exito=True, nuevos=nuevas)
                 log.info(f"{nombre}: {nuevas} nuevas noticias.")
+                if nuevas > 0:
+                    asyncio.run(notify_new_content("noticias"))
             else:
                 db.log_scraper_run(nombre, exito=True, nuevos=0)
                 log.info(f"{nombre}: sin noticias nuevas.")
@@ -546,6 +661,8 @@ def _run_sea_scrapers():
     try:
         nuevos = PertinenciasScraper().run()
         db.log_scraper_run("Pertinencias SEA", exito=True, nuevos=nuevos)
+        if nuevos > 0:
+            asyncio.run(notify_new_content("pertinencias"))
     except Exception as e:
         db.log_scraper_run("Pertinencias SEA", exito=False, error=str(e))
 
@@ -570,10 +687,22 @@ def _run_snifa_scrapers():
         ("SNIFA Programas de Cumplimiento", ProgramasCumplimientoScraper),
         ("SNIFA Registro Sanciones", RegistroSancionesScraper)
     ]
+    mapping = {
+        "SNIFA Sancionatorios": "sancionatorios",
+        "SNIFA Fiscalizaciones": "fiscalizaciones",
+        "SNIFA Requerimientos": "requerimientos",
+        "SNIFA Medidas Provisionales": "medidas_provisionales",
+        "SNIFA Programas de Cumplimiento": "programasDeCumplimiento",
+        "SNIFA Registro Sanciones": "registroSanciones"
+    }
     for nombre, ScraperClass in scrapers:
         try:
             nuevos = ScraperClass().run()
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
+            if nuevos > 0:
+                cat = mapping.get(nombre)
+                if cat:
+                    asyncio.run(notify_new_content(cat))
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
 
@@ -587,6 +716,8 @@ def _run_normativas_scrapers():
     try:
         nuevos = DiarioOficialScraper().run()
         db.log_scraper_run("Diario Oficial (Normativas)", exito=True, nuevos=nuevos)
+        if nuevos > 0:
+            asyncio.run(notify_new_content("normativas"))
     except Exception as e:
         db.log_scraper_run("Diario Oficial (Normativas)", exito=False, error=str(e))
 

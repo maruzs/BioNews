@@ -141,7 +141,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
 }) => {
   const { token, user } = useAuth();
-  const { markExit, markItemViewed } = useNotifications();
+  const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,6 +238,24 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
     fetchData();
   }, [tableName, isFavoritesPage]);
+
+  // Al cargar datos de una categoría, actualizar si tiene ítems nuevos
+  // Esto actualiza el punto rojo en la sidebar sin necesidad de F5
+  useEffect(() => {
+    if (!loading && category && !isFavoritesPage) {
+      refreshCategory(category);
+    }
+  }, [loading, category, isFavoritesPage]);
+
+  // Registrar esta categoría como activa en el contexto global
+  useEffect(() => {
+    if (category && !isFavoritesPage) {
+      setCategoryActive(category);
+      return () => {
+        setCategoryActive(null);
+      };
+    }
+  }, [category, isFavoritesPage, setCategoryActive]);
 
   const toggleFavorite = async (item: LegalItem) => {
     const itemId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
@@ -338,14 +356,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     return result;
   }, [data, appliedSearch, appliedColumnFilters, appliedDateRange]);
 
-  useEffect(() => {
-    // Al desmontar la página de la categoría, registrar la salida en la DB
-    return () => {
-      if (category && !isFavoritesPage) {
-        markExit(category);
-      }
-    };
-  }, [category, isFavoritesPage, markExit]);
 
   const handleApplyFilters = () => {
     setAppliedColumnFilters({ ...columnFilters });
@@ -731,7 +741,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           {!isFavoritesPage && category && (
             <button 
               onClick={async () => {
-                await markExit(category);
+                await markAllRead(category);
                 setData(prev => prev.map(item => ({ ...item, is_new: false })));
               }}
               className="btn-mark-read"

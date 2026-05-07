@@ -15,7 +15,7 @@ interface NewsItem {
 
 const NewsPage = () => {
   const { token } = useAuth();
-  const { markExit, markItemViewed } = useNotifications();
+  const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,11 +25,11 @@ const NewsPage = () => {
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Al desmontar la página de noticias, registrar la salida en la DB
+    setCategoryActive('noticias');
     return () => {
-      markExit('noticias');
+      setCategoryActive(null);
     };
-  }, [markExit]);
+  }, [setCategoryActive]);
 
   useEffect(() => {
     if (!token) return;
@@ -42,6 +42,8 @@ const NewsPage = () => {
       .then(data => {
         setNews(data);
         setLoading(false);
+        // Actualizar punto rojo al entrar a noticias (sin F5)
+        refreshCategory('noticias');
       })
       .catch(err => {
         console.error("API error, using fallback data", err);
@@ -87,7 +89,7 @@ const NewsPage = () => {
         <h1 className="page-title">Noticias Recientes</h1>
         <button
           onClick={async () => {
-            await markExit('noticias');
+            await markAllRead('noticias');
             setNews(prev => prev.map(item => ({ ...item, is_new: false })));
           }}
           className="btn-mark-read"

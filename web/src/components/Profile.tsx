@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 const Profile = () => {
   const { user, token, updatePreferences } = useAuth();
+  const { setCategoryActive } = useNotifications();
   const [options, setOptions] = useState<{normativas: string[], sma: string[]}>({ normativas: [], sma: [] });
   const [prefs, setPrefs] = useState<{normativas: string[], sma: string[]}>({ normativas: [], sma: [] });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    setCategoryActive(null);
     fetch('/api/options', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => {

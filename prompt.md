@@ -1,1 +1,0 @@
-Implementa casi todo lo del implementation_plan.md, excepto lo de la paginacion, ademas no es necesario que ejecutes el scraper de registroSanciones, eso lo puedo hacer yo desde el panel de administrador

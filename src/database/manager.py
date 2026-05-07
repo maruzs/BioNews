@@ -200,18 +200,22 @@ class DatabaseManager:
             
             # Ordenar inteligentemente según la tabla
             order_by = ""
-            if 'ficha_id' in columns:
+            if table_name == 'normativas':
+                # Normativas: ordenar por fecha de publicación (más nueva primero)
+                order_by = ' ORDER BY fecha DESC'
+                if 'fecha_scraping' in columns:
+                    order_by += ', fecha_scraping DESC'
+            elif 'ficha_id' in columns:
                 order_by = ' ORDER BY ficha_id DESC'
             elif "Fecha" in columns:
                 order_by = ' ORDER BY "Fecha" DESC'
             elif "fecha" in columns:
                 order_by = ' ORDER BY "fecha" DESC'
             
-            # Agregar fecha_scraping como orden secundario si existe
-            if 'fecha_scraping' in columns and order_by:
-                if 'ficha_id' not in columns: # Si ya ordenamos por ficha_id DESC, no es tan necesario fecha_scraping como secundario pero no estorba
-                     order_by += ', fecha_scraping DESC'
-            elif 'fecha_scraping' in columns:
+            # Agregar fecha_scraping como orden secundario si existe (para tablas sin ficha_id)
+            if 'fecha_scraping' in columns and order_by and 'ficha_id' not in columns and table_name != 'normativas':
+                order_by += ', fecha_scraping DESC'
+            elif 'fecha_scraping' in columns and not order_by:
                 order_by = ' ORDER BY fecha_scraping DESC'
 
             cursor.execute(f'SELECT * FROM "{table_name}"{order_by} LIMIT ?', (limit,))
@@ -562,7 +566,11 @@ class DatabaseManager:
         
         # Obtener columna de fecha de creacion/scraping
         date_col = "fecha_scraping"
-        id_col = "link" if category_slug == "noticias" else ("Expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "pertinencias", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else ("Accion" if category_slug == "Tribunales" else ("accion" if category_slug == "normativas" else "id")))
+        id_col = "link" if category_slug == "noticias" else (
+            "expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else (
+            "Expediente" if category_slug == "pertinencias" else (
+            "Accion" if category_slug == "Tribunales" else (
+            "accion" if category_slug == "normativas" else "id"))))
         
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -612,7 +620,11 @@ class DatabaseManager:
         last_exit = self.get_user_category_last_exit(user_id, category_slug)
         viewed_ids = set(self.get_viewed_items_ids(user_id, category_slug))
         
-        id_col = "link" if category_slug == "noticias" else ("Expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "pertinencias", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else ("Accion" if category_slug == "Tribunales" else ("accion" if category_slug == "normativas" else "id")))
+        id_col = "link" if category_slug == "noticias" else (
+            "expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else (
+            "Expediente" if category_slug == "pertinencias" else (
+            "Accion" if category_slug == "Tribunales" else (
+            "accion" if category_slug == "normativas" else "id"))))
         date_col = "fecha_scraping"
 
         norm_last_exit = self._normalize_date(last_exit)
