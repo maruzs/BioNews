@@ -51,6 +51,7 @@ A continuación se detalla la jerarquía completa de archivos y directorios:
 ```text
 BioNews/
 ├── data/                       # Almacenamiento persistente
+│   ├── scheduler.json          # Configuración del scheduler
 │   └── data.db                 # Base de datos SQLite principal
 ├── src/                        # Lógica de Backend y Scrapers
 │   ├── database/               # Gestión de base de datos
@@ -69,6 +70,7 @@ BioNews/
 │   │   ├── reqSEIA.py
 │   │   ├── sanciones.py
 │   │   ├── sbap.py
+│   │   ├── scraper_dga.py      # Nuevo scraper (DGA)
 │   │   ├── sea.py
 │   │   ├── sea_legal.py
 │   │   ├── segundoTribunal.py
@@ -100,6 +102,7 @@ BioNews/
 │   │   ├── App.tsx
 │   │   ├── index.css           # Estilos globales
 │   │   └── main.tsx            # Punto de entrada de React
+│   ├── public/                 # Archivos estáticos públicos
 │   ├── Dockerfile              # Docker para el frontend
 │   ├── nginx.conf              # Configuración de Nginx
 │   ├── package.json            # Dependencias de Node.js
@@ -108,145 +111,81 @@ BioNews/
 ├── .dockerignore
 ├── .env                        # Variables de entorno (claves, puertos)
 ├── .gitignore
+├── .venv/
+├── __pycache__/                # (Borrar: caché de Python autogenerada)
+├── assets/                     # Recursos estáticos globales
 ├── docker-compose.yml          # Orquestación de contenedores
 ├── Dockerfile                  # Docker para el backend
-├── logo_sernageomin.png
-├── requirements.txt            # Dependencias de Python
+├── prompt.md                   # Instrucciones para el modelo
+├── requirements.docker.txt     # Dependencias para entorno Docker
+├── requirements.txt            # Dependencias de Python local
 ├── scheduler.py                # Servicio de tareas programadas
 ├── server.py                   # API principal (FastAPI)
 ├── startScraping.py            # Ejecución manual de scrapers
 └── proyecto.md                 # Este documento
 ```
 
-## 5. Tablas de la BD
+## 5. Esquema de Base de Datos (SQLite)
 
-```sql
-Table: fiscalizaciones
-expediente (TEXT) PK
-nombre_razon_social (TEXT)
-unidad_fiscalizable (TEXT)
-categoria (TEXT)
-region (TEXT)
-estado (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+A continuación se detallan las tablas principales y su estructura:
 
-Table: programasDeCumplimiento
-expediente (TEXT) PK
-unidad_fiscalizable (TEXT)
-nombre_razon_social (TEXT)
-categoria (TEXT)
-region (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+### Tabla: `noticias`
 
-Table: registroSanciones
-expediente (TEXT) PK
-unidad_fiscalizable (TEXT)
-nombre_razon_social (TEXT)
-categoria (TEXT)
-region (TEXT)
-multa_uta (TEXT)
-pago_multa (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+Almacena noticias generales de diversas fuentes.
 
-Table: requerimientos
-expediente (TEXT) PK
-unidad_fiscalizable (TEXT)
-nombre_razon_social (TEXT)
-categoria (TEXT)
-region (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+- **link** (TEXT, PK): URL única de la noticia.
+- **titulo** (TEXT): Título de la publicación.
+- **fecha** (TEXT): Fecha de publicación.
+- **imagen** (TEXT): URL de la imagen asociada.
+- **fuente** (TEXT): Origen de la noticia.
+- **fecha_scraping** (TIMESTAMP): Cuándo fue capturada.
 
-Table: sancionatorios
-expediente (TEXT) PK
-unidad_fiscalizable (TEXT)
-nombre_razon_social (TEXT)
-categoria (TEXT)
-region (TEXT)
-estado (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+### Tabla: `users`
 
-Table: medidas_provisionales
-expediente (TEXT) PK
-unidad_fiscalizable (TEXT)
-nombre_razon_social (TEXT)
-categoria (TEXT)
-region (TEXT)
-estado (TEXT)
-detalle_link (TEXT)
-fecha_scraping (TIMESTAMP)
+Gestión de usuarios y preferencias.
 
-Table: sqlite_sequence
-name ()
-seq ()
+- **id** (INTEGER, PK): Identificador único.
+- **name** (TEXT): Nombre completo.
+- **email** (TEXT): Correo electrónico (login).
+- **password_hash** (TEXT): Contraseña cifrada.
+- **role** (TEXT): Nivel de acceso (admin/user).
+- **blocked** (INTEGER): Estado de la cuenta.
+- **preferences** (TEXT): Configuración en formato JSON.
+- **last_login** (TIMESTAMP): Último acceso.
 
-Table: Tribunales
-Rol (TEXT) PK
-Fecha (TEXT)
-Caratula (TEXT)
-Tribunal (TEXT)
-Tipo_de_Procedimiento (TEXT)
-Estado_Procesal (TEXT)
-Accion (TEXT)
-fecha_scraping (TIMESTAMP)
+### Tabla: `favoritos`
 
-Table: pertinencias
-Expediente (TEXT) PK
-Nombre_de_Proyecto (TEXT)
-Proponente (TEXT)
-Fecha (TEXT)
-Estado (TEXT)
-Accion (TEXT)
-fecha_scraping (TIMESTAMP)
+Ítems marcados por los usuarios para seguimiento.
 
-Table: normativas
-fecha (TEXT)
-normativa (TEXT)
-tipo_normativa (TEXT)
-organismo (TEXT)
-suborganismo (TEXT)
-accion (TEXT)
-fecha_scraping (TIMESTAMP)
+- **user_id** (INTEGER, PK): ID del usuario.
+- **id_o_link** (TEXT, PK): Referencia al ítem o noticia.
+- **fuente** (TEXT): Origen del ítem.
+- **nombre** (TEXT): Título o descripción.
+- **fecha_agregado** (TIMESTAMP): Fecha de marcado.
+- **accion** (TEXT): Tipo de acción realizada.
 
-Table: noticias
-link (TEXT) PK
-titulo (TEXT)
-fecha (TEXT)
-imagen (TEXT)
-fuente (TEXT)
-fecha_scraping (TIMESTAMP)
+### Tabla: `scraper_logs`
 
-Table: scraper_logs
-fuente (TEXT) PK
-ultimo_intento (TIMESTAMP)
-ultimo_exito (TIMESTAMP)
-estado (TEXT)
-error (TEXT)
-nuevos_registros (INTEGER)
+Monitoreo del estado de los motores de extracción.
 
-Table: favoritos
-user_id (INTEGER) PK
-id_o_link (TEXT) PK
-fuente (TEXT)
-nombre (TEXT)
-fecha_agregado (TIMESTAMP)
-accion (TEXT)
+- **fuente** (TEXT, PK): Nombre del scraper.
+- **ultimo_intento** (TIMESTAMP): Fecha de última ejecución.
+- **ultimo_exito** (TIMESTAMP): Fecha de último éxito.
+- **estado** (TEXT): Resultado (Exitoso/Error).
+- **error** (TEXT): Detalle del fallo si existe.
+- **nuevos_registros** (INTEGER): Cantidad de datos nuevos encontrados.
 
-Table: users
-id (INTEGER) PK
-name (TEXT)
-email (TEXT)
-password_hash (TEXT)
-role (TEXT)
-blocked (INTEGER)
-preferences (TEXT)
-last_login (TIMESTAMP)
+### Tabla: `user_item_views`
 
-```
+Seguimiento de "Puntos Rojos" (notificaciones vistas).
+
+- **id** (INTEGER, PK): ID de registro.
+- **user_id** (INTEGER): ID del usuario.
+- **item_id_or_link** (TEXT): Referencia al ítem visto.
+- **category_slug** (TEXT): Categoría a la que pertenece.
+- **viewed_at** (TIMESTAMP): Fecha de visualización.
+
+_(Existen otras tablas técnicas como `user_category_views` para el manejo granular de la interfaz)._
 
 ---
 

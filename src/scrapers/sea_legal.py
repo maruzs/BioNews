@@ -141,7 +141,7 @@ class PertinenciasScraper:
                         INSERT OR IGNORE INTO pertinencias 
                         (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now()))
+                    ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     
                     if cursor.rowcount > 0:
                         nuevos_registros += 1

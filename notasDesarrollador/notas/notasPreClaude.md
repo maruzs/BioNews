@@ -3,7 +3,6 @@
 ## A implementar en el codigo
 
 Implementar src/scrapers/scraper_dga.py para que funcione igual que el resto de scrapers de noticias.(Tambien debe ir a la tabla 'Noticias' y ejecutarse al mismo tiempo que los demas scrapers de noticias, tener su checkbox, etc. Todo igual ya que solo es una nueva fuente de noticias)
-No es necesario probar todos los scrapers en esta ocasion, solo el que se tiene que agregar (Y no cambies su funcionamiento, si no funciona avisame y te enviare la investigacion que hice para implementarlo)
 
 ## Errores en el desarrollo
 
@@ -180,7 +179,4 @@ https://snifa.sma.gob.cl/Fiscalizacion/Ficha/1004507 (Mas antigua)
 
 - La tabla debe estar ordenada de mas nueva a mas antigua y que siempre en la interfaz las mas nuevas esten primero, no las ultimas obtenidas.
 
-Tienes permiso para hacer todos los cambios que consideres pertinentes al proyecto ya que estamos en una rama libre
-Estoy funcionando con un .venv/
-
-Por ahora estoy probando todo desde mi PC Windows mediante Antigravity y su terminal. No hagas nada con docker por ahora
+Tienes permiso para hacer todos los cambios que consideres pertinentes al proyecto ya que hare una nueva rama para esto

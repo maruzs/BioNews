@@ -135,7 +135,7 @@ class RequerimientosScraper:
                 record['categoria'],
                 record['region'],
                 record['detalle_link'],
-                datetime.now()
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ))
             print(f"  + {record['expediente']}")
 

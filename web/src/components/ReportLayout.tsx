@@ -288,6 +288,18 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     }
     Object.entries(appliedColumnFilters).forEach(([field, value]) => {
       if (value) {
+        if (field === 'expediente_year') {
+          result = result.filter(item => {
+            const exp = String(item['expediente'] || '');
+            const parts = exp.split('-');
+            if (parts.length >= 2) {
+              return parts[1] === value;
+            }
+            return exp.includes(value);
+          });
+          return;
+        }
+        
         const lowerValue = value.toLowerCase();
         result = result.filter(item => {
           const itemVal = item[field];
@@ -553,14 +565,32 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         <>
           <div className="filter-section">
         <div className="filter-top">
-          <div className="search-bar">
+          <div className="search-bar" style={{ display: 'flex', alignItems: 'center' }}>
             <Search className="search-icon" size={18} />
             <input 
               type="text" 
               placeholder="Buscar por palabra clave" 
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search); } }}
             />
+            <button
+              onClick={() => setAppliedSearch(search)}
+              style={{
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '6px 14px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                marginLeft: '8px'
+              }}
+            >
+              Buscar
+            </button>
           </div>
           
           <div className="filter-actions">
@@ -615,6 +645,27 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     </div>
                   );
               })}
+              {activeColumns.some(c => c.field === 'expediente') && (
+                <div style={{ flex: '1 1 200px' }}>
+                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Año (Expediente)</h4>
+                  <select 
+                    className="filter-select" 
+                    value={columnFilters['expediente_year'] || ''} 
+                    onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
+                  >
+                    <option value="">Todos los Años</option>
+                    {Array.from(new Set(
+                      data.map(item => {
+                        const exp = String(item['expediente'] || '');
+                        const parts = exp.split('-');
+                        return parts.length >= 2 ? parts[1] : null;
+                      }).filter(Boolean)
+                    )).sort((a, b) => Number(b) - Number(a)).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
                 <div style={{ flex: '1 1 300px' }}>
                   <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Rango de Fechas</h4>

@@ -236,20 +236,6 @@ def get_notifications_config():
             return {"interval": config.get("notification_interval", 15)}
     return {"interval": 15}
 
-#last_test_call = None
-
-#@app.get("/api/test/status")
-#def test_status():
-#    global last_test_call
-#    now = datetime.datetime.now()
-#    if last_test_call is None:
-#        elapsed = 0
-#    else:
-#        elapsed = (now - last_test_call).total_seconds()
-#    last_test_call = now
-#    log.info(f"API Test Status: transcurridos {elapsed:.1f} segundos.")
-#    return {"elapsed": elapsed}
-
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
 def get_news(user = Depends(get_current_user)):
@@ -344,6 +330,7 @@ def post_notification_exit(req: dict, user = Depends(get_current_user)):
     category = req.get("category")
     if not category:
         raise HTTPException(status_code=400, detail="Category is required")
+    log.info(f"POST /api/notifications/exit: User {user['sub']} saliendo de {category}")
     db.update_category_exit(user["sub"], category)
     return {"success": True}
 
@@ -369,6 +356,7 @@ def _run_all_scrapers():
         from src.scrapers.sma import SMAScraper
         from src.scrapers.corteSuprema import CorteSupremaScraper
         from src.scrapers.tribunal3 import TercerTribunalNewsScraper
+        from src.scrapers.scraper_dga import DGAScraper
         # Scrapers de datos (tablas especificas)
         from src.scrapers.primerTribunal import PrimerTribunalScraper
         from src.scrapers.segundoTribunal import SegundoTribunalScraper
@@ -439,6 +427,7 @@ def _run_all_scrapers():
         ("SEA",                           SEAScraper),
         ("Sernageomin",                   SernageominScraper),
         ("Segundo Tribunal",              TribunalScraper),
+        ("DGA",                           DGAScraper),
     ]
 
     log.info("--- SCRAPING NOTICIAS ---")
@@ -475,18 +464,6 @@ def _run_tribunales_scrapers():
     """Función interna que corre solo los scrapers de tribunales legales."""
     log.info("--- SCRAPING TRIBUNALES MANUAL ---")
     
-    # 1. Borrar el ultimo registro de cada tribunal para permitir re-scraping manual
-    # try:
-    #     conn = db.get_connection()
-    #     cursor = conn.cursor()
-    #     tribunales = ["Primer Tribunal", "Segundo Tribunal", "Tercer Tribunal"]
-    #     for t in tribunales:
-    #         cursor.execute("DELETE FROM Tribunales WHERE rowid IN (SELECT rowid FROM Tribunales WHERE Tribunal = ? ORDER BY Fecha DESC LIMIT 1)", (t,))
-    #     conn.commit()
-    #     log.info("Limpieza de últimos registros de tribunales completada.")
-    # except Exception as e:
-    #     log.error(f"Error limpiando registros de tribunales: {e}")
-
     # 2. Ejecutar scrapers
     try:
         from src.scrapers.primerTribunal import PrimerTribunalScraper
@@ -525,6 +502,7 @@ def _run_news_scrapers():
         from src.scrapers.sma import SMAScraper
         from src.scrapers.corteSuprema import CorteSupremaScraper
         from src.scrapers.tribunal3 import TercerTribunalNewsScraper as TercerTribunalScraper
+        from src.scrapers.scraper_dga import DGAScraper
     except ImportError as e:
         log.error(f"Error de importación al iniciar scrapers: {e}")
         return
@@ -538,6 +516,7 @@ def _run_news_scrapers():
         ("SEA Noticias",                  SEAScraper),
         ("Sernageomin",                   SernageominScraper),
         ("Segundo Tribunal",              TribunalScraper),
+        ("DGA",                           DGAScraper),
     ]
 
     log.info("--- SCRAPING NOTICIAS MANUAL ---")
@@ -644,7 +623,7 @@ async def scheduler_monitor():
                         horario = "1" if current_time == config.get("snifa_time_1") else "2"
                         log.info(f"ALERTA: Iniciando scrapeo programado de SNIFA (Horario {horario}) a las {current_time}")
                         # Ejecutar en background sin bloquear el monitor
-                        asyncio.to_thread(_run_snifa_scrapers)
+                        await asyncio.to_thread(_run_snifa_scrapers)
 
                     # Hora de testeo específica solicitada por el usuario
                     if current_time == config.get("test_time"):

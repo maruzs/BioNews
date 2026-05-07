@@ -8,6 +8,7 @@ from src.scrapers.tribunal2 import TribunalScraper
 from src.scrapers.sma import SMAScraper
 from src.scrapers.corteSuprema import CorteSupremaScraper
 from src.scrapers.tribunal3 import TercerTribunalScraper
+from src.scrapers.scraper_dga import DGAScraper
 # Scrapers de datos (tablas especificas)
 from src.scrapers.primerTribunal import PrimerTribunalScraper
 from src.scrapers.segundoTribunal import SegundoTribunalScraper
@@ -84,7 +85,8 @@ def run_sync(log_callback, progress_callback=None):
             ("SBAP", SBAPScraper()),
             ("SEA Noticias", SEAScraper()),
             ("Sernageomin", SernageominScraper()),
-            ("Tribunal Ambiental (Noticias)", TribunalScraper())
+            ("Tribunal Ambiental (Noticias)", TribunalScraper()),
+            ("DGA", DGAScraper())
         ]
         
         total_scrapers = len(datos_scrapers) + len(noticias_scrapers)

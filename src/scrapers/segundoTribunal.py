@@ -153,7 +153,7 @@ def procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha_db):
             INSERT OR REPLACE INTO Tribunales
             (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion, fecha_scraping)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, datetime.now()))
+        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         
         nuevos_registros += 1
         

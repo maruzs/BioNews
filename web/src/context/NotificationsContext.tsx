@@ -29,33 +29,12 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [token]);
 
+  // Cargar estado UNA SOLA VEZ al iniciar sesión / montar el componente
+  // No hay polling ni WebSocket: las notificaciones se refrescan solo
+  // al navegar entre categorías (markExit actualiza el estado local)
   useEffect(() => {
     if (token && user) {
       refreshStatus();
-
-      // Fetch polling interval and start polling
-      let timeoutId: number | undefined;
-
-      const poll = async () => {
-        try {
-          const configRes = await fetch('/api/config/notifications');
-          const config = await configRes.json();
-          const intervalSeconds = config.interval || 15;
-
-          await refreshStatus();
-
-          timeoutId = setTimeout(poll, intervalSeconds * 1000);
-        } catch (error) {
-          console.error("Error in polling loop:", error);
-          timeoutId = setTimeout(poll, 15000);
-        }
-      };
-
-      poll();
-
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId);
-      };
     } else {
       setCategoryStatus({});
     }
@@ -93,9 +72,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         body: JSON.stringify({ category, item_id: itemId }),
         keepalive: true
       });
-      // No actualizamos categoryStatus aquí necesariamente, 
-      // el punto rojo solo se quita al entrar/salir de la categoría según la regla.
-      // O si era el último ítem, pero eso lo calcula el backend mejor en refreshStatus si queremos precisión absoluta.
+      // No actualizamos categoryStatus aquí.
+      // El punto rojo se quita al salir de la categoría (markExit).
     } catch (error) {
       console.error("Error marking item viewed:", error);
     }

@@ -2,6 +2,10 @@ import sqlite3
 import os
 from datetime import datetime
 
+def _now_str():
+    """Retorna la fecha/hora actual como string sin microsegundos: YYYY-MM-DD HH:MM:SS"""
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 class DatabaseManager:
     def __init__(self, db_path="data/data.db"):
         self.db_path = db_path
@@ -126,30 +130,30 @@ class DatabaseManager:
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
 
     def save_news(self, news_list):
+        """Guarda noticias nuevas. NO actualiza fecha_scraping de las ya existentes."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             inserted_count = 0
             for item in news_list:
                 try:
+                    # Verificar si ya existe
+                    cursor.execute("SELECT 1 FROM noticias WHERE link = ?", (item['link'],))
+                    if cursor.fetchone():
+                        # Ya existe, no hacer nada (no actualizar fecha_scraping)
+                        continue
                     cursor.execute("""
                         INSERT INTO noticias 
                         (link, titulo, fecha, imagen, fuente, fecha_scraping)
                         VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(link) DO UPDATE SET 
-                            titulo=excluded.titulo,
-                            fecha=excluded.fecha,
-                            imagen=excluded.imagen,
-                            fecha_scraping=excluded.fecha_scraping
                     """, (
                         item['link'], 
                         item['titulo'], 
                         item['fecha'], 
                         item['imagen'], 
                         item['fuente'],
-                        datetime.now()
+                        _now_str()
                     ))
-                    if cursor.rowcount > 0:
-                        inserted_count += 1
+                    inserted_count += 1
                 except Exception as e:
                     print(f"Error al guardar noticia: {e}")
             conn.commit()
@@ -194,12 +198,24 @@ class DatabaseManager:
             cursor.execute(f'PRAGMA table_info("{table_name}")')
             columns = [col[1] for col in cursor.fetchall()]
             
-            # Sort by date if possible
+            # Ordenar inteligentemente según la tabla
+            # SNIFA tables: ordenar por detalle_link DESC (ficha más alta = más nueva)
+            snifa_tables = {'fiscalizaciones', 'sancionatorios', 'registroSanciones',
+                           'medidas_provisionales', 'requerimientos', 'programasDeCumplimiento'}
+            
             order_by = ""
-            if "Fecha" in columns:
+            if table_name in snifa_tables and 'detalle_link' in columns:
+                order_by = ' ORDER BY detalle_link DESC'
+            elif "Fecha" in columns:
                 order_by = ' ORDER BY "Fecha" DESC'
             elif "fecha" in columns:
                 order_by = ' ORDER BY "fecha" DESC'
+            
+            # Agregar fecha_scraping como orden secundario si existe
+            if 'fecha_scraping' in columns and order_by:
+                order_by += ', fecha_scraping DESC'
+            elif 'fecha_scraping' in columns:
+                order_by = ' ORDER BY fecha_scraping DESC'
 
             cursor.execute(f'SELECT * FROM "{table_name}"{order_by} LIMIT ?', (limit,))
             rows = cursor.fetchall()
@@ -236,7 +252,7 @@ class DatabaseManager:
                         fuente=excluded.fuente,
                         nombre=excluded.nombre,
                         accion=excluded.accion
-                """, (user_id, id_o_link, fuente, nombre, datetime.now(), accion))
+                """, (user_id, id_o_link, fuente, nombre, _now_str(), accion))
                 conn.commit()
                 return True
             except Exception as e:
@@ -308,7 +324,7 @@ class DatabaseManager:
     def update_user_last_login(self, user_id):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (datetime.now(), user_id))
+            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (_now_str(), user_id))
             conn.commit()
 
     def update_user_status(self, user_id, blocked):
@@ -337,7 +353,7 @@ class DatabaseManager:
     def log_scraper_run(self, fuente, exito, error="", nuevos=0):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            ahora = datetime.now()
+            ahora = _now_str()
             
             # Obtener el log actual si existe
             cursor.execute("SELECT ultimo_exito FROM scraper_logs WHERE fuente = ?", (fuente,))
@@ -481,7 +497,7 @@ class DatabaseManager:
                 VALUES (?, ?, ?)
                 ON CONFLICT(user_id, category_slug) DO UPDATE SET
                     last_exit_at = excluded.last_exit_at
-            """, (user_id, category_slug, datetime.now()))
+            """, (user_id, category_slug, _now_str()))
             conn.commit()
 
     def mark_item_viewed(self, user_id, item_id_or_link, category_slug):
@@ -491,7 +507,7 @@ class DatabaseManager:
             cursor.execute("""
                 INSERT OR IGNORE INTO user_item_views (user_id, item_id_or_link, category_slug, viewed_at)
                 VALUES (?, ?, ?, ?)
-            """, (user_id, item_id_or_link, category_slug, datetime.now()))
+            """, (user_id, item_id_or_link, category_slug, _now_str()))
             conn.commit()
 
     def get_user_category_last_exit(self, user_id, category_slug):
@@ -575,16 +591,20 @@ class DatabaseManager:
         if not date_val: return ""
         str_val = str(date_val).strip()
         
-        # Caso 1: DD/MM/YYYY o DD-MM-YYYY
+        # Caso 1: DD/MM/YYYY o DD-MM-YYYY (con o sin hora)
         if "/" in str_val or ("-" in str_val and len(str_val.split("-")[0]) != 4):
             sep = "/" if "/" in str_val else "-"
-            parts = str_val.split(" ")[0].split(sep)
+            date_part = str_val.split(" ")[0]
+            time_part = " ".join(str_val.split(" ")[1:]) if " " in str_val else ""
+            parts = date_part.split(sep)
             if len(parts) == 3:
-                # Asumimos DD-MM-YYYY si la primera parte es <= 31
                 try:
                     d, m, y = parts[0], parts[1], parts[2]
                     if len(y) == 2: y = "20" + y
-                    return f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+                    result = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+                    if time_part:
+                        result += f" {time_part}"
+                    return result
                 except: pass
         
         # Caso 2: Ya es YYYY-MM-DD...
@@ -599,6 +619,7 @@ class DatabaseManager:
         date_col = "fecha_scraping"
 
         norm_last_exit = self._normalize_date(last_exit)
+        # print(f"DEBUG: Category {category_slug}, User {user_id}, Last Exit: {norm_last_exit}")
 
         for item in items:
             item_id = str(item.get(id_col) or item.get("id_o_link") or "")
@@ -620,6 +641,7 @@ class DatabaseManager:
                 item['is_new'] = False
             else:
                 norm_item_date = self._normalize_date(item_date)
-                item['is_new'] = norm_item_date > norm_last_exit
+                is_new = norm_item_date > norm_last_exit
+                item['is_new'] = is_new
         
         return items

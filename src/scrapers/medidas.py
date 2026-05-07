@@ -138,7 +138,7 @@ class MedidasProvisionalesScraper:
                 record['region'],
                 record['estado'],
                 record['detalle_link'],
-                datetime.now()
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ))
             print(f"  + {record['expediente']}")
 
