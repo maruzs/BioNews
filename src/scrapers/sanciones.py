@@ -22,6 +22,21 @@ def get_db_info():
     return expedientes, len(expedientes)
 
 
+def extract_ficha_id(url):
+    """Extrae el número de ficha del final de la URL."""
+    if not url:
+        return None
+    try:
+        parts = url.rstrip('/').split('/')
+        if parts:
+            last_part = parts[-1]
+            if last_part.isdigit():
+                return int(last_part)
+    except:
+        pass
+    return None
+
+
 def parse_row(row):
     """Extrae los datos de una fila de la tabla HTML."""
     tds = row.find_all('td')
@@ -36,7 +51,8 @@ def parse_row(row):
         'region': '',
         'multa_uta': '',
         'pago_multa': '',
-        'detalle_link': ''
+        'detalle_link': '',
+        'ficha_id': None
     }
 
     for td in tds:
@@ -66,8 +82,17 @@ def parse_row(row):
             data['region'] = ' / '.join(filter(None, items))
         elif label in ('Multa (UTA)', 'Multa'):
             data['multa_uta'] = td.get_text(strip=True)
-        elif label in ('Pago de Multa', 'Pago'):
-            data['pago_multa'] = td.get_text(strip=True)
+        elif label in ('Pago de Multa', 'Pago', 'PagoMulta'):
+            # El texto puede estar dentro de un span con clase pagada/pendiente o en un <i>No Aplica</i>
+            text = td.get_text(strip=True)
+            if 'Pagada' in text:
+                data['pago_multa'] = 'Pagada'
+            elif 'Pendiente' in text:
+                data['pago_multa'] = 'Pendiente'
+            elif 'No Aplica' in text:
+                data['pago_multa'] = 'No Aplica'
+            else:
+                data['pago_multa'] = text
         elif label == 'Detalle':
             a_tag = td.find('a')
             if a_tag:
@@ -79,6 +104,8 @@ def parse_row(row):
 
     if not data['expediente']:
         return None
+    
+    data['ficha_id'] = extract_ficha_id(data['detalle_link'])
     return data
 
 
@@ -132,8 +159,8 @@ class RegistroSancionesScraper:
             cursor.execute('''
                 INSERT OR REPLACE INTO registroSanciones (
                     expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, multa_uta, pago_multa, detalle_link, fecha_scraping
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    categoria, region, multa_uta, pago_multa, detalle_link, fecha_scraping, ficha_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['unidad_fiscalizable'],
@@ -143,7 +170,8 @@ class RegistroSancionesScraper:
                 record['multa_uta'],
                 record['pago_multa'],
                 record['detalle_link'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                record.get('ficha_id')
             ))
             print(f"  + {record['expediente']}")
 

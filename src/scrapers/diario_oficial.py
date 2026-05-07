@@ -16,6 +16,26 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 DIAS_A_EXTRAER = 1
 
 
+def extract_ficha_id(url):
+    """Extrae el número de ficha del final de la URL."""
+    if not url:
+        return None
+    try:
+        # Ejemplo: .../2805795.pdf
+        url = url.split('?')[0]
+        url = url.rstrip('/')
+        if url.endswith('.pdf'):
+            url = url[:-4]
+        parts = url.split('/')
+        if parts:
+            last_part = parts[-1]
+            if last_part.isdigit():
+                return int(last_part)
+    except:
+        pass
+    return None
+
+
 def crear_tabla_si_no_existe(conn):
     cursor = conn.cursor()
     cursor.execute('''
@@ -25,8 +45,9 @@ def crear_tabla_si_no_existe(conn):
             tipo_normativa TEXT,
             organismo TEXT,
             suborganismo TEXT,
-            accion TEXT UNIQUE,
-            fecha_scraping TEXT
+            accion TEXT PRIMARY KEY,
+            fecha_scraping TEXT,
+            ficha_id INTEGER
         )
     ''')
     # Migración: agregar UNIQUE a accion si la tabla ya existe sin él
@@ -84,11 +105,13 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
                     except:
                         fecha_db = fecha_str
 
+                    fid = extract_ficha_id(accion_link)
+
                     # Usar INSERT OR IGNORE para evitar duplicados por URL (accion)
                     cursor.execute('''
-                        INSERT OR IGNORE INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                        INSERT OR IGNORE INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping, ficha_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fid))
                     
     except Exception as e:
         print(f"Error procesando seccion {tipo_normativa} para la fecha {fecha_str}: {e}")

@@ -73,7 +73,7 @@ def get_db():
 
 def ejecutar_scrapers(scrapers_list, msg_inicio):
     log.info("=" * 40)
-    log.info(msg_inicio)
+    log.info(msg_inicio + "SCHEDULED")
     log.info("=" * 40)
     for nombre, ScraperClass in scrapers_list:
         log.info(f"  ▶ Procesando: {nombre}...")
@@ -192,7 +192,8 @@ def setup_schedule():
     # SNIFA
     schedule.every().day.at(config.get("snifa_time_1", "07:00")).do(run_snifa)
     schedule.every().day.at(config.get("snifa_time_2", "14:00")).do(run_snifa)
-    
+    # SEA
+    #schedule.every().day.at(config.get("sea_time", "07:00")).do(run_pertinencias)
     # The others
     p_interval = int(config.get("pertinencias_interval", 1))
     n_interval = int(config.get("noticias_interval", 1))

@@ -1,51 +1,128 @@
-# Plan de Implementación - BioNews Fixes
+# Plan de Implementación – SNIFA/SMA
 
-## Tareas identificadas del prompt.md
+## 1. Objetivo General
 
-### 1. ✅ Integrar `scraper_dga.py` como scraper de noticias
+Unificar el criterio de ordenamiento en todas las tablas del sistema (Fiscalizaciones, Sancionatorios, RegistroSanciones, Programas de Cumplimiento, Requerimientos, Medidas Provisionales), reemplazando el actual orden lexicográfico del campo `detalle_link` por un orden numérico basado en el ID de ficha extraído de la URL.
 
-- Agregar DGA al listado de scrapers de noticias en `server.py` y `startScraping.py`
-- Agregar checkbox DGA en el panel de admin (ya usa el mismo flujo)
+Además, corregir los filtros por año en múltiples tablas y reparar la extracción del campo `pago_multa` en RegistroSanciones.
 
-### 2. ✅ Exceso de notificaciones en terminal (Polling)
+---
 
-- **Causa raíz**: `NotificationsContext.tsx` hace polling cada 15 segundos a `/api/config/notifications` + `/api/notifications/status`
-- **Solución**: Eliminar el polling periódico. Usar solo `refreshStatus()` bajo demanda:
-  - Al cargar la app (login/refresh)
-  - Después de un `markExit` o `markItemViewed` (ya actualiza estado local)
-  - Cuando un WebSocket notifique nuevo contenido
+## 2. Nueva Columna Obligatoria en Cada Tabla
 
-### 3. ✅ Notificaciones "vuelven" después de marcar como leído
+Agregar en **cada registro de todas las tablas** una columna llamada:
 
-- **Causa raíz**: `save_news` usa `ON CONFLICT DO UPDATE SET fecha_scraping=datetime.now()`. Esto actualiza `fecha_scraping` para noticias que YA existían, lo que hace que parezcan "nuevas" comparado con `last_exit_at`.
-- **Solución**: Cambiar `save_news` para que solo inserte noticias nuevas (INSERT OR IGNORE) y NO actualice `fecha_scraping` de las existentes.
+| nombre_columna | tipo    | origen                         |
+| -------------- | ------- | ------------------------------ |
+| `ficha_id`     | integer | Extraído de la URL del detalle |
 
-### 4. ✅ Descarga repetida de normativas
+### Regla de extracción
 
-- **Causa raíz**: `diario_oficial.py` usa `INSERT INTO` sin verificar duplicados (no tiene PK en la tabla).
-- **Solución**:
-  - Usar `accion` (URL) como identificador único: agregar `UNIQUE(accion)` y usar `INSERT OR IGNORE`
-  - Limpiar duplicados existentes en la BD
+Tomar el número entero al final de la URL:
 
-### 5. ✅ Barra de búsqueda por palabra clave
+- `https://snifa.sma.gob.cl/RegistroPublico/Ficha/3979` → `3979`
+- `https://snifa.sma.gob.cl/Sancionatorio/Ficha/4490` → `4490`
+- `https://snifa.sma.gob.cl/RequerimientoIngreso/Ficha/254` → `254`
 
-- **Solución**: Búsqueda al presionar Enter + botón de buscar (opción 2, más óptima)
+### Ordenamiento definitivo
 
-### 6. ✅ Fecha scraping sin microsegundos
+Toda tabla se ordenará por `ficha_id DESC` (más alto = más nuevo).
 
-- Asignar `2026-05-04 23:59:59` a registros sin `fecha_scraping`
-- Eliminar microsegundos de fechas existentes
-- Usar `strftime` para nuevas fechas
+---
 
-### 7. ✅ Corrección scrapers de noticias (fecha_scraping se actualiza para registros existentes)
+## 3. Corrección de Filtros por Año en las Tablas
 
-- Misma causa raíz que #3, se resuelve junto
+### Tablas afectadas actualmente
 
-### 8. ✅ SMA/SNIFA - Ordenar por más nuevos primero
+- Sancionatorios
+- RegistroSanciones
+- Programas de Cumplimiento
+- Medidas Provisionales
+- Requerimientos
 
-- Ordenar fiscalizaciones por `detalle_link` DESC (número de ficha más alto = más nuevo)
-- Asegurar que el límite de 5000 trae las más nuevas primero
+### Problema detectado
 
-### 9. ✅ Filtro por año en fiscalizaciones
+El dropdown de “Filtrar por Año (Expediente)” está tomando el **segundo** valor del expediente (`NÚMERO`) en lugar del **tercero** (`AÑO`).
 
-- Agregar filtro por año basado en el campo expediente
+### Formato correcto del expediente
+
+`LETRA - NÚMERO - AÑO`
+Ejemplo: `D-063-2026` → año = `2026`
+
+### Acción requerida
+
+- Modificar la lógica de extracción del año en el scraper/filtro.
+- El dropdown de años debe mostrar años reales (2026, 2025, 2024, …) orden descendente.
+- Aplicar el mismo cambio en todas las tablas mencionadas.
+
+---
+
+## 4. Corrección Específica para RegistroSanciones
+
+### Campo `pago_multa`
+
+Actualmente no se extrae ningún valor.
+
+### Posibles valores reales según el HTML
+
+| HTML contiene                                 | Valor a guardar |
+| --------------------------------------------- | --------------- |
+| `<span class="pagada">...Pagada</span>`       | `Pagada`        |
+| `<span class="pendiente">...Pendiente</span>` | `Pendiente`     |
+| `<i>No Aplica</i>`                            | `No Aplica`     |
+
+### Cambio solicitado en el filtro
+
+- Actual: filtro de texto libre.
+- Nuevo: **dropdown con 3 opciones**:
+  - Pagada
+  - Pendiente
+  - No Aplica
+
+---
+
+## 5. Tablas Sin Primary Key (Normativas)
+
+La tabla **Normativas** no tiene primary key actualmente.
+
+- La URL del detalle es única por día.
+- Usar `url` o `ficha_id` como identificador único (según disponibilidad).
+- Aplicar también el orden por `ficha_id` si existe, o conservar el orden por fecha si `ficha_id` no está disponible.
+
+---
+
+## 6. Notificaciones de Ítems Nuevos
+
+### Estado actual
+
+- Solo se muestran al refrescar con F5.
+- Las tablas no tienen etiqueta visual de “nuevo”.
+
+### No se requiere acción inmediata
+
+El documento solo solicita **registro del comportamiento actual**, no cambios específicos.
+
+---
+
+## 7. Resumen de Acciones por Tabla
+
+| Tabla                     | Orden por `ficha_id` | Filtro año corregido | Campo `pago_multa` | Dropdown pago multa |
+| ------------------------- | -------------------- | -------------------- | ------------------ | ------------------- |
+| Fiscalizaciones           | Sí                   | No indica error      | N/A                | N/A                 |
+| Sancionatorios            | Sí                   | Sí                   | N/A                | N/A                 |
+| RegistroSanciones         | Sí                   | Sí                   | Sí                 | Sí                  |
+| Programas de Cumplimiento | Sí                   | Sí                   | N/A                | N/A                 |
+| Medidas Provisionales     | Sí                   | Sí                   | N/A                | N/A                 |
+| Requerimientos            | Sí                   | Sí                   | N/A                | N/A                 |
+| Normativas                | Sí (si aplica)       | No aplica            | N/A                | N/A                 |
+
+---
+
+## 8. Orden de Ejecución Recomendado
+
+1. **Extraer y guardar `ficha_id`** en todas las tablas.
+2. **Migrar ordenamiento** a `ficha_id DESC`.
+3. **Corregir filtro de año** (expediente) en las 5 tablas afectadas.
+4. **Reparar scraper de `pago_multa`** en RegistroSanciones.
+5. **Cambiar filtro de pago multa** a dropdown.
+6. **Validar** que el orden por ficha refleje correctamente “nuevo más arriba”.

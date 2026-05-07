@@ -561,6 +561,7 @@ def _run_snifa_scrapers():
     from src.scrapers.medidas import MedidasProvisionalesScraper
     from src.scrapers.pdc import ProgramasCumplimientoScraper
     from src.scrapers.sanciones import RegistroSancionesScraper
+    log.info("MANUAL")
     scrapers = [
         ("SNIFA Sancionatorios", SancionatoriosScraper),
         ("SNIFA Fiscalizaciones", SnifaFiscalizacionScraper),

@@ -290,10 +290,10 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       if (value) {
         if (field === 'expediente_year') {
           result = result.filter(item => {
-            const exp = String(item['expediente'] || '');
+            const exp = String(item['expediente'] || item['Expediente'] || '');
             const parts = exp.split('-');
-            if (parts.length >= 2) {
-              return parts[1] === value;
+            if (parts.length >= 3) {
+              return parts[2] === value;
             }
             return exp.includes(value);
           });
@@ -617,7 +617,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     'estado', 'Estado', 'Estado_Procesal', 
                     'organismo', 'Tribunal', 'categoria', 
                     'region', 'tipo_normativa', 'suborganismo', 
-                    'Tipo_de_Procedimiento', 'materia', 'resultado'
+                    'Tipo_de_Procedimiento', 'materia', 'resultado',
+                    'pago_multa'
                   ];
                   const isCategorical = categoricalFields.includes(col.field);
                   
@@ -645,7 +646,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     </div>
                   );
               })}
-              {activeColumns.some(c => c.field === 'expediente') && (
+              {activeColumns.some(c => ['expediente', 'Expediente'].includes(c.field)) && (
                 <div style={{ flex: '1 1 200px' }}>
                   <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Año (Expediente)</h4>
                   <select 
@@ -656,9 +657,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     <option value="">Todos los Años</option>
                     {Array.from(new Set(
                       data.map(item => {
-                        const exp = String(item['expediente'] || '');
+                        const exp = String(item['expediente'] || item['Expediente'] || '');
                         const parts = exp.split('-');
-                        return parts.length >= 2 ? parts[1] : null;
+                        return parts.length >= 3 ? parts[2] : null;
                       }).filter((y): y is string => Boolean(y))
                     )).sort((a, b) => Number(b) - Number(a)).map(year => (
                       <option key={year} value={year}>{year}</option>

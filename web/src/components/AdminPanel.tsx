@@ -229,7 +229,7 @@ const AdminPanel = () => {
               <input type="time" value={schedulerConfig.hora_fin} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_fin: e.target.value})} className="filter-select" />
             </div>
             <div style={{ flex: '1 1 200px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Testeo (Ejecución Terminal)</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Testeo</label>
               <input 
                 type="time" 
                 value={schedulerConfig.test_time || ''} 

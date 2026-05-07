@@ -199,13 +199,9 @@ class DatabaseManager:
             columns = [col[1] for col in cursor.fetchall()]
             
             # Ordenar inteligentemente según la tabla
-            # SNIFA tables: ordenar por detalle_link DESC (ficha más alta = más nueva)
-            snifa_tables = {'fiscalizaciones', 'sancionatorios', 'registroSanciones',
-                           'medidas_provisionales', 'requerimientos', 'programasDeCumplimiento'}
-            
             order_by = ""
-            if table_name in snifa_tables and 'detalle_link' in columns:
-                order_by = ' ORDER BY detalle_link DESC'
+            if 'ficha_id' in columns:
+                order_by = ' ORDER BY ficha_id DESC'
             elif "Fecha" in columns:
                 order_by = ' ORDER BY "Fecha" DESC'
             elif "fecha" in columns:
@@ -213,7 +209,8 @@ class DatabaseManager:
             
             # Agregar fecha_scraping como orden secundario si existe
             if 'fecha_scraping' in columns and order_by:
-                order_by += ', fecha_scraping DESC'
+                if 'ficha_id' not in columns: # Si ya ordenamos por ficha_id DESC, no es tan necesario fecha_scraping como secundario pero no estorba
+                     order_by += ', fecha_scraping DESC'
             elif 'fecha_scraping' in columns:
                 order_by = ' ORDER BY fecha_scraping DESC'
 

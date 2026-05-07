@@ -26,6 +26,21 @@ def get_db_expedientes():
     return expedientes, db_count
 
 
+def extract_ficha_id(url):
+    """Extrae el número de ficha del final de la URL."""
+    if not url:
+        return None
+    try:
+        parts = url.rstrip('/').split('/')
+        if parts:
+            last_part = parts[-1]
+            if last_part.isdigit():
+                return int(last_part)
+    except:
+        pass
+    return None
+
+
 def parse_row(row):
     """Extrae los datos de una fila de la tabla HTML."""
     tds = row.find_all('td')
@@ -80,6 +95,8 @@ def parse_row(row):
 
     if not data['expediente']:
         return None
+    
+    data['ficha_id'] = extract_ficha_id(data['detalle_link'])
     return data
 
 
@@ -195,8 +212,8 @@ class SnifaFiscalizacionScraper:
             cursor.execute('''
                 INSERT OR REPLACE INTO fiscalizaciones (
                     expediente, nombre_razon_social, unidad_fiscalizable,
-                    categoria, region, estado, detalle_link, fecha_scraping
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    categoria, region, estado, detalle_link, fecha_scraping, ficha_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record['expediente'],
                 record['nombre_razon_social'],
@@ -205,7 +222,8 @@ class SnifaFiscalizacionScraper:
                 record['region'],
                 record['estado'],
                 record['detalle_link'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                record.get('ficha_id')
             ))
             print(f"  + {record['expediente']}")
 
