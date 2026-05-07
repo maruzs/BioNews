@@ -659,7 +659,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                         const exp = String(item['expediente'] || '');
                         const parts = exp.split('-');
                         return parts.length >= 2 ? parts[1] : null;
-                      }).filter(Boolean)
+                      }).filter((y): y is string => Boolean(y))
                     )).sort((a, b) => Number(b) - Number(a)).map(year => (
                       <option key={year} value={year}>{year}</option>
                     ))}
