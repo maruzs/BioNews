@@ -24,6 +24,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
     expose:
       - "8000"
     networks:
@@ -34,6 +35,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    environment:
+      - TZ=America/Santiago
 
   # ── Scheduler de Scrapers ───────────────────────────────────
   scheduler:
@@ -46,12 +49,14 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - bionews-net
     depends_on:
       api:
         condition: service_healthy
-
+    environment:
+      - TZ=America/Santiago
   # ── Frontend (Nginx + React build) ──────────────────────────
   web:
     build:

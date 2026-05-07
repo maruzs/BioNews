@@ -82,3 +82,13 @@ Tambien por ficha
 
 Quiero que haya una nueva columna en cada tabla del SNIFA/SMA (Fiscalizaciones, Sancionatorios, registroSanciones, programasDeCumplimiento, requerimientos y medidas provisionales) se agregue una nueva columna (esto para los antiguos registros de cada tabla y tambien para los antiguos) que sea el numero de ficha que se obtiene de la URL
 Como son tablas separadas no importa mucho ya que no se van a mezclar si tienen la misma ficha (de hecho genial ya que estan relacionados)
+
+### Normativas
+
+La tabla no tiene Primary Key
+
+### Time and Date
+
+El servidor tiene la fecha bien pero el contenedor de docker sigue usando UTC, hay que cambiarlo a America/Santiago
+
+### Cambios en la Base de Datos
