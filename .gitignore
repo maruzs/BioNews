@@ -2,8 +2,6 @@
 venv/
 .venv/
 JSONS/
-old/
-ignore/
 build/
 dist/
 BioNews_Debug.spec
@@ -11,6 +9,4 @@ BioNews.spec
 __pycache__/
 pw-browser/
 logs/
-promtps/
-developer/
 data/*.db
