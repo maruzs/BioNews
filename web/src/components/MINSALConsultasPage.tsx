@@ -28,7 +28,6 @@ const MINSALConsultasPage = () => {
   const [docsLoading, setDocsLoading] = useState(false);
   const [filter, setFilter] = useState<'vigentes' | 'resultados'>('vigentes');
 
-  const category = 'minsal'; // Usaremos un slug unificado para notificaciones si es posible, o manejar ambos
 
   useEffect(() => {
     // Para notificaciones, MINSAL usa dos slugs actualmente en manager.py
