@@ -9,6 +9,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import AdminPanel from './components/AdminPanel';
 import Profile from './components/Profile';
+import ConsultasPage from './components/ConsultasPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 
@@ -83,6 +84,12 @@ function ProtectedLayout() {
 
           {/* Tribunales */}
           <Route path="/tribunales" element={<ReportLayout key="tribunales" title="Tribunales Ambientales" description="Reporte de causas en los Tribunales Ambientales." listTitle="Causas" tableName="Tribunales" category="Tribunales" />} />
+
+          {/* Consultas Públicas */}
+          <Route path="/consultas/minsal-vigentes" element={<ConsultasPage key="minsal_vigentes" title="MINSAL - Consultas Vigentes" description="Consultas públicas vigentes del Ministerio de Salud." tableName="minsal_vigentes" category="minsal_vigentes" type="vigente" />} />
+          <Route path="/consultas/minsal-resultados" element={<ConsultasPage key="minsal_resultados" title="MINSAL - Resultados" description="Resultados de consultas públicas del Ministerio de Salud." tableName="minsal_resultados" category="minsal_resultados" type="resultado" />} />
+          <Route path="/consultas/dga" element={<div style={{ padding: '40px' }}><h1 className="report-title">DGA</h1><p>En proceso...</p></div>} />
+          <Route path="/consultas/mma" element={<div style={{ padding: '40px' }}><h1 className="report-title">MMA</h1><p>En proceso...</p></div>} />
 
           {/* Admin Panel */}
           <Route path="/admin" element={<AdminPanel />} />

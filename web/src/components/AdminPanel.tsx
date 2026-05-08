@@ -113,6 +113,7 @@ const AdminPanel = () => {
     if (type === 'snifa') url = '/api/scrape/snifa';
     if (type === 'normativas') url = '/api/scrape/normativas';
     if (type === 'tribunales') url = '/api/scrape/tribunales';
+    if (type === 'consultas') url = '/api/scrape/consultas';
     
     if (!url) {
       setScraping(null);
@@ -261,6 +262,9 @@ const AdminPanel = () => {
           </button>
           <button onClick={() => handleManualScrape('tribunales')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Play size={16} /> {scraping === 'tribunales' ? '...' : 'Tribunales'}
+          </button>
+          <button onClick={() => handleManualScrape('consultas')} disabled={!!scraping} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Play size={16} /> {scraping === 'consultas' ? '...' : 'Consultas'}
           </button>
           <button onClick={() => fetchLogs()} className="btn-primary" style={{ padding: '6px 15px' }}>
             Refrescar Logs

@@ -187,7 +187,8 @@ class DatabaseManager:
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
-            'requerimientos', 'sancionatorios', 'Tribunales'
+            'requerimientos', 'sancionatorios', 'Tribunales',
+            'minsal_vigentes', 'minsal_resultados'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -229,7 +230,8 @@ class DatabaseManager:
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
-            'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos'
+            'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos',
+            'minsal_vigentes', 'minsal_resultados'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -535,7 +537,8 @@ class DatabaseManager:
         categories = [
             "noticias", "normativas", "pertinencias", "fiscalizaciones", 
             "sancionatorios", "registroSanciones", "programasDeCumplimiento", 
-            "medidas_provisionales", "requerimientos", "Tribunales"
+            "medidas_provisionales", "requerimientos", "Tribunales",
+            "minsal_vigentes", "minsal_resultados"
         ]
         
         status = {}
@@ -558,7 +561,9 @@ class DatabaseManager:
             "programasDeCumplimiento": "programasDeCumplimiento",
             "medidas_provisionales": "medidas_provisionales",
             "requerimientos": "requerimientos",
-            "Tribunales": "Tribunales"
+            "Tribunales": "Tribunales",
+            "minsal_vigentes": "minsal_vigentes",
+            "minsal_resultados": "minsal_resultados"
         }
         
         table = table_mapping.get(category_slug)
@@ -566,11 +571,19 @@ class DatabaseManager:
         
         # Obtener columna de fecha de creacion/scraping
         date_col = "fecha_scraping"
-        id_col = "link" if category_slug == "noticias" else (
-            "expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else (
-            "Expediente" if category_slug == "pertinencias" else (
-            "Accion" if category_slug == "Tribunales" else (
-            "accion" if category_slug == "normativas" else "id"))))
+        if category_slug == "noticias":
+            id_col = "link"
+        elif category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"]:
+            id_col = "expediente"
+        elif category_slug == "pertinencias":
+            id_col = "Expediente"
+        elif category_slug == "Tribunales":
+            id_col = "Accion"
+        elif category_slug == "normativas":
+            id_col = "accion"
+        else:
+            id_col = "id"
+        
         
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -620,11 +633,19 @@ class DatabaseManager:
         last_exit = self.get_user_category_last_exit(user_id, category_slug)
         viewed_ids = set(self.get_viewed_items_ids(user_id, category_slug))
         
-        id_col = "link" if category_slug == "noticias" else (
-            "expediente" if category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"] else (
-            "Expediente" if category_slug == "pertinencias" else (
-            "Accion" if category_slug == "Tribunales" else (
-            "accion" if category_slug == "normativas" else "id"))))
+        if category_slug == "noticias":
+            id_col = "link"
+        elif category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"]:
+            id_col = "expediente"
+        elif category_slug == "pertinencias":
+            id_col = "Expediente"
+        elif category_slug == "Tribunales":
+            id_col = "Accion"
+        elif category_slug == "normativas":
+            id_col = "accion"
+        else:
+            id_col = "id"
+        
         date_col = "fecha_scraping"
 
         norm_last_exit = self._normalize_date(last_exit)
@@ -654,3 +675,15 @@ class DatabaseManager:
                 item['is_new'] = is_new
         
         return items
+
+    def get_consultation_documents(self, consulta_id, tipo_consulta):
+        """Obtiene los documentos asociados a una consulta."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT nombre_documento, link 
+                FROM documentos 
+                WHERE consulta_id = ? AND tipo_consulta = ?
+            """, (consulta_id, tipo_consulta))
+            rows = cursor.fetchall()
+            return [{"nombre": row[0], "link": row[1]} for row in rows]

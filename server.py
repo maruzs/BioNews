@@ -265,6 +265,11 @@ def get_table_count(table_name: str, user = Depends(get_current_user)):
     except ValueError as e:
         return {"error": str(e)}
 
+@app.get("/api/consultas/documentos/{consulta_id}")
+def get_consultation_docs(consulta_id: str, tipo: str, user = Depends(get_current_user)):
+    """Obtiene los documentos asociados a una consulta pública."""
+    return db.get_consultation_documents(consulta_id, tipo)
+
 @app.get("/api/options")
 def get_options(user = Depends(get_current_user)):
     try:
@@ -480,6 +485,7 @@ def _run_all_scrapers():
         from src.scrapers.medidas import MedidasProvisionalesScraper
         from src.scrapers.pdc import ProgramasCumplimientoScraper
         from src.scrapers.sanciones import RegistroSancionesScraper
+        from src.scrapers.minsal import MINSALScraper
     except ImportError as e:
         log.error(f"Error de importación al iniciar scrapers: {e}")
         return
@@ -497,6 +503,7 @@ def _run_all_scrapers():
         ("SNIFA Medidas Provisionales", MedidasProvisionalesScraper),
         ("SNIFA Programas de Cumplimiento", ProgramasCumplimientoScraper),
         ("SNIFA Registro Sanciones",   RegistroSancionesScraper),
+        ("MINSAL Consultas",           MINSALScraper),
     ]
 
     log.info("--- SCRAPING DATOS ---")
@@ -512,6 +519,7 @@ def _run_all_scrapers():
         "SNIFA Medidas Provisionales": "medidas_provisionales",
         "SNIFA Programas de Cumplimiento": "programasDeCumplimiento",
         "SNIFA Registro Sanciones": "registroSanciones",
+        "MINSAL Consultas": "minsal_vigentes", # Notifica a vigentes, el frontend revisará ambos
     }
     for nombre, ScraperClass in datos_scrapers:
         log.info(f"Procesando: {nombre}...")
@@ -524,6 +532,8 @@ def _run_all_scrapers():
                 cat = mapping.get(nombre)
                 if cat:
                     asyncio.run(notify_new_content(cat))
+                    if nombre == "MINSAL Consultas":
+                        asyncio.run(notify_new_content("minsal_resultados"))
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
             log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
@@ -725,6 +735,22 @@ def _run_normativas_scrapers():
 def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
     background_tasks.add_task(_run_normativas_scrapers)
     return {"message": "Scraping de Normativas iniciado en background."}
+
+def _run_consultas_scrapers():
+    from src.scrapers.minsal import MINSALScraper
+    try:
+        nuevos = MINSALScraper().run()
+        db.log_scraper_run("MINSAL Consultas", exito=True, nuevos=nuevos)
+        if nuevos > 0:
+            asyncio.run(notify_new_content("minsal_vigentes"))
+            asyncio.run(notify_new_content("minsal_resultados"))
+    except Exception as e:
+        db.log_scraper_run("MINSAL Consultas", exito=False, error=str(e))
+
+@app.post("/api/scrape/consultas")
+def scrape_consultas(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    background_tasks.add_task(_run_consultas_scrapers)
+    return {"message": "Scraping de Consultas Públicas iniciado en background."}
 
 
 # ─── Health check ──────────────────────────────────────────────────────────────

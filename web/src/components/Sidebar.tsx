@@ -44,7 +44,8 @@ const Sidebar = () => {
     diario: true,
     sea: true,
     sma: true,
-    tribunales: true
+    tribunales: true,
+    consultas: false
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
@@ -202,6 +203,32 @@ const Sidebar = () => {
             <NavLink onClick={handleMobileClose} to="/tribunales" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="Tribunales Ambientales">
               <Scale size={18} /> {!collapsed && "Tribunales"}
               {!collapsed && <Dot show={categoryStatus.Tribunales} />}
+            </NavLink>
+          </ul>
+        )}
+
+        {/* Consultas Públicas */}
+        <div className="menu-category" onClick={() => toggleSection('consultas')} title="Consultas Públicas">
+          {!collapsed ? <span>Consultas Públicas</span> : <UserSearch size={20} className="icon" />}
+          {!collapsed && (openSections.consultas ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+        </div>
+        {(!collapsed && openSections.consultas) && (
+          <ul className="submenu">
+            <NavLink onClick={handleMobileClose} to="/consultas/minsal-vigentes" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MINSAL - Vigentes">
+              <CalendarCheck size={18} /> {!collapsed && "MINSAL - Vigentes"}
+              {!collapsed && <Dot show={categoryStatus.minsal_vigentes} />}
+            </NavLink>
+            <NavLink onClick={handleMobileClose} to="/consultas/minsal-resultados" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MINSAL - Resultados">
+              <FileCheck size={18} /> {!collapsed && "MINSAL - Resultados"}
+              {!collapsed && <Dot show={categoryStatus.minsal_resultados} />}
+            </NavLink>
+            <NavLink onClick={handleMobileClose} to="/consultas/dga" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="DGA">
+              <Leaf size={18} /> {!collapsed && "DGA"}
+              {!collapsed && <Dot show={categoryStatus.dga} />}
+            </NavLink>
+            <NavLink onClick={handleMobileClose} to="/consultas/mma" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MMA">
+              <Leaf size={18} /> {!collapsed && "MMA"}
+              {!collapsed && <Dot show={categoryStatus.mma} />}
             </NavLink>
           </ul>
         )}
