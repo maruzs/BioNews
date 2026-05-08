@@ -112,8 +112,7 @@ class DGAConsultasScraper:
                 ON CONFLICT(id) DO UPDATE SET
                     nombre=excluded.nombre,
                     imagen=excluded.imagen,
-                    url=excluded.url,
-                    fecha_scraping=excluded.fecha_scraping
+                    url=excluded.url
             """, (item['id'], item['nombre'], item['imagen'], item['url'], now))
             
             if not exists:

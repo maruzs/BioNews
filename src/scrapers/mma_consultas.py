@@ -265,8 +265,7 @@ class MMAConsultasScraper:
                     tipo_instrumento=excluded.tipo_instrumento,
                     tipo_proceso=excluded.tipo_proceso,
                     ambito_territorial=excluded.ambito_territorial,
-                    link_detalle=excluded.link_detalle,
-                    fecha_scraping=excluded.fecha_scraping
+                    link_detalle=excluded.link_detalle
             """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'], 
                   item['tipo_instrumento'], item['tipo_proceso'], item['ambito_territorial'], item['link_detalle'], now))
             if not exists: nuevos += 1
@@ -286,8 +285,7 @@ class MMAConsultasScraper:
                     fecha_termino=excluded.fecha_termino,
                     tipo_instrumento=excluded.tipo_instrumento,
                     ambito_territorial=excluded.ambito_territorial,
-                    link_detalle=excluded.link_detalle,
-                    fecha_scraping=excluded.fecha_scraping
+                    link_detalle=excluded.link_detalle
             """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'], 
                   item['tipo_instrumento'], item['ambito_territorial'], item['link_detalle'], now))
             if not exists: nuevos += 1

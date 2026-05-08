@@ -74,4 +74,118 @@ ahi dentro tendras un formulario (ver evAmbiental/formulario.html)
    --data-raw ^"nombre=^&titular=^&folio=^&selectRegion=^&selectComuna=^&tipoPresentacion=Ambos^&projectStatus=^&PresentacionMin=^&PresentacionMax=^&CalificaMin=^&CalificaMax=^&sectores_economicos=^&razoningreso=^&id_tipoexpediente=^&offset=1^&limit=10^&orderColumn=FECHA_PRESENTACION^&orderDir=desc^"
    ```
    3.2 Paginacion:
-   Por defecto se muestran 10 proyectos y usa paginacion
+   Por defecto se muestran 10 proyectos y usa paginacion, aqui tienes el html de ambos apartados:
+   ```html
+   <div class="dt-layout-row">
+     <div class="dt-layout-cell dt-layout-start"></div>
+     <div class="dt-layout-cell dt-layout-end">
+       <div class="dt-length">
+         <label for="dt-length-0">Mostrar &nbsp; </label
+         ><select
+           name="datatable-proyectos_length"
+           aria-controls="datatable-proyectos"
+           class="dt-input"
+           id="dt-length-0"
+         >
+           <option value="10">10</option>
+           <option value="20">20</option>
+           <option value="50">50</option>
+           <option value="100">100</option>
+         </select>
+       </div>
+       <div
+         class="dt-info"
+         aria-live="polite"
+         id="datatable-proyectos_info"
+         role="status"
+       >
+         Mostrando <strong>1 - 10 de 30.104</strong>
+       </div>
+       <div class="dt-paging">
+         <nav aria-label="pagination">
+           <button
+             class="dt-paging-button disabled first"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             aria-disabled="true"
+             aria-label="First"
+             data-dt-idx="first"
+             tabindex="-1"
+           >
+             «</button
+           ><button
+             class="dt-paging-button disabled previous"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             aria-disabled="true"
+             aria-label="Previous"
+             data-dt-idx="previous"
+             tabindex="-1"
+           >
+             ‹</button
+           ><button
+             class="dt-paging-button current"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             aria-current="page"
+             data-dt-idx="0"
+           >
+             1</button
+           ><button
+             class="dt-paging-button"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             data-dt-idx="1"
+           >
+             2</button
+           ><button
+             class="dt-paging-button"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             data-dt-idx="2"
+           >
+             3</button
+           ><span
+             class="ellipsis"
+             aria-controls="datatable-proyectos"
+             aria-disabled="true"
+             data-dt-idx="ellipsis"
+             tabindex="-1"
+             >…</span
+           ><button
+             class="dt-paging-button"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             data-dt-idx="3010"
+           >
+             3.011</button
+           ><button
+             class="dt-paging-button next"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             aria-label="Next"
+             data-dt-idx="next"
+           >
+             ›</button
+           ><button
+             class="dt-paging-button last"
+             role="link"
+             type="button"
+             aria-controls="datatable-proyectos"
+             aria-label="Last"
+             data-dt-idx="last"
+           >
+             »
+           </button>
+         </nav>
+       </div>
+     </div>
+   </div>
+   ```
