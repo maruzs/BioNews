@@ -691,18 +691,28 @@ class DatabaseManager:
 
     def get_items_with_new_flag(self, user_id, category_slug, items):
         """Agrega el flag 'is_new' a cada ítem de la lista."""
-        last_exit = self.get_user_category_last_exit(user_id, category_slug)
-        viewed_ids = set(self.get_viewed_items_ids(user_id, category_slug))
         
-        if category_slug == "noticias":
+        # Mapeo de subcategorías (tablas) a categorías principales para notificaciones
+        # Esto permite que tablas como mma_abiertas y mma_cerradas compartan el mismo last_exit de 'mma'
+        notification_mapping = {
+            "mma_abiertas": "mma",
+            "mma_cerradas": "mma",
+            "dga_consultas": "dga"
+        }
+        notif_category = notification_mapping.get(category_slug, category_slug)
+
+        last_exit = self.get_user_category_last_exit(user_id, notif_category)
+        viewed_ids = set(self.get_viewed_items_ids(user_id, notif_category))
+        
+        if notif_category == "noticias":
             id_col = "link"
-        elif category_slug in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"]:
+        elif notif_category in ["fiscalizaciones", "medidas_provisionales", "programasDeCumplimiento", "registroSanciones", "requerimientos", "sancionatorios"]:
             id_col = "expediente"
-        elif category_slug == "pertinencias":
+        elif notif_category == "pertinencias":
             id_col = "Expediente"
-        elif category_slug == "Tribunales":
+        elif notif_category == "Tribunales":
             id_col = "Accion"
-        elif category_slug == "normativas":
+        elif notif_category == "normativas":
             id_col = "accion"
         else:
             id_col = "id"

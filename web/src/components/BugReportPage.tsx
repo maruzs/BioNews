@@ -17,9 +17,21 @@ const BugReportPage = () => {
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
+  useEffect(() => {
+    if (screenshot) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(screenshot);
+    } else {
+      setScreenshotPreview(null);
+    }
+  }, [screenshot]);  
   // Admin state
   const [reports, setReports] = useState<BugReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
@@ -46,6 +58,18 @@ const BugReportPage = () => {
       console.error(err);
     }
     setLoadingReports(false);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setScreenshot(file);
+        }
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,7 +153,8 @@ const BugReportPage = () => {
               <textarea 
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Explica qué sucedió y cómo podemos reproducir el error..."
+                onPaste={handlePaste}
+                placeholder="Explica qué sucedió y cómo podemos reproducir el error... (Puedes pegar una captura de pantalla aquí)"
                 rows={5}
                 style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', resize: 'vertical' }}
                 required
@@ -138,16 +163,32 @@ const BugReportPage = () => {
 
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '8px', color: '#475569' }}>Captura de pantalla (Opcional, máx 5MB)</label>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                />
-                <div style={{ padding: '10px 20px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border)' }}>
-                  <ImageIcon size={18} /> {screenshot ? screenshot.name : 'Seleccionar imagen'}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                  />
+                  <div style={{ padding: '10px 20px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border)' }}>
+                    <ImageIcon size={18} /> {screenshot ? (screenshot.name || 'Imagen pegada') : 'Seleccionar imagen'}
+                  </div>
+                  {screenshot && (
+                    <button 
+                      type="button"
+                      onClick={() => setScreenshot(null)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
+                {screenshotPreview && (
+                  <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', maxWidth: '100%' }}>
+                    <img src={screenshotPreview} alt="Preview" style={{ width: '100%', display: 'block' }} />
+                  </div>
+                )}
               </div>
             </div>
 

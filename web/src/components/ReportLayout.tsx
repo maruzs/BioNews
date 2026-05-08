@@ -310,10 +310,28 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           result = result.filter(item => {
             const exp = String(item['expediente'] || item['Expediente'] || '');
             const parts = exp.split('-');
-            if (parts.length >= 3) {
-              return parts[2] === value;
+            // Buscar una parte que tenga 4 dígitos (el año)
+            const yearPart = parts.find(p => /^\d{4}$/.test(p));
+            if (yearPart) {
+              return yearPart === value;
             }
             return exp.includes(value);
+          });
+          return;
+        }
+
+        if (field === 'expediente_tipo') {
+          result = result.filter(item => {
+            const exp = String(item['expediente'] || item['Expediente'] || '');
+            const parts = exp.split('-');
+            // El tipo suele ser la 5ta parte (index 4) o la última si es fiscalización
+            // Formato: DFZ-ANO-NUMERO-REGION-TIPO
+            if (parts.length >= 5) {
+              // Puede tener -IA o -EI al final, tomamos solo el tipo base
+              const type = parts[4];
+              return type === value;
+            }
+            return false;
           });
           return;
         }
@@ -657,25 +675,44 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                   );
               })}
               {activeColumns.some(c => ['expediente', 'Expediente'].includes(c.field)) && (
-                <div style={{ flex: '1 1 200px' }}>
-                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Año (Expediente)</h4>
-                  <select 
-                    className="filter-select" 
-                    value={columnFilters['expediente_year'] || ''} 
-                    onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
-                  >
-                    <option value="">Todos los Años</option>
-                    {Array.from(new Set(
-                      data.map(item => {
-                        const exp = String(item['expediente'] || item['Expediente'] || '');
-                        const parts = exp.split('-');
-                        return parts.length >= 3 ? parts[2] : null;
-                      }).filter((y): y is string => Boolean(y))
-                    )).sort((a, b) => Number(b) - Number(a)).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Año (Expediente)</h4>
+                    <select 
+                      className="filter-select" 
+                      value={columnFilters['expediente_year'] || ''} 
+                      onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
+                    >
+                      <option value="">Todos los Años</option>
+                      {Array.from(new Set(
+                        data.map(item => {
+                          const exp = String(item['expediente'] || item['Expediente'] || '');
+                          const parts = exp.split('-');
+                          const yearPart = parts.find(p => /^\d{4}$/.test(p));
+                          return yearPart || null;
+                        }).filter((y): y is string => Boolean(y))
+                      )).sort((a, b) => Number(b) - Number(a)).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {tableName === 'fiscalizaciones' && (
+                    <div style={{ flex: '1 1 200px' }}>
+                      <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Tipo de Documento</h4>
+                      <select 
+                        className="filter-select" 
+                        value={columnFilters['expediente_tipo'] || ''} 
+                        onChange={(e) => setColumnFilters({...columnFilters, 'expediente_tipo': e.target.value})}
+                      >
+                        <option value="">Todos los Tipos</option>
+                        {['RCA', 'PC', 'PPDA', 'NE', 'LEY', 'MP', 'NC', 'SRCA'].map(tipo => (
+                          <option key={tipo} value={tipo}>{tipo}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
               {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
                 <div style={{ flex: '1 1 300px' }}>
