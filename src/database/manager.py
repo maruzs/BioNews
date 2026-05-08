@@ -173,9 +173,16 @@ class DatabaseManager:
                     descripcion TEXT,
                     screenshot_path TEXT,
                     fecha_reporte TIMESTAMP,
+                    status TEXT DEFAULT 'pendiente',
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
+            
+            # Migración: Agregar status a bug_reports si no existe
+            cursor.execute("PRAGMA table_info(bug_reports)")
+            bug_columns = [col[1] for col in cursor.fetchall()]
+            if 'status' not in bug_columns:
+                cursor.execute("ALTER TABLE bug_reports ADD COLUMN status TEXT DEFAULT 'pendiente'")
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
@@ -764,20 +771,53 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO bug_reports (user_id, titulo, descripcion, screenshot_path, fecha_reporte)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO bug_reports (user_id, titulo, descripcion, screenshot_path, fecha_reporte, status)
+                VALUES (?, ?, ?, ?, ?, 'pendiente')
             """, (user_id, titulo, descripcion, screenshot_path, _now_str()))
             conn.commit()
             return cursor.lastrowid
 
-    def get_bug_reports(self):
+    def get_bug_reports(self, user_id=None):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT b.*, u.name as user_name 
-                FROM bug_reports b
-                JOIN users u ON b.user_id = u.id
-                ORDER BY b.fecha_reporte DESC
-            """)
+            if user_id:
+                cursor.execute("""
+                    SELECT b.*, u.name as user_name 
+                    FROM bug_reports b
+                    JOIN users u ON b.user_id = u.id
+                    WHERE b.user_id = ?
+                    ORDER BY b.fecha_reporte DESC
+                """, (user_id,))
+            else:
+                cursor.execute("""
+                    SELECT b.*, u.name as user_name 
+                    FROM bug_reports b
+                    JOIN users u ON b.user_id = u.id
+                    ORDER BY b.fecha_reporte DESC
+                """)
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def update_bug_status(self, bug_id, status):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE bug_reports SET status = ? WHERE id = ?", (status, bug_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_bug_report(self, bug_id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bug_reports WHERE id = ?", (bug_id,))
+            row = cursor.fetchone()
+            if row:
+                columns = [col[0] for col in cursor.description]
+                return dict(zip(columns, row))
+            return None
+
+    def delete_bug_report(self, bug_id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bug_reports WHERE id = ?", (bug_id,))
+            conn.commit()
+            return cursor.rowcount > 0

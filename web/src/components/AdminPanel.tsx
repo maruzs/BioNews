@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert, Trash2, ShieldOff, Play, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const { token, user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
@@ -152,6 +154,20 @@ const AdminPanel = () => {
       <div className="report-header-text">
         <h1 className="report-title">Panel de Administrador</h1>
         <p className="report-description">Gestión de usuarios y monitoreo avanzado del sistema.</p>
+      </div>
+
+      <div style={{ marginTop: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>Reportes de Bugs</h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-light)', margin: 0 }}>Gestiona los problemas técnicos informados por los usuarios, márcalos como resueltos o elimínalos.</p>
+          <button 
+            onClick={() => navigate('/admin/reportes')} 
+            className="btn-primary" 
+            style={{ marginTop: 'auto', alignSelf: 'flex-start', padding: '10px 20px' }}
+          >
+            Gestionar Reportes
+          </button>
+        </div>
       </div>
 
       <div style={{ marginTop: '30px' }}>

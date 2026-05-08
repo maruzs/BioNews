@@ -5,4 +5,11 @@ De todas formas primero quiero rescatar TODOS los proyectos ingresados para la p
 
 ## ANALISIS
 
-1. Como dije, hay que acceder mediante login y es exactamente lo mismo que para obtener las pertinencias
+1. Como dije, hay que acceder mediante login y es exactamente lo mismo que para obtener las pertinencias, puedes implementar que justo despues de investigar las pertinencias se pase a ver los proyectos.
+
+Este es el link de la pagina de los proyectos:
+https://seia.sea.gob.cl/busqueda/buscarProyecto.php
+
+ahi dentro tendras un formulario (ver evAmbiental/formulario.html)
+
+2. Para la primera ejecucion del scraper cuando llenemos la tabla de datos no habra que poner nada en el formulario ya que queremos TODOS los datos

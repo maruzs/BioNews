@@ -271,8 +271,65 @@ async def report_bug(
     return {"success": True}
 
 @app.get("/api/admin/bugs")
-def get_bugs(admin = Depends(get_current_admin)):
+def get_admin_bugs(admin = Depends(get_current_admin)):
     return db.get_bug_reports()
+
+@app.get("/api/bugs/my")
+def get_my_bugs(user = Depends(get_current_user)):
+    return db.get_bug_reports(user_id=user["sub"])
+
+@app.put("/api/admin/bugs/{bug_id}/resolve")
+def resolve_bug(bug_id: int, admin = Depends(get_current_admin)):
+    from pathlib import Path
+    bug = db.get_bug_report(bug_id)
+    if not bug:
+        raise HTTPException(status_code=404, detail="Bug no encontrado")
+    
+    # Borrar imagen asociada si existe
+    if bug["screenshot_path"]:
+        filename = bug["screenshot_path"].split("/")[-1]
+        file_path = Path("uploads/bugs") / filename
+        if file_path.exists():
+            file_path.unlink()
+    
+    db.update_bug_status(bug_id, "resuelto")
+    return {"message": "Bug marcado como resuelto y captura eliminada."}
+
+@app.delete("/api/admin/bugs/{bug_id}")
+def delete_bug_admin(bug_id: int, admin = Depends(get_current_admin)):
+    from pathlib import Path
+    bug = db.get_bug_report(bug_id)
+    if not bug:
+        raise HTTPException(status_code=404, detail="Bug no encontrado")
+    
+    # Solo se pueden borrar si están resueltos
+    if bug["status"] != "resuelto":
+         raise HTTPException(status_code=400, detail="Solo se pueden borrar reportes resueltos")
+
+    if bug["screenshot_path"]:
+        filename = bug["screenshot_path"].split("/")[-1]
+        file_path = Path("uploads/bugs") / filename
+        if file_path.exists():
+            file_path.unlink()
+            
+    db.delete_bug_report(bug_id)
+    return {"message": "Reporte eliminado permanentemente."}
+
+@app.delete("/api/bugs/{bug_id}")
+def delete_bug_user(bug_id: int, user = Depends(get_current_user)):
+    from pathlib import Path
+    bug = db.get_bug_report(bug_id)
+    if not bug or bug["user_id"] != int(user["sub"]):
+        raise HTTPException(status_code=404, detail="Bug no encontrado o no pertenece al usuario")
+    
+    if bug["screenshot_path"]:
+        filename = bug["screenshot_path"].split("/")[-1]
+        file_path = Path("uploads/bugs") / filename
+        if file_path.exists():
+            file_path.unlink()
+            
+    db.delete_bug_report(bug_id)
+    return {"message": "Reporte eliminado permanentemente."}
 
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")

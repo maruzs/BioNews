@@ -1,0 +1,903 @@
+<form id="buscador_proyecto" onkeypress="if (event.keyCode == 13) enviar_formulario()" name="buscador_proyecto"
+    method="post" action="buscarProyectoResumen.php">
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="projectName" class="col-md-3 col-sm-12 col-form-label">Nombre del Proyecto</label>
+        <div class="col-md-9 col-sm-12">
+            <input type="text" class="form-control" id="projectName" name="nombre" aria-describedby="projectNameHelp">
+            <div id="projectNameHelp" class="form-text">
+                Para este campo el sistema buscará coincidencias en cualquier orden de las palabras ingresadas.
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="nombreTitular" class="col-md-3 col-sm-12 col-form-label">Nombre del Titular</label>
+        <div class="col-md-9 col-sm-12">
+            <input type="text" class="form-control" id="nombreTitular" name="titular">
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="fileFolio" class="col-md-3 col-sm-12 col-form-label">Folio del Expediente</label>
+        <div class="col-md-9 col-sm-12">
+            <input type="text" class="form-control" id="fileFolio" name="folio" placeholder="Ej: 2018-99-2">
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="selectRegion-tomselected" class="col-md-3 col-sm-12 col-form-label"
+            id="selectRegion-ts-label">Región</label>
+        <div class="col-md-9 col-sm-12">
+            <select class="form-select tom-select-seia-region tomselected" id="selectRegion" name="selectRegion[]"
+                autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --" tabindex="-1" hidden="hidden">
+                <option value="14">Interregional</option>
+                <option value="13">Región Metropolitana de Santiago</option>
+                <option value="15">Región de Arica y Parinacota</option>
+                <option value="1">Región de Tarapacá</option>
+                <option value="2">Región de Antofagasta</option>
+                <option value="3">Región de Atacama</option>
+                <option value="4">Región de Coquimbo</option>
+                <option value="5">Región de Valparaíso</option>
+                <option value="6">Región del Libertador General Bernardo O'Higgins</option>
+                <option value="7">Región del Maule</option>
+                <option value="16">Región de Ñuble</option>
+                <option value="8">Región del Biobío</option>
+                <option value="9">Región de La Araucanía</option>
+                <option value="2420135">Región de Los Ríos</option>
+                <option value="10">Región de Los Lagos</option>
+                <option value="11">Región de Aysén del General Carlos Ibáñez del Campo</option>
+                <option value="12">Región de Magallanes y de la Antártica Chilena</option>
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-region multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full"><input type="select-multiple" autocomplete="off" size="1"
+                        tabindex="0" role="combobox" haspopup="listbox" aria-expanded="false"
+                        aria-controls="selectRegion-ts-dropdown" id="selectRegion-tomselected"
+                        placeholder="-- Seleccionar --" aria-activedescendant="selectRegion-opt-1"></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-region plugin-checkbox_options plugin-remove_button"
+                    style="display: none; visibility: visible;">
+                    <div role="listbox" id="selectRegion-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="selectRegion-ts-label">
+                        <div data-selectable="" data-value="14" class="option active" role="option"
+                            id="selectRegion-opt-1" aria-selected="true"><input type="checkbox">Interregional</div>
+                        <div data-selectable="" data-value="13" class="option" role="option" id="selectRegion-opt-2">
+                            <input type="checkbox">Región Metropolitana de Santiago
+                        </div>
+                        <div data-selectable="" data-value="15" class="option" role="option" id="selectRegion-opt-3">
+                            <input type="checkbox">Región de Arica y Parinacota
+                        </div>
+                        <div data-selectable="" data-value="1" class="option" role="option" id="selectRegion-opt-4">
+                            <input type="checkbox">Región de Tarapacá
+                        </div>
+                        <div data-selectable="" data-value="2" class="option" role="option" id="selectRegion-opt-5">
+                            <input type="checkbox">Región de Antofagasta
+                        </div>
+                        <div data-selectable="" data-value="3" class="option" role="option" id="selectRegion-opt-6">
+                            <input type="checkbox">Región de Atacama
+                        </div>
+                        <div data-selectable="" data-value="4" class="option" role="option" id="selectRegion-opt-7">
+                            <input type="checkbox">Región de Coquimbo
+                        </div>
+                        <div data-selectable="" data-value="5" class="option" role="option" id="selectRegion-opt-8">
+                            <input type="checkbox">Región de Valparaíso
+                        </div>
+                        <div data-selectable="" data-value="6" class="option" role="option" id="selectRegion-opt-9">
+                            <input type="checkbox">Región del Libertador General Bernardo O'Higgins
+                        </div>
+                        <div data-selectable="" data-value="7" class="option" role="option" id="selectRegion-opt-10">
+                            <input type="checkbox">Región del Maule
+                        </div>
+                        <div data-selectable="" data-value="16" class="option" role="option" id="selectRegion-opt-11">
+                            <input type="checkbox">Región de Ñuble
+                        </div>
+                        <div data-selectable="" data-value="8" class="option" role="option" id="selectRegion-opt-12">
+                            <input type="checkbox">Región del Biobío
+                        </div>
+                        <div data-selectable="" data-value="9" class="option" role="option" id="selectRegion-opt-13">
+                            <input type="checkbox">Región de La Araucanía
+                        </div>
+                        <div data-selectable="" data-value="2420135" class="option" role="option"
+                            id="selectRegion-opt-14"><input type="checkbox">Región de Los Ríos</div>
+                        <div data-selectable="" data-value="10" class="option" role="option" id="selectRegion-opt-15">
+                            <input type="checkbox">Región de Los Lagos
+                        </div>
+                        <div data-selectable="" data-value="11" class="option" role="option" id="selectRegion-opt-16">
+                            <input type="checkbox">Región de Aysén del General Carlos Ibáñez del Campo
+                        </div>
+                        <div data-selectable="" data-value="12" class="option" role="option" id="selectRegion-opt-17">
+                            <input type="checkbox">Región de Magallanes y de la Antártica Chilena
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="selectComuna-tomselected" class="col-md-3 col-sm-12 col-form-label"
+            id="selectComuna-ts-label">Comuna</label>
+        <div class="col-md-9 col-sm-12">
+            <select class="form-select tom-select-seia-comuna tomselected" id="selectComuna" name="selectComuna[]"
+                autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --" tabindex="-1" hidden="hidden"
+                disabled="">
+
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-comuna multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full has-options disabled locked"><input type="select-multiple"
+                        autocomplete="off" size="1" tabindex="-1" role="combobox" haspopup="listbox"
+                        aria-expanded="false" aria-controls="selectComuna-ts-dropdown" id="selectComuna-tomselected"
+                        placeholder="-- Seleccionar --" disabled=""></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-comuna plugin-checkbox_options plugin-remove_button"
+                    style="display: none;">
+                    <div role="listbox" id="selectComuna-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="selectComuna-ts-label"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="selectPresentation" class="col-md-3 col-sm-12 col-form-label">Tipo de Presentación</label>
+        <div class="col-md-9 col-sm-12 d-flex align-items-center">
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="tipoPresentacion" id="dia" value="DIA">
+                <label class="form-check-label" for="dia">DIA</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="tipoPresentacion" id="eia" value="EIA">
+                <label class="form-check-label" for="eia">EIA</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="tipoPresentacion" id="ambos" value="Ambos"
+                    checked="">
+                <label class="form-check-label" for="ambos">Ambos</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="projectStatus-tomselected" class="col-md-3 col-sm-12 col-form-label"
+            id="projectStatus-ts-label">Estado del Proyecto</label>
+        <div class="col-md-9 col-sm-12">
+            <select class="form-select tom-select-seia-status tomselected" id="projectStatus" name="projectStatus[]"
+                autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --" tabindex="-1" hidden="hidden">
+                <option value="2">En Admisión</option>
+                <option value="3">En Calificación</option>
+                <option value="4">Aprobado</option>
+                <option value="5">Rechazado</option>
+                <option value="6">No Admitido a Tramitación</option>
+                <option value="30">No calificado</option>
+                <option value="8">Desistido</option>
+                <option value="507">Abandonado</option>
+                <option value="1000">Caducado</option>
+                <option value="40">Revocado</option>
+                <option value="60">Renuncia RCA</option>
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-status multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full"><input type="select-multiple" autocomplete="off" size="1"
+                        tabindex="0" role="combobox" haspopup="listbox" aria-expanded="false"
+                        aria-controls="projectStatus-ts-dropdown" id="projectStatus-tomselected"
+                        placeholder="-- Seleccionar --"></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-status plugin-checkbox_options plugin-remove_button"
+                    style="display: none;">
+                    <div role="listbox" id="projectStatus-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="projectStatus-ts-label"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="presentationDate" class="col-md-3 col-sm-12 col-form-label">Fecha de Presentación</label>
+        <div class="col-md-9 col-sm-12">
+
+            <div class="row">
+                <div class="col-md-6 col-sm-12 inputDate">
+                    <label>Desde</label>
+                    <div class="input-group">
+                        <div role="wrapper" class="gj-datepicker gj-datepicker-bootstrap gj-unselectable input-group">
+                            <input type="text" autocomplete="off" class="form-control" id="startDateFechaP"
+                                name="PresentacionMin" placeholder="dd/mm/aaaa" aria-describedby="btnToPresentationDate"
+                                data-type="datepicker" data-guid="1afe8da3-3371-492d-282e-ae28b31ff76f"
+                                data-datepicker="true" role="input"><span class="input-group-append"
+                                role="right-icon"><button class="btn btn-outline-secondary border-left-0"
+                                    type="button"><i class="fa fa-calendar" aria-hidden="true"></i></button></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-12 inputDate">
+                    <label>Hasta</label>
+                    <div class="input-group">
+                        <div role="wrapper" class="gj-datepicker gj-datepicker-bootstrap gj-unselectable input-group">
+                            <input type="text" autocomplete="off" class="form-control" id="endDateFechaP"
+                                name="PresentacionMax" placeholder="dd/mm/aaaa" aria-describedby="btnToPresentationDate"
+                                data-type="datepicker" data-guid="88bf8dcb-ad03-dd6a-8e27-181532035eed"
+                                data-datepicker="true" role="input"><span class="input-group-append"
+                                role="right-icon"><button class="btn btn-outline-secondary border-left-0"
+                                    type="button"><i class="fa fa-calendar" aria-hidden="true"></i></button></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="qualificationDate" class="col-md-3 col-sm-12 col-form-label">Fecha de Calificación</label>
+        <div class="col-md-9 col-sm-12">
+
+            <div class="row">
+                <div class="col-md-6 col-sm-12 inputDate">
+                    <label>Desde</label>
+                    <div class="input-group">
+                        <div role="wrapper" class="gj-datepicker gj-datepicker-bootstrap gj-unselectable input-group">
+                            <input id="startDateFechaC" autocomplete="off" name="CalificaMin" placeholder="dd/mm/aaaa"
+                                data-type="datepicker" data-guid="403c6f00-a09d-baa4-f082-10c84bb10048"
+                                data-datepicker="true" class="form-control" role="input"><span
+                                class="input-group-append" role="right-icon"><button
+                                    class="btn btn-outline-secondary border-left-0" type="button"><i
+                                        class="fa fa-calendar" aria-hidden="true"></i></button></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-12 inputDate">
+                    <label>Hasta</label>
+                    <div class="input-group">
+                        <div role="wrapper" class="gj-datepicker gj-datepicker-bootstrap gj-unselectable input-group">
+                            <input id="endDateFechaC" autocomplete="off" name="CalificaMax" placeholder="dd/mm/aaaa"
+                                data-type="datepicker" data-guid="8cc5a045-f6f0-25c6-4966-7fd2d53d18da"
+                                data-datepicker="true" class="form-control" role="input"><span
+                                class="input-group-append" role="right-icon"><button
+                                    class="btn btn-outline-secondary border-left-0" type="button"><i
+                                        class="fa fa-calendar" aria-hidden="true"></i></button></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="productiveSector-tomselected" class="col-md-3 col-sm-12 col-form-label"
+            id="productiveSector-ts-label">Sector Productivo</label>
+        <div class="col-md-9 col-sm-12">
+            <select class="form-select tom-select-seia-sector tomselected" id="productiveSector"
+                name="sectores_economicos[]" autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --"
+                tabindex="-1" hidden="hidden">
+                <option value="18">Agropecuario</option>
+                <option value="7">Energía</option>
+                <option value="15">Equipamiento</option>
+                <option value="11">Forestal</option>
+                <option value="14">Infraestructura de Transporte</option>
+                <option value="13">Infraestructura Hidráulica</option>
+                <option value="10">Infraestructura Portuaria</option>
+                <option value="8">Inmobiliarios</option>
+                <option value="16">Instalaciones fabriles varias</option>
+                <option value="2">Minería</option>
+                <option value="5">Pesca y Acuicultura</option>
+                <option value="12">Planificación Territorial e Inmobiliarios en Zonas</option>
+                <option value="6">Saneamiento Ambiental</option>
+                <option value="17">Otros</option>
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-sector multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full"><input type="select-multiple" autocomplete="off" size="1"
+                        tabindex="0" role="combobox" haspopup="listbox" aria-expanded="false"
+                        aria-controls="productiveSector-ts-dropdown" id="productiveSector-tomselected"
+                        placeholder="-- Seleccionar --"></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-sector plugin-checkbox_options plugin-remove_button"
+                    style="display: none;">
+                    <div role="listbox" id="productiveSector-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="productiveSector-ts-label"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="reasonAdmission-tomselected" class="col-md-3 col-sm-12 col-form-label"
+            id="reasonAdmission-ts-label">Razón de Ingreso</label>
+        <div class="col-md-9 col-sm-12">
+            <select class="form-select tom-select-seia-razon tomselected" id="reasonAdmission" name="razoningreso[]"
+                autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --" tabindex="-1" hidden="hidden">
+                <option value="1001">Programa de cumplimiento aprobado por la SMA</option>
+                <option value="1002">Sentencia judicial</option>
+                <option value="1003">Requerimiento de ingreso al SEIA (SMA)</option>
+                <option value="1004">Ingreso por tipología (art. 3 del D.S. N°40)</option>
+                <option value="1005">Ingreso voluntario</option>
+                <option value="1006">Modificación de proyecto por cambios de consideración</option>
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-razon multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full"><input type="select-multiple" autocomplete="off" size="1"
+                        tabindex="0" role="combobox" haspopup="listbox" aria-expanded="false"
+                        aria-controls="reasonAdmission-ts-dropdown" id="reasonAdmission-tomselected"
+                        placeholder="-- Seleccionar --"></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-razon plugin-checkbox_options plugin-remove_button"
+                    style="display: none;">
+                    <div role="listbox" id="reasonAdmission-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="reasonAdmission-ts-label"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-0 py-3 sg-row-line">
+        <label for="projectType-tomselected" class="col-md-12 col-sm-12 col-form-label" id="projectType-ts-label">Tipo
+            de Proyecto</label>
+        <div class="col-md-12 col-sm-12">
+            <select class="form-select tom-select-seia-tipologia tomselected" id="projectType"
+                name="id_tipoexpediente[]" autocomplete="off" multiple="multiple" placeholder="-- Seleccionar --"
+                tabindex="-1" hidden="hidden">
+                <option value="100-1500-2167549293">DS95/DS40/DS17 - a) Acueductos, embalses o tranques y sifones
+                </option>
+                <option value="101-1501">DS95/DS40 - a1) Presas y embalses</option>
+                <option value="2167549294">DS17 - a1) Presas cuyo muro tenga una altura superior a cinco metros (5 m) y
+                    embalses con una capacidad superior a cincuenta mil metros cúbicos (50.000 m3)</option>
+                <option value="102-1502-2167549295">DS95/DS40/DS17 - a2) Drenaje o desecación</option>
+                <option value="2167549296">DS17 - a2.1) Vegas y bofedales ubicados en las Regiones de Arica y
+                    Parinacota, Tarapacá y Antofagasta</option>
+                <option value="2167549297">DS17 - a2.2) Suelos "ñadis", cuya superficie de terreno a recuperar y/o
+                    afectar sea igual o superior a doscientas hectáreas (200 ha)</option>
+                <option value="2167549298">DS17 - a2.3) Turberas</option>
+                <option value="2167549299">DS17 - a2.4) Cuerpos naturales de aguas superficiales cuya superficie de
+                    terreno a recuperar y/o afectar sea igual o superior a diez hectáreas (10 ha), tratándose de las
+                    Regiones de Arica y Parinacota a la Región de Coquimbo; o a veinte hectáreas (20 ha), tratándose de
+                    las Regiones de Valparaíso a la Región del Maule, incluida la Región Metropolitana de Santiago; o a
+                    treinta hectáreas (30 ha), tratándose de las Regiones del Bío Bío a la Región de Magallanes y
+                    Antártica Chilena</option>
+                <option value="103-1503">DS95/DS40 - a3) Dragado</option>
+                <option value="2167549300">DS17 - a3) Dragado de fango, grava, arenas u otros materiales de cuerpos de
+                    aguas continentales</option>
+                <option value="104">DS95 - a4) Defensa o alteración de un cuerpo o curso de aguas terrestres</option>
+                <option value="1504">DS40 - a4) Defensa o alteración de un cuerpo o curso de aguas continentales
+                </option>
+                <option value="2167549301">DS17 - a4) Defensa o alteración de un cuerpo o curso de aguas continentales
+                </option>
+                <option value="105-1507-2167549304">DS95 - a5 / DS40 - a7 / DS17 - a7) Acueductos </option>
+                <option value="1505">DS40 - a5) Ejecución de obras o actividades que impliquen alteración de las
+                    características del glaciar</option>
+                <option value="2167549302">DS17 - a5) Ejecución de obras o actividades que impliquen alteración de las
+                    características del glaciar</option>
+                <option value="106-1506-2167549303">DS95/DS40/DS17 - a6) Sifones</option>
+                <option value="107-200-2167549305">DS95/DS40/DS17 - b) Líneas de transmisión eléctrica de alto voltaje y
+                    sus subestaciones</option>
+                <option value="108-201">DS95/DS40 - b1) Líneas de transmisión eléctrica de alto voltaje</option>
+                <option value="2167549306">DS17 - b1) Líneas de transmisión eléctrica de alto voltaje que conduzcan
+                    energía eléctrica con una tensión mayor a 23 kV y cuyo trazado presente una longitud superior a 2 km
+                </option>
+                <option value="109-202-2167549307">DS95/DS40/DS17 - b2) Subestaciones</option>
+                <option value="110-203-2167549308">DS95/DS40/DS17 - c) Centrales generadoras de energía mayores a 3 MW
+                </option>
+                <option value="111-204-2167549309">DS95/DS40/DS17 - d) Reactores y establecimientos nucleares e
+                    instalaciones relacionadas</option>
+                <option value="112-300-2167549310">DS95/DS40/DS17 - e) Aeropuertos, terminales de buses, camiones y
+                    ferrocarriles, vías férreas, estaciones de servicio, autopistas y los caminos públicos que puedan
+                    afectar áreas protegidas</option>
+                <option value="113-301-2167549311">DS95/DS40/DS17 - e1) Aeropuertos</option>
+                <option value="114-302-2167549312">DS95/DS40/DS17 - e2) Terminales de buses</option>
+                <option value="115-303-2167549313">DS95/DS40/DS17 - e3) Terminales de camiones</option>
+                <option value="116-304-2167549314">DS95/DS40/DS17 - e4) Terminales de ferrocarriles</option>
+                <option value="117-305-2167549315">DS95/DS40/DS17 - e5) Vías férreas</option>
+                <option value="118-306">DS95/DS40 - e6) Estaciones de servicios</option>
+                <option value="2167549316">DS17 - e6) Estaciones de servicios cuya capacidad de almacenamiento sea igual
+                    o superior a 850.000 L</option>
+                <option value="119-307-2167549317">DS95/DS40/DS17 - e7) Autopistas</option>
+                <option value="120">DS95 - e8) Caminos públicos que puedan afectar áreas protegidas</option>
+                <option value="308">DS40 - e8) Caminos públicos que pueden afectar áreas protegidas</option>
+                <option value="2167549318">DS17 - e8) Caminos públicos que pueden afectar áreas protegidas</option>
+                <option value="121-400-2167549319">DS95/DS40/DS17 - f) Puertos, vías de navegación, astilleros y
+                    terminales marítimos</option>
+                <option value="122-401-2167549320">DS95/DS40/DS17 - f1) Puertos (agua)</option>
+                <option value="123-402-2167549321">DS95/DS40/DS17 - f2) Vías de navegación</option>
+                <option value="124-403-2167549322">DS95/DS40/DS17 - f3) Astilleros</option>
+                <option value="125-404-2167549323">DS95/DS40/DS17 - f4) Terminales marítimos</option>
+                <option value="126">DS95 - g) Proyectos de desarrollo urbano o turístico, en zonas no comprendidas en
+                    alguno de los planes a que alude la letra h) del artículo 10 de la Ley</option>
+                <option value="500">DS40 - g) Proyectos de desarrollo urbano o turístico, en zonas no comprendidas en
+                    alguno de los planes evaluados estratégicamente de conformidad a lo establecido en el párrafo 1° bis
+                    del Título II de la Ley</option>
+                <option value="2167549324">DS17 - g) Proyectos de desarrollo urbano o turístico, en zonas no
+                    comprendidas en alguno de los planes evaluados estratégicamente de conformidad a lo establecido en
+                    el párrafo 1° bis del Título II de la Ley</option>
+                <option value="127">DS95 - g1) Conjuntos habitacionales con una cantidad igual o superior a ochenta (80)
+                    viviendas o, tratándose de vivienda social, vivienda progresiva o infraestructura sanitaria, a
+                    ciento sesenta (160) viviendas</option>
+                <option value="501">DS40 - g1) Proyectos de desarrollo urbano que contemplen obras de edificación y/o
+                    urbanización cuyo destino sea habitacional, industrial y/o de equipamiento</option>
+                <option value="2167549325">DS17 - g1) Proyectos de desarrollo urbano que contemplen obras de edificación
+                    y/o urbanización cuyo destino sea habitacional, industrial y/o de equipamiento de acuerdo a lo
+                    siguiente:</option>
+                <option value="2167549326">DS17 - g1.1) Conjuntos habitacionales con una cantidad igual o superior a
+                    ochenta (80) viviendas o, tratándose de vivienda social, vivienda progresiva o infraestructura
+                    sanitaria, a ciento sesenta (160) viviendas</option>
+                <option value="2167549327">DS17 - g1.2) Proyectos de equipamiento que correspondan a predios y/o
+                    edificios destinados en forma permanente a salud, educación, seguridad, culto, deporte,
+                    esparcimiento, cultura, comercio, servicios, fines científicos o sociales y que contemplen al menos
+                    una de las siguientes características:</option>
+                <option value="2167549328">DS17 - g1.2.a) Superficie construida igual o mayor a cinco mil metros
+                    cuadrados (5.000 m²)</option>
+                <option value="2167549329">DS17 - g1.2.b) Superficie predial a intervenir igual o mayor a veinte mil
+                    metros cuadrados (20.000 m²)</option>
+                <option value="2167549330">DS17 - g1.2.c) Capacidad de atención, afluencia o permanencia simultánea
+                    igual o mayor a ochocientas (800) personas;</option>
+                <option value="2167549331">DS17 - g1.2.d) Doscientos (200) o más sitios para el estacionamiento de
+                    vehículos</option>
+                <option value="2167549332">DS17 - g1.3) Urbanizaciones y/o loteos con destino industrial de una
+                    superficie igual o mayor a treinta mil metros cuadrados (30.000 m²)</option>
+                <option value="128">DS95 - g2) Proyectos de equipamiento que correspondan a predios y/o edificios
+                    destinados en forma permanente a salud, educación, seguridad, culto, deporte, esparcimiento,
+                    cultura, transporte, comercio o servicios, y que contemplen al menos una de las siguientes
+                    especificaciones:</option>
+                <option value="2167549333">DS17 - g2) Proyecto de desarrollo turístico (destinados en forma permanente
+                    al uso habitacional y/o de equipamiento para fines turísticos) que contemplen al menos una de las
+                    siguientes características:</option>
+                <option value="2167549334">DS17 - g2.a) Superficie construida igual o mayor a cinco mil metros cuadrados
+                    (5.000 m²)</option>
+                <option value="2167549335">DS17 - g2.b) Superficie predial a intervenir igual o mayor a quince mil
+                    metros cuadrados (15.000 m²)</option>
+                <option value="2167549336">DS17 - g2.c) Capacidad de atención, afluencia o permanencia simultánea igual
+                    o mayor a trescientas (300) personas</option>
+                <option value="2167549337">DS17 - g2.d) Cien (100) o más sitios para el estacionamiento de vehículos
+                </option>
+                <option value="2167549338">DS17 - g2.e) Capacidad igual o superior a cien (100) camas</option>
+                <option value="2167549339">DS17 - g2.f) Doscientos (200) o más sitios para acampar</option>
+                <option value="2167549340">DS17 - g2.g) Capacidad para un número igual o superior a cincuenta (50) naves
+                </option>
+                <option value="129">DS95 - g3) Urbanizaciones y/o loteos con destino industrial de una superficie igual
+                    o mayor a 30,000 mt2</option>
+                <option value="130-502">DS95 - g4 / DS40 - g2) Proyecto de desarrollo turístico (destinados en forma
+                    permanente al uso habitacional y/o de equipamiento para fines turísticos)</option>
+                <option value="131-600-2167549341">DS95/DS40/DS17 - h) Proyectos industriales o inmobiliarios que se
+                    ejecuten en zonas declaradas latentes o saturadas</option>
+                <option value="132-601">DS95/DS40 - h1) Proyectos inmobiliarios</option>
+                <option value="2167549342">DS17 - h1) Proyectos inmobiliarios: loteos o conjuntos de viviendas que
+                    contemplen obras de edificación y/o urbanización, así como los proyectos destinados a equipamiento,
+                    y que presenten alguna de las siguientes características:</option>
+                <option value="2167549380">DS17 - h1.1) Que se emplacen en áreas de extensión urbana o en área rural, de
+                    acuerdo al instrumento de planificación correspondiente y requieran de sistemas propios de
+                    producción y distribución de agua potable y/o de recolección, tratamiento y disposición de aguas
+                    servidas</option>
+                <option value="2167549381">DS17 - h1.2) Que den lugar a la incorporación al dominio nacional de uso
+                    público de vías expresas o troncales</option>
+                <option value="2167549382">DS17 - h1.3) Que se emplacen en una superficie igual o superior a siete
+                    hectáreas (7 ha) o consulten la construcción de trescientas (300) o más viviendas</option>
+                <option value="2167549383">DS17 - h1.4) Que consulten la construcción de edificios de uso público con
+                    una capacidad para cinco mil (5.000) o más personas o con mil (1.000) o más estacionamientos
+                </option>
+                <option value="133-602-2167549379">DS95/DS40/DS17 - h2) Proyectos industriales</option>
+                <option value="2167549384">DS17 - h2.1) Urbanizaciones y/o loteos con destino industrial de una
+                    superficie igual o mayor a veinte hectáreas (20 ha)</option>
+                <option value="2167549385">DS17 - h2.2) Instalaciones industriales que generen una emisión diaria
+                    esperada de algún contaminante causante de la saturación o latencia de la zona, producido o generado
+                    por alguna(s) fuente(s) del proyecto o actividad, igual o superior al cinco por ciento (5%) de la
+                    emisión diaria total estimada de ese contaminante en la zona declarada latente o saturada, para ese
+                    tipo de fuente(s)</option>
+                <option value="134">DS95 - h3) Plan regional de desarrollo urbano</option>
+                <option value="135">DS95 - h4) Plan intercomunal</option>
+                <option value="136">DS95 - h5) Planes reguladores comunales</option>
+                <option value="137">DS95 - h6) Planes seccionales</option>
+                <option value="138">DS95 - i) Proyectos de desarrollo minero, incluidos los de carbón, petróleo y gas,
+                    comprendiendo las prospecciones, explotaciones, plantas procesadoras y disposición de residuos
+                    estériles</option>
+                <option value="700">DS40 - i) Proyectos de desarrollo minero, incluidos los de carbón, petróleo y gas,
+                    comprendiendo las prospecciones, explotaciones, plantas procesadoras y disposición de residuos
+                    estériles, así como la extracción industrial de áridos, turba o greda</option>
+                <option value="2167549386">DS17 - i) Proyectos de desarrollo minero, incluidos los de carbón, petróleo y
+                    gas, comprendiendo las prospecciones, explotaciones, plantas procesadoras y disposición de residuos
+                    estériles, así como la extracción industrial de áridos o greda</option>
+                <option value="139">DS95 - i1) Extracción de pozos o canteras</option>
+                <option value="701">DS40 - i1) Proyectos de desarrollo minero sobre 5.000 ton/mes</option>
+                <option value="2167549387">DS17 - i1) Proyectos de desarrollo minero sobre 5.000 ton/mes</option>
+                <option value="140">DS95 - i2) Extracciones en un cuerpo o curso de agua</option>
+                <option value="702">DS40 - i2) Prospecciones y exploraciones</option>
+                <option value="2167549388">DS17 - i2) Prospecciones y exploraciones</option>
+                <option value="141-706">DS95 - i3 / DS40 - i6) Extracciones de turba</option>
+                <option value="703">DS40 - i3) Proyectos de disposición de residuos y estériles</option>
+                <option value="2167549389">DS17 - i3) Proyectos de disposición de residuos y estériles</option>
+                <option value="142">DS95 - i4) Proyecto de desarrollo minero sobre 5000 tons/mens</option>
+                <option value="143-704-2167549390">DS95 - i5 / DS40 - i4 / DS17 - i4) Proyectos de desarrollo minero de
+                    petróleo y gas</option>
+                <option value="705">DS40 - i5) Proyectos de extracción de áridos y greda</option>
+                <option value="2167549391">DS17 - i5) Proyectos de extracción de áridos y greda</option>
+                <option value="2167549392">DS17 - i5.1) Tratándose de extracciones en pozos o canteras, la extracción de
+                    áridos y/o greda sea igual o superior a diez mil metros cúbicos mensuales (10.000 m³/mes), o a cien
+                    mil metros cúbicos (100.000 m³) totales de material removido durante la vida útil del proyecto o
+                    actividad, o abarca una superficie total igual o mayor a cinco hectáreas (5 ha)</option>
+                <option value="2167549393">DS17 - i5.2) Tratándose de extracciones en un cuerpo o curso de agua, el
+                    volumen total de material a remover durante la vida útil del proyecto o actividad sea igual o
+                    superior a veinte mil metros cúbicos (20.000 m³) tratándose de las Regiones de Arica y Parinacota a
+                    Coquimbo, o a cincuenta mil metros cúbicos (50.000 m³), tratándose de las Regiones de Valparaíso a
+                    Magallanes y Antártica Chilena, incluida la Región Metropolitana de Santiago</option>
+                <option value="2167549394">DS17 - i5.3) Tratándose de extracciones de arena en playa, la extracción sea
+                    igual o superior a cincuenta mil metros cúbicos (50.000 m3) durante la vida útil del proyecto
+                </option>
+                <option value="144-800-2167549395">DS95/DS40/DS17 - j) Oleoductos, gasoductos, ductos mineros u otros
+                    análogos</option>
+                <option value="145-801-2167549396">DS95/DS40/DS17 - j1) Oleoductos</option>
+                <option value="146-802-2167549397">DS95/DS40/DS17 - j2) Gasoductos</option>
+                <option value="147-803-2167549398">DS95/DS40/DS17 - j3) Ductos mineros</option>
+                <option value="148-804-2167549399">DS95/DS40/DS17 - j4) Ductos análogos</option>
+                <option value="149-900-2167549400">DS95/DS40/DS17 - k) Instalaciones fabriles, tales como metalúrgicas,
+                    químicas, textiles, productoras de materiales para la construcción, de equipos y productos metálicos
+                    y curtiembres, de dimensiones industriales. Se entenderá que estos proyectos o actividades son de
+                    dimensiones industriales cuando se trate de:</option>
+                <option value="150">DS95 - k1) Instalaciones fabriles sobre 2000 KVA</option>
+                <option value="901">DS40 - k1) Instalaciones fabriles sobre 2.000 KVA</option>
+                <option value="2167549401">DS17 - k1) Instalaciones fabriles sobre 2.000 KVA</option>
+                <option value="151-902-2167549402">DS95/DS40/DS17 - k2) Instalaciones fabriles de curtiembres cuya
+                    capacidad de producción es superior a 30 mt2/día</option>
+                <option value="152-1000-2167549403">DS95/DS40/DS17 - l) Agroindustrias, mataderos, planteles y establos
+                    de crianza, lechería y engorda de animales, de dimensiones industriales. Se entenderá que estos
+                    proyectos o actividades son de dimensiones industriales cuando se trate de:</option>
+                <option value="153">DS95 - l1) Agroindustria, donde se realicen labores u operaciones de limpieza,
+                    clasificación de productos segun tamaño y calidad, tratamiento de deshidratación, congelamiento,
+                    empacamiento o transformación biológica, física o química</option>
+                <option value="1001">DS40 - l1) Agroindustria, donde se realicen labores u operaciones de limpieza,
+                    clasificación de productos según tamaño y calidad, tratamiento de deshidratación, congelamiento,
+                    empacamiento o transformación biológica, física o química</option>
+                <option value="2167549404">DS17 - l1) Agroindustria, donde se realicen labores u operaciones de
+                    limpieza, clasificación de productos según tamaño y calidad, tratamiento de deshidratación,
+                    congelamiento, empacamiento o transformación biológica, física o química</option>
+                <option value="154-1002-2167549405">DS95/DS40/DS17 - l2) Mataderos con una tasa de faenación de 500
+                    ton/mes</option>
+                <option value="155">DS95 - l3) Planteles y establos de crianza, lechería y/o engorda de animales =&gt;
+                    300 unidades de animal por más de un mes</option>
+                <option value="1003">DS40 - l3) Planteles y establos de crianza, lechería y/o engorda de animales donde
+                    pueden ser mantenidos en confinamiento en patios de alimentación, por más de un mes continuado
+                </option>
+                <option value="2167549406">DS17 - l3) Planteles y establos de crianza, lechería y/o engorda de animales
+                    donde pueden ser mantenidos en confinamiento en patios de alimentación, por más de un mes continuado
+                </option>
+                <option value="2167549407">DS17 - l3.1) Trescientas (300) unidades animal de ganado bovino de carne
+                </option>
+                <option value="2167549408">DS17 - l3.2) Doscientas (200) unidades animal de ganado bovino de leche
+                </option>
+                <option value="2167549409">DS17 - l3.3) Tres mil (3.000) animales porcinos menores de veinticinco kilos
+                    (25 kg) o setecientos cincuenta (750) animales porcinos mayores de veinticinco kilos (25 kg)
+                </option>
+                <option value="2167549410">DS17 - l3.4) Dos mil quinientas (2.500) unidades animal de ganado ovino o
+                    caprino</option>
+                <option value="156">DS95 - l4) Planteles y establos de crianza, engorda, postura y/o reproducción de
+                    animales</option>
+                <option value="1004">DS40 - l4) Planteles y establos de crianza, engorda, postura y/o reproducción de
+                    animales avícolas</option>
+                <option value="2167549411">DS17 - l4) Planteles y establos de crianza, engorda, postura y/o reproducción
+                    de animales avícolas con capacidad para alojar diariamente una cantidad igual o superior a:</option>
+                <option value="2167549412">DS17 - l4.1) Ochenta y cinco mil (85.000) pollos</option>
+                <option value="2167549413">DS17 - l4.2) Sesenta mil (60.000) gallinas</option>
+                <option value="2167549414">DS17 - l4.3) Dieciséis mil quinientos (16.500) pavos</option>
+                <option value="2167549415">DS17 - l4.4) Una cantidad equivalente en peso vivo igual o superior a ciento
+                    cincuenta toneladas (150 t) de otras aves</option>
+                <option value="157">DS95 - l5) Planteles y establos de crianza, lechería y engorda de otros animales,
+                    con capacidad para alojar diariamente una cantidad en peso vivo, igual o superior a (50t)</option>
+                <option value="1005">DS40 - l5) Planteles y establos de crianza, lechería y engorda de otros animales,
+                    con capacidad para alojar diariamente una cantidad en peso vivo, igual o superior a 50 ton</option>
+                <option value="2167549416">DS17 - l5) Planteles y establos de crianza, lechería y engorda de otros
+                    animales, con capacidad para alojar diariamente una cantidad en peso vivo, igual o superior a 50 to
+                </option>
+                <option value="158">DS95 - m) Proyectos de desarrollo o explotaciones forestales en suelos frágiles, en
+                    terrenos cubiertos de bosque nativo, industrias de celulosa, pasta de papel y papel, plantas
+                    astilladoras, elaboradoras de madera y aserraderos, todos de dimensiones industriales</option>
+                <option value="1100">DS40 - m) Proyectos de desarrollo o explotaciones forestales en suelos frágiles, en
+                    terrenos cubiertos de bosque nativo, industrias de celulosa, pasta de papel y papel, plantas
+                    astilladoras, elaboradoras de madera y aserraderos, todos de dimensiones industriales</option>
+                <option value="2167549417">DS17 - m) Proyectos de desarrollo o explotaciones forestales en suelos
+                    frágiles, en terrenos cubiertos de bosque nativo, industrias de celulosa, pasta de papel y papel,
+                    plantas astilladoras, elaboradoras de madera y aserraderos, todos de dimensiones industriales
+                </option>
+                <option value="159">DS95 - m1) Proyectos de desarrollo o explotación forestal en suelos frágiles o en
+                    terrenos cubiertos de bosque nativo serán aquellos que pretendan cualquier forma de aprovechamiento
+                    o cosecha final de los productos maderables del bosque</option>
+                <option value="1101">DS40 - m1) Proyectos de desarrollo o explotación forestal que abarquen una
+                    superficie única o continua de corta de cosecha final o corta de regeneración por tala rasa</option>
+                <option value="2167549418">DS17 - m1) Proyectos de desarrollo o explotación forestal que abarquen una
+                    superficie única o continua de corta de cosecha final o corta de regeneración por tala rasa, y que
+                    se ejecuten en:</option>
+                <option value="2167549419">DS17 - m1.1) Suelos frágiles</option>
+                <option value="2167549420">DS17 - m1.2) Terrenos cubiertos de bosque nativo</option>
+                <option value="160-1102-2167549421">DS95/DS40/DS17 - m2) Plantas astilladoras</option>
+                <option value="161-1103-2167549422">DS95/DS40/DS17 - m3) Aserraderos y plantas elaboradoras de madera
+                </option>
+                <option value="162-1104-2167549423">DS95/DS40/DS17 - m4) Industrias de celulosas, de pasta de papel y de
+                    papel</option>
+                <option value="163-1200-2167549424">DS95 - n / DS40 - n / DS17 - ) Proyectos de explotación intensiva,
+                    cultivo, y plantas procesadoras de recursos hidrobiológicos</option>
+                <option value="164">DS95 - n1) Producción anual de pelillo u otras macroalgas</option>
+                <option value="1201">DS40 - n1) Producción anual de macroalgas</option>
+                <option value="2167549425">DS17 - n1) Una producción anual igual o mayor a mil toneladas (1.000 t) y/o
+                    superficie de cultivo igual o superior a cien mil metros cuadrados (100.000 m2) tratándose de
+                    macroalgas</option>
+                <option value="165">DS95 - n2) Producción anual de moluscos filtradores u otras especies filtradoras
+                </option>
+                <option value="1202">DS40 - n2) Producción anual de moluscos filtradores u otras especies filtradoras a
+                    través de un sistema de producción extensivo</option>
+                <option value="2167549426">DS17 - n2) Una producción anual igual o mayor a mil toneladas (1.000 t) y/o
+                    superficie de cultivo igual o superior a sesenta mil metros cuadrados (60.000 m2), tratándose de
+                    moluscos filtradores y otras especies filtradoras, a través de un sistema de producción extensivo
+                </option>
+                <option value="166-1203">DS95/DS40 - n3) Producción anual igual o mayor a (35ton) tratándose de
+                    equinodermos, crustáceos y moluscos no filtradores, peces y otras especies, a través de un sistema
+                    de producción intensivo</option>
+                <option value="2167549427">DS17 - n3) Una producción anual igual o superior a treinta y cinco toneladas
+                    (35 t) tratándose de equinodermos, crustáceos y moluscos no filtradores, peces y otras especies, a
+                    través de un sistema de producción intensivo</option>
+                <option value="167">DS95 - n4) Producción anual (15 ton) cuando el cultivo se realice en ríos navegables
+                    en la zona no afecta a marea o en ríos no navegables en la zona no afecta a marea</option>
+                <option value="1204">DS40 - n4) Producción anual (15 ton) cuando el cultivo se realice en ríos
+                    navegables en la zona no afecta a marea o en ríos no navegables o en lagos</option>
+                <option value="2167549428">DS17 - n4) Una producción anual igual o superior a quince toneladas (15 t)
+                    cuando el cultivo se realice en ríos navegables en la zona no afecta a marea; o el cultivo de
+                    cualquier recurso hidrobiológico que se realice en ríos no navegables o en lagos cualquiera sea su
+                    producción anual</option>
+                <option value="168">DS95 - n5) Producción anual de engorda de peces 8 ton o cultivo de microalgas y
+                    juveniles de otros recursos hidrobiológicos que requieran el suministro y/o evacuación de aguas de
+                    origen terrestre, marina o estuarina, cualquiera sea su producción anual</option>
+                <option value="1205">DS40 - n5) Producción anual de engorda de peces 8 ton o cultivo de microalgas y/o
+                    juveniles de otros recursos hidrobiológicos que requieran el suministro y/o evacuación de aguas de
+                    origen continental, marina o estuarina, cualquiera sea su producción anual</option>
+                <option value="2167549443">DS17 - n5) Una producción anual igual o superior a ocho toneladas (8 t),
+                    tratándose de peces; o del cultivo de microalgas y/o juveniles de otros recursos hidrobiológicos que
+                    requieran el suministro y/o evacuación de aguas de origen continental, marina o estuarina,
+                    cualquiera sea su producción anual</option>
+                <option value="169-1206-2167549444">DS95/DS40/DS17 - n6) Plantas Procesadoras de recursos
+                    hidrobiológicos</option>
+                <option value="194-1207-2167549445">DS95/DS40/DS17 - n7) Proyectos de explotación intensiva de recursos
+                    hidrobiológicos</option>
+                <option value="170-1300-2167549446">DS95/DS40/DS17 - ñ) Producción, almacenamiento, transporte,
+                    disposición o reutilización habituales de sustancias tóxicas, explosivas, radioactivas, inflamables,
+                    corrosivas o reactivas</option>
+                <option value="171">DS95 - ñ1) Producción, almacenamiento, disposición o reutilización o transporte por
+                    medios terrestres de sustancias tóxicas, (sustancias señaladas en la Clase 6,1 de la NCh. 382, Of.
+                    89)</option>
+                <option value="1301">DS40 - ñ1) Producción, disposición o reutilización de sustancias tóxicas,
+                    (sustancias señaladas en la Clase 6 División 6.1 de la NCh. 382, Of. 2004)</option>
+                <option value="2167549447">DS17 - ñ1) Producción, disposición o reutilización de sustancias tóxicas por
+                    un semestre o más, en una cantidad igual o superior a 10.000 kg/día. Capacidad de almacenamiento de
+                    sustancias tóxicas en una cantidad igual o superior a 2.500 toneladas (sustancias señaladas en la
+                    Clase 6 División 6.1 de la NCh. 382:2013)</option>
+                <option value="172">DS95 - ñ2) Producción, almacenamiento, disposición o reutilización de sustancias
+                    radiactivas en forma de fuentes no selladas o fuentes selladas de material dispersable, en
+                    cantidades superiores a los límites A2 del D.S. N°12/85, o superiores a 5000 A1 para el caso de
+                    fuentes selladas no dispersables</option>
+                <option value="1302">DS40 - ñ2) Producción, disposición o reutilización de sustancias explosivas
+                    (sustancias señaladas en la Clase 1 División 1.1, dela NCh 382, Of.2004)</option>
+                <option value="2167549448">DS17 - ñ2) Producción, disposición o reutilización de sustancias explosivas
+                    por un semestre o más y con periodicidad mensual o mayor, en una cantidad igual o superior a 2.500
+                    kg/día. Capacidad de almacenamiento de sustancias explosivas en una cantidad igual o superior a 30
+                    toneladas (sustancias señaladas en la Clase 1 División 1.1, de la NCh 382:2013)</option>
+                <option value="173">DS95 - ñ3) Producción, almacenamiento, disposición o reutilización o trasporte por
+                    medios terrestres de sustancias explosivas, (sustancias señaladas en la Clase 1.1 de la NCh. 382,
+                    Of. 89)</option>
+                <option value="1303">DS40 - ñ3) Producción, disposición o reutilización de sustancias inflamables,
+                    (sustancias señaladas en la Clase 2 División 2.1, 3 y 4 de la NCh. 382, Of. 2004)</option>
+                <option value="2167549449">DS17 - ñ3) Producción, disposición o reutilización de sustancias inflamables
+                    por un semestre o más, y con una periodicidad mensual o mayor, en una cantidad igual o superior a
+                    80.000 kg/día. Capacidad de almacenamiento de sustancias inflamables en una cantidad igual o
+                    superior a 1.000 toneladas (sustancias señaladas en D.S. 57/2019 MINSAL-MMA o la Clase 2 División
+                    2.1, 3 y 4 de la NCh. 382, Of. 2013)</option>
+                <option value="174">DS95 - ñ4) Producción, almacenamiento, disposición o reutilización o transporte por
+                    medios terrestres de sustancias inflamables, (sustancias señaladas en las clases 3 y 4 de la NCh.
+                    2120/Of. 89)</option>
+                <option value="1304">DS40 - ñ4) Producción, disposición o reutilización de sustancias corrosivas o
+                    reactivas, (sustancias señaladas en las clases 5 de la NCh. 382, Of. 2004)</option>
+                <option value="2167549450">DS17 - ñ4) Producción, disposición o reutilización de sustancias corrosivas o
+                    reactivas por un semestre o más, y con una periodicidad mensual o mayor, en una cantidad igual o
+                    superior a 120.000 kg/día. Capacidad de almacenamiento de sustancias corrosivas o reactivas en una
+                    cantidad igual o superior a 2.500 toneladas (sustancias señaladas en D.S. 57/2019 MINSAL-MMA o la
+                    clase 8 de la NCh. 382, Of. 2013)</option>
+                <option value="175">DS95 - ñ5) Producción, almacenamiento, disposición o reutilización o transporte por
+                    medios terrestres, de sustancias corrosivas o reactivas, que se realicen con una periodicidad
+                    mensual o mayor, en una cantidad igual o superior a 120000 Kg/día</option>
+                <option value="1305">DS40 - ñ5) Transporte por medios terrestres de sustancias tóxicas, explosivas,
+                    inflamables, corrosivas o reactivas en una cantidad igual o superior a 400 ton/día</option>
+                <option value="2167549451">DS17 - ñ5) Transporte por medios terrestres de sustancias tóxicas,
+                    explosivas, inflamables, corrosivas o reactivas en una cantidad igual o superior a 2.500 ton/día
+                </option>
+                <option value="176">DS95 - ñ6) Transporte por medios terrestres de sustancias radiactivas</option>
+                <option value="1306">DS40 - ñ6) Producción, almacenamiento, disposición o reutilización de sustancias
+                    radioactivas</option>
+                <option value="2167549452">DS17 - ñ6) Producción, almacenamiento, disposición o reutilización de
+                    sustancias radioactivas</option>
+                <option value="1307">DS40 - ñ7) Transporte por medios terrestres de sustancias radioactivas</option>
+                <option value="2167549453">DS17 - ñ7) Transporte por medios terrestres de sustancias radioactivas
+                </option>
+                <option value="177-1400-2167549454">DS95/DS40/DS17 - o) Proyectos de saneamiento ambiental, tales como
+                    sistemas de alcantarillado y agua potable, plantas de tratamiento de agua o de residuos sólidos de
+                    origen domiciliario, rellenos sanitarios, emisarios submarinos, sistemas de tratamiento y
+                    disposición de residuos industriales líquidos o sólidos</option>
+                <option value="178">DS95 - o1) Sistemas de alcantarillado de aguas servidas, que atiendan a una
+                    población igual o mayor a 2500 habitantes</option>
+                <option value="1401">DS40 - o1) Sistemas de alcantarillado de aguas servidas, que atiendan a una
+                    población igual o mayor a 10.000 habitantes</option>
+                <option value="2167549455">DS17 - o1) Sistemas de alcantarillado de aguas servidas, que atiendan a una
+                    población igual o mayor a 10.000 habitantes</option>
+                <option value="187">DS95 - o10) Sistemas de tratamiento y/o disposición de residuos infecciosos
+                    generados por establecimientos de salud, con capacidad mayor o igual a 250 kg/día</option>
+                <option value="1410">DS40 - o10) Sistemas de tratamiento, disposición y/o eliminación de residuos
+                    especiales procedentes de establecimientos de salud, con capacidad mayor o igual a 250 kg/día
+                </option>
+                <option value="2167549474">DS17 - o10) Sistemas de tratamiento o eliminación de residuos especiales
+                    procedentes de establecimientos de salud, con una tasa de ingreso de recepción mayor o igual a 500
+                    kg/día</option>
+                <option value="188">DS95 - o11) Reparación o recuperación de terrenos que contengan contaminantes, que
+                    abarquen, una superficie igual o mayor a 10000m2</option>
+                <option value="1411">DS40 - o11) Reparación o recuperación de áreas que contengan contaminantes, que
+                    abarquen, una superficie igual o mayor a 10.000 m2</option>
+                <option value="2167549475">DS17 - o11) Reparación o recuperación de áreas que contengan contaminantes,
+                    que abarquen, una superficie igual o mayor a 10.000 m2</option>
+                <option value="179-1402">DS95/DS40 - o2) Sistemas de alcantarillado o evacuación de aguas lluvias,
+                    cuando se interconecten con redes de alcantarillado de aguas servidas</option>
+                <option value="2167549456">DS17 - o2) Sistemas de alcantarillado o evacuación de aguas lluvias, cuando
+                    se interconecten con redes de alcantarillado de aguas servidas que atiendan a una población igual o
+                    mayor a diez mil (10.000) habitantes</option>
+                <option value="180-1403">DS95/DS40 - o3) Sistemas de agua potable que comprendan obras que capten y
+                    conduzcan agua desde el lugar de captación hasta su entrega en el inmueble del usuario</option>
+                <option value="2167549457">DS17 - o3) Sistemas de agua potable que comprendan obras que capten y
+                    conduzcan agua desde el lugar de captación hasta su entrega en el inmueble del usuario, considerando
+                    los procesos intermedios, y que atiendan a una población igual o mayor a quince mil (15.000)
+                    habitantes</option>
+                <option value="181">DS95 - o4) Plantas de tratamiento de aguas de origen domiciliario que atiendan a una
+                    población igual o mayor a 2500 habitantes</option>
+                <option value="1404">DS40 - o4) Plantas de tratamiento de aguas de origen domiciliario que atiendan a
+                    una población igual o mayor a 2.500 habitantes</option>
+                <option value="2167549458">DS17 - o4) Plantas de tratamiento de aguas de origen domiciliario que
+                    atiendan a una población igual o mayor a 5.000 habitantes</option>
+                <option value="182">DS95 - o5) Plantas de tratamiento y/o disposición de residuos sólidos de origen
+                    domiciliario, rellenos sanitarios y estaciones de transferencia que atiendan a una población igual o
+                    mayor a 5000 habitantes</option>
+                <option value="1405">DS40 - o5) Plantas de tratamiento y/o disposición de residuos sólidos de origen
+                    domiciliario, rellenos sanitarios y estaciones de transferencia y centros de acopio y clasificación
+                    que atiendan a una población igual o mayor a 5.000 habitantes</option>
+                <option value="2167549459">DS17 - o5) Sistemas o plantas de tratamiento y/o eliminación de residuos
+                    sólidos de origen domiciliario</option>
+                <option value="2167549460">DS17 - o5.1) Sistemas o plantas de eliminación de residuos sólidos de origen
+                    domiciliario, incluidos los rellenos sanitarios, con una tasa de ingreso igual o mayor a treinta
+                    toneladas día (30 t/día)</option>
+                <option value="2167549461">DS17 - o5.2) Sistemas o plantas de tratamiento de residuos sólidos de origen
+                    domiciliario, incluidas las plantas de compostaje y las de biodigestión, con una tasa de ingreso
+                    igual o mayor a cincuenta toneladas día (50 t/día)</option>
+                <option value="2167549462">DS17 - o5.3) Estaciones de transferencia de residuos sólidos de origen
+                    domiciliario con tasa de ingreso igual o mayor a cien toneladas día (100 t/día)</option>
+                <option value="183-1406-2167549463">DS95/DS40/DS17 - o6) Emisarios submarinos</option>
+                <option value="184">DS95 - o7) Sistemas de tratamiento y/o disposición de residuos industriales
+                    líquidos, que contemplen dentro de sus instalaciones lagunas de estabilización u otros depositos de
+                    los efluentes sin tratar y tratados</option>
+                <option value="1407">DS40 - o7) Sistemas de tratamiento y/o disposición de residuos industriales
+                    líquidos</option>
+                <option value="2167549464">DS17 - o7) Sistemas de tratamiento y/o eliminación de residuos industriales
+                    líquidos</option>
+                <option value="2167549465">DS17 - o7.1) Que sus efluentes sin tratar se usen para el riego, aspersión y
+                    humectación de terrenos o caminos, o se utilicen para el mismo efecto efluentes tratados, en
+                    cumplimiento de la respectiva norma de emisión, en una cantidad igual o mayor a 50 m3/día</option>
+                <option value="2167549466">DS17 - o7.2) Traten un caudal de efluentes líquidos igual o superior a ciento
+                    sesenta metros cúbicos día (160 m3/día)</option>
+                <option value="185">DS95 - o8) Sistemas de tratamiento y/o disposición de residuos industriales sólidos
+                </option>
+                <option value="1408">DS40 - o8) Sistemas de tratamiento, disposición y/o eliminación de residuos
+                    industriales sólidos</option>
+                <option value="2167549467">DS17 - o8) Sistemas o plantas de tratamiento y/o eliminación de residuos
+                    industriales sólidos</option>
+                <option value="2167549468">DS17 - o8.1) Sistemas o plantas de eliminación de residuos industriales
+                    sólidos con una tasa de ingreso igual o superior a treinta toneladas día (30 t/día)</option>
+                <option value="2167549469">DS17 - o8.2) Sistemas o plantas de tratamiento de residuos industriales
+                    sólidos de origen animal o de lodos provenientes de plantas de tratamiento de aguas residuales de
+                    cualquier clase, con una tasa de ingreso igual o mayor a treinta toneladas día (30 t/día)</option>
+                <option value="2167549470">DS17 - o8.3) Sistemas o plantas de tratamiento de residuos industriales
+                    sólidos, incluidas las plantas de compostaje y las de biodigestión, con una tasa de ingreso igual o
+                    mayor a cincuenta toneladas día (50 t/día)</option>
+                <option value="186">DS95 - o9) Plantas de tratamiento y/o disposición de residuos peligrosos, incluidos
+                    los infecciosos</option>
+                <option value="1409">DS40 - o9) Plantas de tratamiento, disposición y/o eliminación de residuos
+                    peligrosos</option>
+                <option value="2167549471">DS17 - o9) Plantas de tratamiento y/o eliminación de residuos peligrosos
+                </option>
+                <option value="2167549472">DS17 - o9.1) Sistemas o plantas de eliminación de residuos peligrosos con una
+                    tasa de ingreso igual o mayor de veinticinco kilos día (25 kg/día) para aquellos que estén dentro de
+                    la categoría de "tóxicos agudos" del DS 148, de 2003, del Ministerio de Salud, o el que lo
+                    reemplace; y de 1 tonelada día (1 t/día) para los residuos peligrosos que presenten cualquier otra
+                    característica de peligrosidad</option>
+                <option value="2167549473">DS17 - o9.2) Sistemas o plantas de tratamiento de residuos que presenten
+                    alguna de las características de peligrosidad establecidas en el DS 148, de 2003, del Ministerio de
+                    Salud, o el que lo reemplace, con una tasa de ingreso igual o mayor a 5 toneladas día (5 t/día)
+                </option>
+                <option value="189-1412-2167549476">DS95/DS40/DS17 - p) Ejecución de obras, programas o actividades en
+                    parques nacionales, reservas nacionales, monumentos naturales, reservas de zonas vírgenes,
+                    santuarios de la naturaleza, parques marinos, reservas marinas o en cualesquiera otra área colocada
+                    bajo protección oficial, en los casos en que la legislación respectiva lo permita</option>
+                <option value="190-1413-2167549477">DS95/DS40/DS17 - q) Aplicación masiva de productos químicos en áreas
+                    urbanas o zonas rurales próximas a centros poblados o cursos o masas de aguas que puedan ser
+                    afectadas</option>
+                <option value="191">DS95 - r) Cotos de caza</option>
+                <option value="1414">DS40 - r) Proyectos de desarrollo, cultivo o explotación, en las áreas mineras,
+                    agrícolas, forestales o hidrobiológicas que utilicen organismos genéticamente modificados con fines
+                    de producción y en áreas no confinadas</option>
+                <option value="2167549478">DS17 - r) Proyectos de desarrollo, cultivo o explotación, en las áreas
+                    mineras, agrícolas, forestales o hidrobiológicas que utilicen organismos genéticamente modificados
+                    con fines de producción y en áreas no confinadas</option>
+                <option value="192-1416-2167549480">DS95 - s / DS40 - t / DS17 - t) Obras que se concesionen para
+                    construir y explorar el subsuelo de los bienes nacionales de uso público</option>
+                <option value="1415">DS40 - s) Ejecución de obras o actividades que puedan significar una alteración
+                    física o química a los componentes bióticos, a sus interacciones o a los flujos ecosistémicos de
+                    humedales que se encuentran total o parcialmente dentro del límite urbano, y que impliquen su
+                    relleno, drenaje, secado, extracción de caudales o de áridos, la alteración de la barra terminal, de
+                    la vegetación azonal hídrica y ripariana, la extracción de la cubierta vegetal de turberas o el
+                    deterioro, menoscabo, transformación o invasión de la flora y la fauna contenida dentro del humedal,
+                    indistintamente de su superficie.</option>
+                <option value="2167549479">DS17 - s) Ejecución de obras o actividades que puedan significar una
+                    alteración física o química a los componentes bióticos, a sus interacciones o a los flujos
+                    ecosistémicos de humedales que se encuentran total o parcialmente dentro del límite urbano, y que
+                    impliquen su relleno, drenaje, secado, extracción de caudales o de áridos, la alteración de la barra
+                    terminal, de la vegetación azonal hídrica y ripariana, la extracción de la cubierta vegetal de
+                    turberas o el deterioro, menoscabo, transformación o invasión de la flora y la fauna contenida
+                    dentro del humedal, indistintamente de su superficie.</option>
+                <option value="193-1417-2167549481">DS95 - t / DS40 - u / DS17 - u) Ingreso voluntario</option>
+            </select>
+            <div
+                class="ts-control form-select tom-select-seia-tipologia multi plugin-checkbox_options plugin-remove_button">
+                <div class="items ts-input not-full"><input type="select-multiple" autocomplete="off" size="1"
+                        tabindex="0" role="combobox" haspopup="listbox" aria-expanded="false"
+                        aria-controls="projectType-ts-dropdown" id="projectType-tomselected"
+                        placeholder="-- Seleccionar --"></div>
+                <div class="ts-dropdown multi form-select tom-select-seia-tipologia plugin-checkbox_options plugin-remove_button"
+                    style="display: none;">
+                    <div role="listbox" id="projectType-ts-dropdown" tabindex="-1" class="ts-dropdown-content"
+                        aria-labelledby="projectType-ts-label"></div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <div class="row gx-0 pt-5 text-center">
+        <div class="col-md-12">
+            <!-- <button type="button" class="btn btn-primary btn-lg sg-btnForm">Buscar</button> <br> -->
+            <button type="submit" onclick="enviar_formulario()"
+                class="btn btn-primary btn-lg sg-btnForm">Buscar</button>
+        </div>
+    </div>
+
+    <!-- <div class="centrar-boton"> 
+
+      <script type="text/javascript">
+      // Realiza el submit/click validando que solo se haga una vez
+      var click_1 = 0;
+      function action_1() {
+         var variable = 'click_1';
+
+         if (click_1 == 1) {
+            return;
+         } else {
+           click_1 = 1;
+ 
+            document.buscador_proyecto.submit();
+         }
+      }
+      </script>
+	      <button type="button" class="bot_70px" onclick="action_1()" value="Buscar">Buscar</button>
+	       </div> -->
+
+    <div class="clear"><br></div>
+
+
+    <!-- 	if ( == 'submit' ||  == '{javascript:enviar}') {
+          return "<button type=\"submit\" class=\"bot_px\" value=\"\"></button>";
+      } -->
+
+
+
+
+    <!-- 	</form> -->
+
+</form>

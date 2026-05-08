@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { user, token, updatePreferences } = useAuth();
   const [options, setOptions] = useState<{normativas: string[], sma: string[]}>({ normativas: [], sma: [] });
   const [prefs, setPrefs] = useState<{normativas: string[], sma: string[]}>({ normativas: [], sma: [] });
@@ -77,6 +79,16 @@ const Profile = () => {
           
           <strong style={{ color: 'var(--text-light)' }}>Rol:</strong>
           <span className="profile-value" style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span>
+        </div>
+        
+        <div style={{ marginBottom: '30px' }}>
+          <button 
+            onClick={() => navigate('/bugs')} 
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px' }}
+          >
+            Reportar un Bug / Problema Técnico
+          </button>
         </div>
 
         <h2 style={{ fontSize: '20px', color: 'var(--text-dark)', marginBottom: '15px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>Preferencias de Filtrado (Opcional)</h2>

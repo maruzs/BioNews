@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bug, Send, Image as ImageIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Bug, Send, Image as ImageIcon, AlertCircle, CheckCircle, Clock, Trash2, X } from 'lucide-react';
 
 interface BugReport {
   id: number;
   user_id: number;
-  user_name: string;
   titulo: string;
   descripcion: string;
   screenshot_path: string | null;
   fecha_reporte: string;
+  status: 'pendiente' | 'resuelto';
 }
 
 const BugReportPage = () => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -21,6 +21,30 @@ const BugReportPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
+  const [myReports, setMyReports] = useState<BugReport[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+
+  const fetchMyReports = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/bugs/my', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyReports(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    fetchMyReports();
+  }, [token]);
+
   useEffect(() => {
     if (screenshot) {
       const reader = new FileReader();
@@ -31,34 +55,7 @@ const BugReportPage = () => {
     } else {
       setScreenshotPreview(null);
     }
-  }, [screenshot]);  
-  // Admin state
-  const [reports, setReports] = useState<BugReport[]>([]);
-  const [loadingReports, setLoadingReports] = useState(false);
-
-  const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchReports();
-    }
-  }, [isAdmin]);
-
-  const fetchReports = async () => {
-    setLoadingReports(true);
-    try {
-      const res = await fetch('/api/admin/bugs', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setReports(data);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setLoadingReports(false);
-  };
+  }, [screenshot]);
 
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
@@ -109,7 +106,7 @@ const BugReportPage = () => {
         setTitulo('');
         setDescripcion('');
         setScreenshot(null);
-        if (isAdmin) fetchReports();
+        fetchMyReports();
       } else {
         const err = await res.json();
         setMessage({ type: 'error', text: err.detail || 'Error al enviar el reporte.' });
@@ -120,6 +117,30 @@ const BugReportPage = () => {
     setLoading(false);
   };
 
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("¿Deseas eliminar este reporte permanentemente de tu historial?")) return;
+    try {
+      const res = await fetch(`/api/bugs/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchMyReports();
+        if (selectedReportId === id) setSelectedReportId(null);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleModal = (id: number) => {
+    if (selectedReportId === id) {
+      setSelectedReportId(null);
+    } else {
+      setSelectedReportId(id);
+    }
+  };
+
   return (
     <div className="report-container">
       <div className="report-header-text">
@@ -127,7 +148,7 @@ const BugReportPage = () => {
         <p className="report-description">Ayúdanos a mejorar BioNews informando sobre cualquier error o problema técnico.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: '40px', marginTop: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px', marginTop: '20px' }}>
         
         {/* Formulario de reporte */}
         <div style={{ background: 'white', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
@@ -220,43 +241,71 @@ const BugReportPage = () => {
           </form>
         </div>
 
-        {/* Listado para administrador */}
-        {isAdmin && (
-          <div style={{ background: 'white', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', maxHeight: '700px', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <AlertCircle size={20} color="var(--orange)" /> Reportes Recibidos
-            </h2>
+        {/* Historial personal */}
+        <div style={{ background: 'white', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', maxHeight: '700px', overflowY: 'auto' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Clock size={20} color="var(--primary)" /> Mis Reportes
+          </h2>
 
-            {loadingReports ? (
-              <p>Cargando reportes...</p>
-            ) : reports.length === 0 ? (
-              <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>No hay reportes de bugs registrados.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {reports.map((report) => (
-                  <div key={report.id} style={{ padding: '20px', borderRadius: '12px', border: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>{report.user_name}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{report.fecha_reporte}</span>
+          {loadingHistory ? (
+            <p>Cargando historial...</p>
+          ) : myReports.length === 0 ? (
+            <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>No has enviado reportes aún.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {myReports.map((report) => (
+                <div key={report.id} style={{ border: '1px solid #f1f5f9', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div 
+                    onClick={() => toggleModal(report.id)}
+                    style={{ 
+                      padding: '15px 20px', 
+                      background: '#f8fafc', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      borderBottom: selectedReportId === report.id ? '1px solid #f1f5f9' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>{report.titulo}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(report.fecha_reporte).toLocaleDateString('es-ES')}</span>
                     </div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '8px', color: '#1e293b' }}>{report.titulo}</h3>
-                    <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '15px', lineHeight: '1.5' }}>{report.descripcion}</p>
-                    {report.screenshot_path && (
-                      <a 
-                        href={report.screenshot_path} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
-                      >
-                        <ImageIcon size={14} /> Ver captura de pantalla
-                      </a>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <span style={{ 
+                        fontSize: '0.7rem', 
+                        fontWeight: 700, 
+                        padding: '3px 8px', 
+                        borderRadius: '12px',
+                        background: report.status === 'resuelto' ? '#f0fdf4' : '#fff7ed',
+                        color: report.status === 'resuelto' ? '#166534' : '#c2410c',
+                        textTransform: 'uppercase'
+                      }}>
+                        {report.status}
+                      </span>
+                      <Trash2 
+                        size={16} 
+                        color="#ef4444" 
+                        style={{ cursor: 'pointer' }} 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(report.id); }} 
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  
+                  {selectedReportId === report.id && (
+                    <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Descripción del problema</h4>
+                        <button onClick={() => setSelectedReportId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{report.descripcion}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
     </div>

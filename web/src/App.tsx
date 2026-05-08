@@ -13,6 +13,7 @@ import MINSALConsultasPage from './components/MINSALConsultasPage';
 import MMAConsultasPage from './components/MMAConsultasPage';
 import DGAConsultasPage from './components/DGAConsultasPage';
 import BugReportPage from './components/BugReportPage';
+import AdminBugsPage from './components/AdminBugsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 
@@ -95,6 +96,7 @@ function ProtectedLayout() {
 
           {/* Admin Panel */}
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/reportes" element={<AdminBugsPage />} />
 
           {/* Profile */}
           <Route path="/perfil" element={<Profile />} />
