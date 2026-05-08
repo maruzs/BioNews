@@ -37,16 +37,16 @@ const Register = () => {
         {error && <div style={{ color: '#ef4444', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '6px', marginBottom: '20px', fontSize: '14px' }}>{error}</div>}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Nombre Completo</label>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+            <label htmlFor="name" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Nombre Completo</label>
+            <input id="name" name="name" type="text" required value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Correo Electrónico</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+            <label htmlFor="email" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Correo Electrónico</label>
+            <input id="email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Contraseña</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500, color: 'var(--text-dark)' }}>Contraseña</label>
+            <input id="password" name="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
           </div>
           <button type="submit" style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '12px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', marginTop: '10px' }}>
             Registrarse

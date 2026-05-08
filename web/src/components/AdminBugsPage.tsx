@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, ExternalLink, Trash2, CheckCircle, Clock, X, Eye } from 'lucide-react';
+import { ArrowLeft, Trash2, CheckCircle, Clock, Eye, X, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface BugReport {

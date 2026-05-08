@@ -142,6 +142,22 @@ class DatabaseManager:
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sea_proyectos_evaluados (
+                    id TEXT PRIMARY KEY,
+                    nombre TEXT,
+                    titular TEXT,
+                    via_ingreso TEXT,
+                    estado_proyecto TEXT,
+                    razon_ingreso TEXT,
+                    fecha_presentacion TEXT,
+                    subestado_proyecto TEXT,
+                    tipo_proyecto TEXT,
+                    url TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS mma_cerradas (
                     id TEXT PRIMARY KEY,
                     nombre_instrumento TEXT,
@@ -247,7 +263,7 @@ class DatabaseManager:
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales',
             'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas',
-            'dga_consultas'
+            'dga_consultas', 'sea_proyectos_evaluados'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -598,7 +614,7 @@ class DatabaseManager:
             "noticias", "normativas", "pertinencias", "fiscalizaciones", 
             "sancionatorios", "registroSanciones", "programasDeCumplimiento", 
             "medidas_provisionales", "requerimientos", "Tribunales",
-            "minsal_vigentes", "minsal_resultados", "mma", "dga"
+            "minsal_vigentes", "minsal_resultados", "mma", "dga", "sea_proyectos_evaluados"
         ]
         
         status = {}
@@ -625,7 +641,8 @@ class DatabaseManager:
             "minsal_vigentes": "minsal_vigentes",
             "minsal_resultados": "minsal_resultados",
             "mma": ["mma_abiertas", "mma_cerradas"],
-            "dga": "dga_consultas"
+            "dga": "dga_consultas",
+            "sea_proyectos_evaluados": "sea_proyectos_evaluados"
         }
         
         table = table_mapping.get(category_slug)

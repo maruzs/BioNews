@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bug, Send, Image as ImageIcon, AlertCircle, CheckCircle, Clock, Trash2, X } from 'lucide-react';
+import { Send, Image as ImageIcon, AlertCircle, CheckCircle, Clock, Trash2, X, Bug } from 'lucide-react';
 
 interface BugReport {
   id: number;

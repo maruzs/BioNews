@@ -156,6 +156,10 @@ const Sidebar = () => {
               <UserSquare2 size={18} /> {!collapsed && "Pertinencias"}
               {!collapsed && <Dot show={categoryStatus.pertinencias} />}
             </NavLink>
+            <NavLink onClick={handleMobileClose} to="/sea-evaluados" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="Proyectos Evaluados">
+              <FileCheck size={18} /> {!collapsed && "Proyectos Evaluados"}
+              {!collapsed && <Dot show={categoryStatus.sea_proyectos_evaluados} />}
+            </NavLink>
           </ul>
         )}
 

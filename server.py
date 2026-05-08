@@ -17,15 +17,20 @@ import bcrypt
 import asyncio
 from asyncio import Queue
 from typing import Optional, List
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.responses import StreamingResponse
+# pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import shutil
 import os
 from src.database.manager import DatabaseManager
+from src.scrapers.sea_legal import PertinenciasScraper
+from src.scrapers.sea_evaluados import SEAEvaluadosScraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("bionews.server")
@@ -408,6 +413,7 @@ def global_search(q: str = "", user = Depends(get_current_user)):
         ("noticias",              ["titulo", "fuente"], "titulo", "link", "link"),
         ("Tribunales",            ["Rol", "Caratula"], "Caratula", "Rol", "Accion"),
         ("pertinencias",          ["Expediente", "Nombre_de_Proyecto", "Proponente"], "Nombre_de_Proyecto", "Expediente", "Accion"),
+        ("sea_proyectos_evaluados", ["nombre", "titular", "via_ingreso", "estado_proyecto"], "nombre", "id", "url"),
     ]
     
     with db.get_connection() as conn:
@@ -774,15 +780,25 @@ def scrape_news(background_tasks: BackgroundTasks, admin = Depends(get_current_a
     return {"message": "Scraping de noticias iniciado en background."}
 
 async def _run_sea_scrapers():
-    from src.scrapers.sea_legal import PertinenciasScraper
+    # 1. Pertinencias
     try:
-        scraper_inst = PertinenciasScraper()
-        nuevos = await asyncio.to_thread(scraper_inst.run)
-        db.log_scraper_run("Pertinencias SEA", exito=True, nuevos=nuevos)
-        if nuevos > 0:
+        scraper_pert = PertinenciasScraper()
+        nuevos_pert = await asyncio.to_thread(scraper_pert.run)
+        db.log_scraper_run("Pertinencias SEA", exito=True, nuevos=nuevos_pert)
+        if nuevos_pert > 0:
             await notify_new_content("pertinencias")
     except Exception as e:
         db.log_scraper_run("Pertinencias SEA", exito=False, error=str(e))
+
+    # 2. Proyectos Evaluados
+    try:
+        scraper_eval = SEAEvaluadosScraper()
+        nuevos_eval = await asyncio.to_thread(scraper_eval.run)
+        db.log_scraper_run("Proyectos Evaluados SEA", exito=True, nuevos=nuevos_eval)
+        if nuevos_eval > 0:
+            await notify_new_content("sea_proyectos_evaluados")
+    except Exception as e:
+        db.log_scraper_run("Proyectos Evaluados SEA", exito=False, error=str(e))
 
 @app.post("/api/scrape/sea")
 def scrape_sea(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):

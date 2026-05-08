@@ -12,6 +12,7 @@ import Profile from './components/Profile';
 import MINSALConsultasPage from './components/MINSALConsultasPage';
 import MMAConsultasPage from './components/MMAConsultasPage';
 import DGAConsultasPage from './components/DGAConsultasPage';
+import SEAEvaluadosPage from './components/SEAEvaluadosPage';
 import BugReportPage from './components/BugReportPage';
 import AdminBugsPage from './components/AdminBugsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -77,6 +78,7 @@ function ProtectedLayout() {
 
           {/* SEA */}
           <Route path="/pertinencias" element={<ReportLayout key="pertinencias" title="Pertinencias" description="Reporte de pertinencias ingresadas al SEA." listTitle="Pertinencias" tableName="pertinencias" category="pertinencias" />} />
+          <Route path="/sea-evaluados" element={<SEAEvaluadosPage />} />
 
           {/* SMA */}
           <Route path="/fiscalizaciones" element={<ReportLayout key="fiscalizaciones" title="Fiscalizaciones" description="Reporte de fiscalizaciones realizadas por la SMA." listTitle="Fiscalizaciones" tableName="fiscalizaciones" category="fiscalizaciones" />} />
