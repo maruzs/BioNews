@@ -12,4 +12,7 @@ https://seia.sea.gob.cl/busqueda/buscarProyecto.php
 
 ahi dentro tendras un formulario (ver evAmbiental/formulario.html)
 
-2. Para la primera ejecucion del scraper cuando llenemos la tabla de datos no habra que poner nada en el formulario ya que queremos TODOS los datos, por lo que daremos directamente a buscar
+2. Ejecucion scraper (FORMULARIO):
+   2.1 Primera ejecucion: Para la primera ejecucion del scraper cuando llenemos la tabla de datos no habra que poner nada en el formulario ya que queremos TODOS los datos, por lo que daremos directamente a buscar
+   <button type="submit" onclick="enviar_formulario()" class="btn btn-primary btn-lg sg-btnForm">Buscar</button>
+   2.2 Ejecucion posterior: Debera filtrar por el dia de hoy
