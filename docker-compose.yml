@@ -24,6 +24,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
       - /etc/localtime:/etc/localtime:ro
     expose:
       - "8000"

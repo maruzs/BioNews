@@ -74,7 +74,7 @@ ahi dentro tendras un formulario (ver evAmbiental/formulario.html)
    --data-raw ^"nombre=^&titular=^&folio=^&selectRegion=^&selectComuna=^&tipoPresentacion=Ambos^&projectStatus=^&PresentacionMin=^&PresentacionMax=^&CalificaMin=^&CalificaMax=^&sectores_economicos=^&razoningreso=^&id_tipoexpediente=^&offset=1^&limit=10^&orderColumn=FECHA_PRESENTACION^&orderDir=desc^"
    ```
    3.2 Paginacion:
-   Por defecto se muestran 10 proyectos y usa paginacion, aqui tienes el html de ambos apartados:
+   Por defecto se muestran 10 proyectos y usa paginacion, aqui tienes el html de ambos apartados (evAmbiental/paginacion.html):
    ```html
    <div class="dt-layout-row">
      <div class="dt-layout-cell dt-layout-start"></div>
