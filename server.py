@@ -372,6 +372,105 @@ def get_consultation_docs(consulta_id: str, tipo: str, user = Depends(get_curren
     """Obtiene los documentos asociados a una consulta pública."""
     return db.get_consultation_documents(consulta_id, tipo)
 
+@app.get("/api/minsal/documents/{consulta_id}")
+def get_minsal_docs_alias(consulta_id: str, type: str, user = Depends(get_current_user)):
+    """Alias para el endpoint de documentos de MINSAL con mapeo de tipos."""
+    mapped_type = f"minsal_{type}" if not type.startswith("minsal_") else type
+    return db.get_consultation_documents(consulta_id, mapped_type)
+
+@app.delete("/api/admin/debug/delete-latest/{category}")
+def delete_latest_record(category: str, admin = Depends(get_current_admin)):
+    """Endpoint de depuración para borrar el registro más reciente basado en fecha."""
+    table_mapping = {
+        "mma_abiertas": "mma_abiertas",
+        "mma_cerradas": "mma_cerradas",
+        "minsal_vigentes": "minsal_vigentes",
+        "sea_evaluados": "sea_proyectos_evaluados",
+        "pertinencias": "pertinencias",
+        "fiscalizaciones": "fiscalizaciones",
+        "sancionatorios": "sancionatorios",
+        "sanciones": "registroSanciones",
+        "programas": "programasDeCumplimiento",
+        "medidas": "medidas_provisionales",
+        "requerimientos": "requerimientos",
+    }
+    
+    table = table_mapping.get(category)
+    if not table and category not in ["tribunal_1", "tribunal_2", "tribunal_3"]:
+        raise HTTPException(status_code=400, detail="Categoría inválida")
+    
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            if category.startswith("tribunal_"):
+                trib_id = category.split("_")[1]
+                trib_names = {"1": "Primer Tribunal", "2": "Segundo Tribunal", "3": "Tercer Tribunal"}
+                trib_name = trib_names.get(trib_id)
+                cursor.execute("DELETE FROM Tribunales WHERE rowid = (SELECT MAX(rowid) FROM Tribunales WHERE Tribunal = ?)", (trib_name,))
+                deleted = cursor.rowcount
+            
+            elif category in ["mma_abiertas", "mma_cerradas"]:
+                # MMA format: dd-mm-yyyy
+                cursor.execute(f"""
+                    DELETE FROM {table} 
+                    WHERE rowid = (
+                        SELECT rowid FROM {table} 
+                        ORDER BY substr(fecha_inicio, 7, 4) || '-' || substr(fecha_inicio, 4, 2) || '-' || substr(fecha_inicio, 1, 2) DESC, rowid DESC 
+                        LIMIT 1
+                    )
+                """)
+                deleted = cursor.rowcount
+                
+            elif category == "minsal_vigentes":
+                # MINSAL format: yyyy-mm-dd
+                cursor.execute(f"""
+                    DELETE FROM {table} 
+                    WHERE rowid = (
+                        SELECT rowid FROM {table} 
+                        ORDER BY fecha_inicio DESC, rowid DESC 
+                        LIMIT 1
+                    )
+                """)
+                deleted = cursor.rowcount
+                
+            elif category == "sea_evaluados":
+                # SEA format: dd/mm/yyyy
+                cursor.execute(f"""
+                    DELETE FROM {table} 
+                    WHERE rowid = (
+                        SELECT rowid FROM {table} 
+                        ORDER BY substr(fecha_presentacion, 7, 4) || '-' || substr(fecha_presentacion, 4, 2) || '-' || substr(fecha_presentacion, 1, 2) DESC, rowid DESC 
+                        LIMIT 1
+                    )
+                """)
+                deleted = cursor.rowcount
+                
+            elif category == "pertinencias":
+                # Pertinencias format: yyyy-mm-dd (based on manual check)
+                # Wait, I should double check if it's yyyy-mm-dd. Yes, '2026-05-04'.
+                cursor.execute(f"""
+                    DELETE FROM {table} 
+                    WHERE rowid = (
+                        SELECT rowid FROM {table} 
+                        ORDER BY Fecha DESC, rowid DESC 
+                        LIMIT 1
+                    )
+                """)
+                deleted = cursor.rowcount
+
+            elif category in ["fiscalizaciones", "sancionatorios", "sanciones", "programas", "medidas", "requerimientos"]:
+                # SMA tables use ficha_id as requested before
+                cursor.execute(f"DELETE FROM {table} WHERE ficha_id = (SELECT MAX(ficha_id) FROM {table})")
+                deleted = cursor.rowcount
+            else:
+                cursor.execute(f"DELETE FROM {table} WHERE rowid = (SELECT MAX(rowid) FROM {table})")
+                deleted = cursor.rowcount
+            
+            conn.commit()
+            return {"status": "ok", "deleted": deleted, "table": table or "Tribunales"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/options")
 def get_options(user = Depends(get_current_user)):
     try:

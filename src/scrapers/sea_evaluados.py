@@ -106,6 +106,7 @@ class SEAEvaluadosScraper:
                     fecha = item.get("FECHA_PRESENTACION_FORMAT", "")
                     subestado = item.get("SUSPENDIDO", "")
                     tipo = item.get("TIPO_PROYECTO", "")
+                    region = item.get("REGION_NOMBRE", "")
                     url = item.get("EXPEDIENTE_URL_PPAL", "")
                     
                     cursor.execute("SELECT 1 FROM sea_proyectos_evaluados WHERE id = ?", (exp_id,))
@@ -115,15 +116,15 @@ class SEAEvaluadosScraper:
                         # Actualizar estado y url, etc.
                         cursor.execute("""
                             UPDATE sea_proyectos_evaluados 
-                            SET nombre=?, titular=?, via_ingreso=?, estado_proyecto=?, razon_ingreso=?, fecha_presentacion=?, subestado_proyecto=?, tipo_proyecto=?, url=?
+                            SET nombre=?, titular=?, via_ingreso=?, estado_proyecto=?, razon_ingreso=?, fecha_presentacion=?, subestado_proyecto=?, tipo_proyecto=?, region=?, url=?
                             WHERE id=?
-                        """, (nombre, titular, via_ingreso, estado, razon, fecha, subestado, tipo, url, exp_id))
+                        """, (nombre, titular, via_ingreso, estado, razon, fecha, subestado, tipo, region, url, exp_id))
                     else:
                         cursor.execute("""
                             INSERT INTO sea_proyectos_evaluados 
-                            (id, nombre, titular, via_ingreso, estado_proyecto, razon_ingreso, fecha_presentacion, subestado_proyecto, tipo_proyecto, url, fecha_scraping)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (exp_id, nombre, titular, via_ingreso, estado, razon, fecha, subestado, tipo, url, now_str))
+                            (id, nombre, titular, via_ingreso, estado_proyecto, razon_ingreso, fecha_presentacion, subestado_proyecto, tipo_proyecto, region, url, fecha_scraping)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (exp_id, nombre, titular, via_ingreso, estado, razon, fecha, subestado, tipo, region, url, now_str))
                         nuevos_registros += 1
                         
                 conn.commit()

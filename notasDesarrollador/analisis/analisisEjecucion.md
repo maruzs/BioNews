@@ -1,3 +1,5 @@
+# IGNORAR ESTE DOCUMENTO - NO LEER NO ES PARA DESARROLLAR ES SOLO PARA MI ANALISIS E INVESTIGACION
+
 ## SMA - FISCALIZACIONES
 
 ### LOGS - TERMINAL
@@ -108,3 +110,11 @@ No encontro nada nuevo, pero revisando la categoria MMA me aparecian todas con l
 ### PROBLEMA
 
 Al registrar un usuario van 'raro' los apartados para escribir nombre, correo y clave, escribia y se borraba el texto y tuve que hacer click afuera del campo y luego volver a clickearlo para que funcionara
+
+## PROBLEMA CONSULTAS MINSAL
+
+No se estan cargando los documentos asociados, dice
+' Documentos Adjuntos
+No hay documentos disponibles para esta consulta.'
+
+##

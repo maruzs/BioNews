@@ -152,6 +152,7 @@ class DatabaseManager:
                     fecha_presentacion TEXT,
                     subestado_proyecto TEXT,
                     tipo_proyecto TEXT,
+                    region TEXT,
                     url TEXT,
                     fecha_scraping TIMESTAMP
                 )
@@ -199,6 +200,13 @@ class DatabaseManager:
             bug_columns = [col[1] for col in cursor.fetchall()]
             if 'status' not in bug_columns:
                 cursor.execute("ALTER TABLE bug_reports ADD COLUMN status TEXT DEFAULT 'pendiente'")
+            
+            # Migración: Agregar region a sea_proyectos_evaluados si no existe
+            cursor.execute("PRAGMA table_info(sea_proyectos_evaluados)")
+            sea_columns = [col[1] for col in cursor.fetchall()]
+            if 'region' not in sea_columns:
+                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN region TEXT")
+                
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────

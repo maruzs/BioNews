@@ -1,3 +1,5 @@
+# IGNORAR ESTE DOCUMENTO - NO LEER NO ES PARA DESARROLLAR ES SOLO PARA MI ANALISIS E INVESTIGACION
+
 ## Mejoras mas avanzadas
 
 Implementar/mejorar dashboards con cartas (usar ecosinfoambiental como base)

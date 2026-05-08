@@ -11,15 +11,15 @@ No todo se debe implementar ahora, estara marcado basado en prioridades
 
 ## Funciones a implementar
 
-### Mejoras scrapers (3 - Media)
+### Mejoras scrapers
 
-#### SEA - Pertinencias (3 - Media)
+#### SEA - Pertinencias (4 - Media Baja)
 
 Quiero que en la tabla tambien se guarde el tipo de proyecto, categoria economica y la region. Pero que no se muestren en la tabla, solo que se guarde en la BD y se pueda filtrar por ellos en el 'Desplegar filtros' de las pertinencias.
 Hay que mapear las categorias economicas.
 Habra que rellenar nuevamente la tabla de pertinencias para que se agreguen las columnas que nos interesan,
 
-#### SNIFA/SMA - Todos (3 - Media)
+#### SNIFA/SMA - Todos (4 - Wishlist)
 
 1. Si yo agrego un registro de alguna categoria del SNIFA quiero que la pagina haga seguimientos de los cambios DENTRO de ese expediente, es decir las fechas, nuevos documentos, etc.
 
