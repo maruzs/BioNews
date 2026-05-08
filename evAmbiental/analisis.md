@@ -12,4 +12,4 @@ https://seia.sea.gob.cl/busqueda/buscarProyecto.php
 
 ahi dentro tendras un formulario (ver evAmbiental/formulario.html)
 
-2. Para la primera ejecucion del scraper cuando llenemos la tabla de datos no habra que poner nada en el formulario ya que queremos TODOS los datos
+2. Para la primera ejecucion del scraper cuando llenemos la tabla de datos no habra que poner nada en el formulario ya que queremos TODOS los datos, por lo que daremos directamente a buscar

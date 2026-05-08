@@ -51,7 +51,8 @@ const AdminBugsPage = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        fetchReports();
+        await fetchReports();
+        // Cerramos el modal si estaba abierto para este reporte
         if (selectedReport?.id === id) setSelectedReport(null);
       }
     } catch (err) {
@@ -179,7 +180,7 @@ const AdminBugsPage = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-              {selectedReport.screenshot_path ? (
+              {selectedReport.screenshot_path && selectedReport.status !== 'resuelto' ? (
                 <a 
                   href={selectedReport.screenshot_path} 
                   target="_blank" 
@@ -191,7 +192,9 @@ const AdminBugsPage = () => {
                 </a>
               ) : (
                 <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  No hay captura de pantalla asociada (o ya fue eliminada).
+                  {selectedReport.status === 'resuelto' 
+                    ? 'La captura de pantalla ha sido eliminada para ahorrar espacio.' 
+                    : 'No hay captura de pantalla asociada.'}
                 </div>
               )}
               
