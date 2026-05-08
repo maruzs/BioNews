@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList } from 'lucide-react';
+import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -19,6 +19,7 @@ const DGAConsultasPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<DGAConsulta | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const category = 'dga';
 
@@ -38,6 +39,13 @@ const DGAConsultasPage = () => {
       const json = await res.json();
       setData(Array.isArray(json) ? json : []);
       refreshCategory(category);
+      
+      // Cargar favoritos
+      const favRes = await fetch('/api/favorites', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const favJson = await favRes.json();
+      setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
     } catch (err) {
       console.error(err);
     }
@@ -59,6 +67,42 @@ const DGAConsultasPage = () => {
   const filteredData = data.filter(item => 
     item.nombre.toLowerCase().includes(search.toLowerCase())
   );
+
+  const toggleFavorite = async (e: React.MouseEvent, item: DGAConsulta) => {
+    e.stopPropagation();
+    const isFav = favorites.has(item.id);
+    try {
+      if (isFav) {
+        await fetch(`/api/favorites/${encodeURIComponent(item.id)}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      } else {
+        await fetch('/api/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            id_o_link: item.id,
+            fuente: 'DGA',
+            nombre: item.nombre,
+            accion: item.url
+          })
+        });
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.add(item.id);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
 
   // Determinar si es un formulario de Google o no
   const isGoogleForm = (url: string) => url.includes('forms.gle') || url.includes('docs.google.com/forms');
@@ -123,7 +167,20 @@ const DGAConsultasPage = () => {
                         return item.imagen && item.imagen.length === 1 ? item.imagen : <HelpCircle size={64} />;
                       })()}
                     </div>
-                    <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '15px', flex: 1 }}>{item.nombre}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px', flex: 1 }}>
+                      <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{item.nombre}</div>
+                      <Heart 
+                        size={20} 
+                        onClick={(e) => toggleFavorite(e, item)}
+                        style={{ 
+                          cursor: 'pointer', 
+                          flexShrink: 0,
+                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none', 
+                          color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
+                          transition: 'all 0.2s'
+                        }} 
+                      />
+                    </div>
                     <div className="card-action" style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
                       <ExternalLink size={16} /> Ver detalles
                     </div>
@@ -151,6 +208,19 @@ const DGAConsultasPage = () => {
             <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '15px', color: '#1e293b' }}>
                 {isGoogleForm(selectedItem.url) ? 'Formulario de Google' : 'Enlace Externo'}
             </h3>
+            
+            <div style={{ position: 'absolute', top: '20px', left: '20px' }}>
+                <Heart 
+                    size={24} 
+                    onClick={(e) => toggleFavorite(e, selectedItem)}
+                    style={{ 
+                        cursor: 'pointer', 
+                        fill: favorites.has(selectedItem.id) ? 'var(--orange)' : 'none', 
+                        color: favorites.has(selectedItem.id) ? 'var(--orange)' : 'var(--text-light)',
+                        transition: 'all 0.2s'
+                    }} 
+                />
+            </div>
             
             <p style={{ color: '#64748b', marginBottom: '30px', lineHeight: '1.6' }}>
                 {isGoogleForm(selectedItem.url) 

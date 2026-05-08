@@ -163,6 +163,19 @@ class DatabaseManager:
                     fecha_scraping TIMESTAMP
                 )
             """)
+
+            # Tabla para reportes de bugs
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bug_reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    titulo TEXT,
+                    descripcion TEXT,
+                    screenshot_path TEXT,
+                    fecha_reporte TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """)
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
@@ -735,3 +748,26 @@ class DatabaseManager:
             """, (consulta_id, tipo_consulta))
             rows = cursor.fetchall()
             return [{"nombre": row[0], "link": row[1]} for row in rows]
+
+    # ─── BUG REPORTS ──────────────────────────────────────────────────────────
+    def save_bug_report(self, user_id, titulo, descripcion, screenshot_path=None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO bug_reports (user_id, titulo, descripcion, screenshot_path, fecha_reporte)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user_id, titulo, descripcion, screenshot_path, _now_str()))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_bug_reports(self):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT b.*, u.name as user_name 
+                FROM bug_reports b
+                JOIN users u ON b.user_id = u.id
+                ORDER BY b.fecha_reporte DESC
+            """)
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]

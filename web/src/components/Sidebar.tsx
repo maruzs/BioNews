@@ -7,7 +7,7 @@ import {
   FileCheck, Edit3, LogIn, Scale,
   ChevronDown, ChevronUp, Menu,
   BookOpen, Leaf, Search,
-  User, LogOut, Settings
+  User, LogOut, Settings, Bug
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
@@ -228,6 +228,11 @@ const Sidebar = () => {
             </NavLink>
           </ul>
         )}
+
+        <NavLink onClick={handleMobileClose} to="/bugs" className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`} title="Reporte de bugs" style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '15px' }}>
+          <Bug size={20} className="icon" />
+          {!collapsed && <span>Reporte de bugs</span>}
+        </NavLink>
       </div>
     </aside>
   );

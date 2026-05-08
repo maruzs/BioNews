@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, FileText, X, Info, Download } from 'lucide-react';
+import { Search, Calendar, FileText, X, Info, Download, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -24,6 +24,7 @@ const MINSALConsultasPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<MINSALConsulta | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [documents, setDocuments] = useState<Documento[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [filter, setFilter] = useState<'vigentes' | 'resultados'>('vigentes');
@@ -49,6 +50,13 @@ const MINSALConsultasPage = () => {
       const json = await res.json();
       setData(Array.isArray(json) ? json : []);
       refreshCategory(tableName);
+
+      // Cargar favoritos
+      const favRes = await fetch('/api/favorites', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const favJson = await favRes.json();
+      setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
     } catch (err) {
       console.error(err);
     }
@@ -89,6 +97,42 @@ const MINSALConsultasPage = () => {
   const filteredData = data.filter(item => 
     item.titulo.toLowerCase().includes(search.toLowerCase())
   );
+
+  const toggleFavorite = async (e: React.MouseEvent, item: MINSALConsulta) => {
+    e.stopPropagation();
+    const isFav = favorites.has(item.id);
+    try {
+      if (isFav) {
+        await fetch(`/api/favorites/${encodeURIComponent(item.id)}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      } else {
+        await fetch('/api/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            id_o_link: item.id,
+            fuente: 'MINSAL',
+            nombre: item.titulo,
+            accion: '' // MINSAL doesn't have a direct external link for the item, it's modal based
+          })
+        });
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.add(item.id);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
 
   return (
     <div className="report-container">
@@ -168,7 +212,20 @@ const MINSALConsultasPage = () => {
                         {filter === 'vigentes' ? 'VIGENTE' : 'RESULTADO'}
                        </span>
                     </div>
-                    <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '15px', minHeight: '3em', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.titulo}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                      <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.titulo}</div>
+                      <Heart 
+                        size={20} 
+                        onClick={(e) => toggleFavorite(e, item)}
+                        style={{ 
+                          cursor: 'pointer', 
+                          flexShrink: 0,
+                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none', 
+                          color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
+                          transition: 'all 0.2s'
+                        }} 
+                      />
+                    </div>
                     <div className="card-meta">
                       {item.fecha_inicio && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '5px' }}>
@@ -199,9 +256,21 @@ const MINSALConsultasPage = () => {
               <X size={20} />
             </button>
             
-            <div style={{ marginBottom: '25px' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle Consulta MINSAL</span>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginTop: '5px', lineHeight: '1.3', color: '#1e293b' }}>{selectedItem.titulo}</h2>
+            <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle Consulta MINSAL</span>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginTop: '5px', lineHeight: '1.3', color: '#1e293b' }}>{selectedItem.titulo}</h2>
+              </div>
+              <Heart 
+                size={28} 
+                onClick={(e) => toggleFavorite(e, selectedItem)}
+                style={{ 
+                  cursor: 'pointer', 
+                  fill: favorites.has(selectedItem.id) ? 'var(--orange)' : 'none', 
+                  color: favorites.has(selectedItem.id) ? 'var(--orange)' : 'var(--text-light)',
+                  transition: 'all 0.2s'
+                }} 
+              />
             </div>
             
             <div style={{ marginBottom: '30px' }}>

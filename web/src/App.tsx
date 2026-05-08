@@ -12,6 +12,7 @@ import Profile from './components/Profile';
 import MINSALConsultasPage from './components/MINSALConsultasPage';
 import MMAConsultasPage from './components/MMAConsultasPage';
 import DGAConsultasPage from './components/DGAConsultasPage';
+import BugReportPage from './components/BugReportPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 
@@ -97,6 +98,8 @@ function ProtectedLayout() {
 
           {/* Profile */}
           <Route path="/perfil" element={<Profile />} />
+          {/* Bug Reports */}
+          <Route path="/bugs" element={<BugReportPage />} />
         </Routes>
       </main>
     </div>

@@ -17,10 +17,13 @@ import bcrypt
 import asyncio
 from asyncio import Queue
 from typing import Optional, List
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import shutil
+import os
 from src.database.manager import DatabaseManager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -37,6 +40,11 @@ app.add_middleware(
 )
 
 db = DatabaseManager()
+
+# Directorio para uploads
+UPLOAD_DIR = "uploads/bugs"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # ─── SSE NOTIFICATION MANAGER ───────────────────────────────────────────────
 class SSEManager:
@@ -234,6 +242,37 @@ def get_notifications_config():
             config = json.load(f)
             return {"interval": config.get("notification_interval", 15)}
     return {"interval": 15}
+
+# ─── BUG REPORTS ────────────────────────────────────────────────────────────
+@app.post("/api/bugs")
+async def report_bug(
+    titulo: str = Form(...),
+    descripcion: str = Form(...),
+    screenshot: UploadFile = File(None),
+    user = Depends(get_current_user)
+):
+    screenshot_path = None
+    if screenshot:
+        # Validar tamaño (5MB)
+        contents = await screenshot.read()
+        if len(contents) > 5 * 1024 * 1024:
+             raise HTTPException(status_code=400, detail="El archivo es demasiado grande (máximo 5MB)")
+        await screenshot.seek(0)
+        
+        # Guardar archivo
+        file_ext = screenshot.filename.split(".")[-1] if "." in screenshot.filename else "png"
+        filename = f"bug_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{user['sub']}.{file_ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(screenshot.file, buffer)
+        screenshot_path = f"/uploads/bugs/{filename}"
+
+    db.save_bug_report(user["sub"], titulo, descripcion, screenshot_path)
+    return {"success": True}
+
+@app.get("/api/admin/bugs")
+def get_bugs(admin = Depends(get_current_admin)):
+    return db.get_bug_reports()
 
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
