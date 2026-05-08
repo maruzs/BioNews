@@ -214,13 +214,9 @@ const Sidebar = () => {
         </div>
         {(!collapsed && openSections.consultas) && (
           <ul className="submenu">
-            <NavLink onClick={handleMobileClose} to="/consultas/minsal-vigentes" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MINSAL - Vigentes">
-              <CalendarCheck size={18} /> {!collapsed && "MINSAL - Vigentes"}
-              {!collapsed && <Dot show={categoryStatus.minsal_vigentes} />}
-            </NavLink>
-            <NavLink onClick={handleMobileClose} to="/consultas/minsal-resultados" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MINSAL - Resultados">
-              <FileCheck size={18} /> {!collapsed && "MINSAL - Resultados"}
-              {!collapsed && <Dot show={categoryStatus.minsal_resultados} />}
+            <NavLink onClick={handleMobileClose} to="/consultas/minsal" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="MINSAL">
+              <CalendarCheck size={18} /> {!collapsed && "MINSAL"}
+              {!collapsed && <Dot show={categoryStatus.minsal_vigentes || categoryStatus.minsal_resultados} />}
             </NavLink>
             <NavLink onClick={handleMobileClose} to="/consultas/dga" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`} title="DGA">
               <Leaf size={18} /> {!collapsed && "DGA"}

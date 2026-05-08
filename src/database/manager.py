@@ -125,6 +125,34 @@ class DatabaseManager:
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
+
+            # --- TABLAS PARA MMA ---
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mma_abiertas (
+                    id TEXT PRIMARY KEY,
+                    nombre_instrumento TEXT,
+                    fecha_inicio TEXT,
+                    fecha_termino TEXT,
+                    tipo_instrumento TEXT,
+                    tipo_proceso TEXT,
+                    ambito_territorial TEXT,
+                    link_detalle TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mma_cerradas (
+                    id TEXT PRIMARY KEY,
+                    nombre_instrumento TEXT,
+                    fecha_inicio TEXT,
+                    fecha_termino TEXT,
+                    tipo_instrumento TEXT,
+                    ambito_territorial TEXT,
+                    link_detalle TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
@@ -188,7 +216,7 @@ class DatabaseManager:
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales',
-            'minsal_vigentes', 'minsal_resultados'
+            'minsal_vigentes', 'minsal_resultados',            'mma_abiertas', 'mma_cerradas'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -231,7 +259,8 @@ class DatabaseManager:
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos',
-            'minsal_vigentes', 'minsal_resultados'
+            'minsal_vigentes', 'minsal_resultados',
+            'mma_abiertas', 'mma_cerradas'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -418,7 +447,7 @@ class DatabaseManager:
                     ORDER BY anio DESC
                 """)
                 rows = cursor.fetchall()
-                stats['by_year_type'] = [dict(zip(['anio', 'tipo', 'count'], row)) for row in rows if len(row[0]) == 4]
+                stats['by_year_type'] = [dict(zip(['anio', 'tipo', 'count'], row)) for row in rows if row[0] and len(str(row[0])) == 4]
 
             elif table_name == 'fiscalizaciones':
                 # Fiscalizaciones por region
@@ -481,7 +510,7 @@ class DatabaseManager:
                     ORDER BY anio DESC
                 """)
                 rows = cursor.fetchall()
-                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in rows if len(row[0]) == 4]
+                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in rows if row[0] and len(str(row[0])) == 4]
                 
                 # Causas por tipo de procedimiento
                 cursor.execute("SELECT Tipo_de_Procedimiento, COUNT(*) as count FROM Tribunales WHERE Tipo_de_Procedimiento IS NOT NULL GROUP BY Tipo_de_Procedimiento ORDER BY count DESC")
@@ -538,7 +567,7 @@ class DatabaseManager:
             "noticias", "normativas", "pertinencias", "fiscalizaciones", 
             "sancionatorios", "registroSanciones", "programasDeCumplimiento", 
             "medidas_provisionales", "requerimientos", "Tribunales",
-            "minsal_vigentes", "minsal_resultados"
+            "minsal_vigentes", "minsal_resultados", "mma"
         ]
         
         status = {}
@@ -563,7 +592,8 @@ class DatabaseManager:
             "requerimientos": "requerimientos",
             "Tribunales": "Tribunales",
             "minsal_vigentes": "minsal_vigentes",
-            "minsal_resultados": "minsal_resultados"
+            "minsal_resultados": "minsal_resultados",
+            "mma": ["mma_abiertas", "mma_cerradas"]
         }
         
         table = table_mapping.get(category_slug)
@@ -588,21 +618,27 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Si last_exit es NULL, consideramos todo nuevo.
-            if last_exit is None:
-                if viewed_ids:
-                    placeholders = ', '.join(['?'] * len(viewed_ids))
-                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
-                else:
-                    cursor.execute(f'SELECT 1 FROM "{table}" LIMIT 1')
-            else:
-                if viewed_ids:
-                    placeholders = ', '.join(['?'] * len(viewed_ids))
-                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE {date_col} > ? AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
-                else:
-                    cursor.execute(f'SELECT 1 FROM "{table}" WHERE {date_col} > ? LIMIT 1', (last_exit,))
+            tables = table if isinstance(table, list) else [table]
             
-            return cursor.fetchone() is not None
+            for t in tables:
+                # Si last_exit es NULL, consideramos todo nuevo.
+                if last_exit is None:
+                    if viewed_ids:
+                        placeholders = ', '.join(['?'] * len(viewed_ids))
+                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
+                    else:
+                        cursor.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
+                else:
+                    if viewed_ids:
+                        placeholders = ', '.join(['?'] * len(viewed_ids))
+                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > ? AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
+                    else:
+                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > ? LIMIT 1', (last_exit,))
+                
+                if cursor.fetchone():
+                    return True
+            
+            return False
 
     def _normalize_date(self, date_val):
         """Normaliza una fecha a string ISO YYYY-MM-DD HH:MM:SS para comparación."""

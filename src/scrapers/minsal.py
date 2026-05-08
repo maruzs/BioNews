@@ -32,6 +32,7 @@ class MINSALScraper:
         all_details = soup.find_all('details', class_='e-n-accordion-item')
         
         total_nuevos = 0
+        total_procesados = 0
         
         for details in all_details:
             id_attr = details.get('id', '')
@@ -39,19 +40,17 @@ class MINSALScraper:
                 continue
                 
             consulta_id = id_attr.split('-')[-1]
+            total_procesados += 1
             
-            # Determinar si es vigente o resultado basándonos en su posición relativa al h2 de resultados
-            # O simplemente viendo el contenido de la tabla (más fiable)
-            
-            table = details.find('table')
-            if not table:
-                continue
-                
+            # ... resto del código ...
             # Título de la consulta
             title_tag = details.find('div', class_='e-n-accordion-item-title-text')
             titulo = title_tag.get_text(strip=True) if title_tag else ""
             
             # Verificar si es tabla de resultados (columnas Documento y Descarga)
+            table = details.find('table')
+            if not table: continue
+            
             headers = [th.get_text(strip=True).lower() for th in table.find_all('th')]
             is_resultado = "documento" in headers and "descarga" in headers
             
@@ -59,6 +58,7 @@ class MINSALScraper:
                 # Es un resultado de consulta
                 cursor.execute("SELECT 1 FROM minsal_resultados WHERE id = ?", (consulta_id,))
                 if not cursor.fetchone():
+                    print(f"  Nuevo Resultado: {titulo}")
                     cursor.execute("""
                         INSERT INTO minsal_resultados (id, titulo, fecha_scraping)
                         VALUES (?, ?, ?)
@@ -82,6 +82,7 @@ class MINSALScraper:
                 # Es una consulta vigente
                 cursor.execute("SELECT 1 FROM minsal_vigentes WHERE id = ?", (consulta_id,))
                 if not cursor.fetchone():
+                    print(f"  Nueva Consulta Vigente: {titulo}")
                     data = {'fecha_inicio': None, 'periodo_consulta': None, 'indicaciones': None}
                     rows = table.find_all('tr')
                     
@@ -120,6 +121,7 @@ class MINSALScraper:
                     
                     total_nuevos += 1
 
+        print(f"  MINSAL: {total_procesados} consultas analizadas, {total_nuevos} nuevas.")
         conn.commit()
         conn.close()
         return total_nuevos
