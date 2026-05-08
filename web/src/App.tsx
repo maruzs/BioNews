@@ -11,6 +11,7 @@ import AdminPanel from './components/AdminPanel';
 import Profile from './components/Profile';
 import MINSALConsultasPage from './components/MINSALConsultasPage';
 import MMAConsultasPage from './components/MMAConsultasPage';
+import DGAConsultasPage from './components/DGAConsultasPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 
@@ -88,7 +89,7 @@ function ProtectedLayout() {
 
           {/* Consultas Públicas */}
           <Route path="/consultas/minsal" element={<MINSALConsultasPage />} />
-          <Route path="/consultas/dga" element={<div style={{ padding: '40px' }}><h1 className="report-title">DGA</h1><p>En proceso...</p></div>} />
+          <Route path="/consultas/dga" element={<DGAConsultasPage />} />
           <Route path="/consultas/mma" element={<MMAConsultasPage />} />
 
           {/* Admin Panel */}

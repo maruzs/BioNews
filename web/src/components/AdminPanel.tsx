@@ -13,6 +13,8 @@ const AdminPanel = () => {
     pertinencias_interval: 1,
     noticias_interval: 1,
     tribunales_interval: 1,
+    consultas_time_1: "08:30",
+    consultas_time_2: "15:30",
     hora_inicio: "07:00",
     hora_fin: "19:00",
     notification_interval: 15,
@@ -228,6 +230,14 @@ const AdminPanel = () => {
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Fin (Diario)</label>
               <input type="time" value={schedulerConfig.hora_fin} onChange={(e) => setSchedulerConfig({...schedulerConfig, hora_fin: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Consultas Horario 1</label>
+              <input type="time" value={schedulerConfig.consultas_time_1} onChange={(e) => setSchedulerConfig({...schedulerConfig, consultas_time_1: e.target.value})} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Consultas Horario 2</label>
+              <input type="time" value={schedulerConfig.consultas_time_2} onChange={(e) => setSchedulerConfig({...schedulerConfig, consultas_time_2: e.target.value})} className="filter-select" />
             </div>
             <div style={{ flex: '1 1 200px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Hora de Testeo</label>
