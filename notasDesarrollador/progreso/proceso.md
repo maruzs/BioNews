@@ -28,32 +28,9 @@ Habra que rellenar nuevamente la tabla de pertinencias para que se agreguen las 
 2. Que se pueda ordenar por fecha de manera descendente (De mas nueva a mas antigua) por defecto, para eso tambien necesitamos entrar en mas detalle en los expedientes. Por lo que necesito que se guarde en la base de datos cierta informacion dentro del expediente. Ademas no todas las categorias del SNIFA tienen fecha, pero como cada categoria del SNIFA tiene su propia tabla no sera complicado implementarlo.
 3. Clasificar por estado (leve, grave, gravisima), esto requiere investigar internamente tambien (SANCIONATORIOS)
 
-#### Tribunales (3 - Media)
+#### Tribunales (4 - Media Baja)
 
-1. Implementar filtro en Desplegar filtros para que se pueda filtrar por Tipo de Procedimiento
-2. Que se pueda filtrar por categoria economica, deberan mapearse las categorias economicas, require investigacion y definicion de las categorias.
-
-### Scrapers nuevos (3 - Media)
-
-Quiero implementar nuevos scrapers pero requieren que investigue, se haran despues. No es necesario que investigues ahora sobre esto.
-
-#### Nuevas fuentes de noticias: (3 - Media)
-
-Hay que investigar las paginas para construir e implementar los scrapers. Se podrian agregar mas fuentes a futuro.
-
-- Direccion General de Aguas (DGA) -> https://dga.mop.gob.cl/noticias/
-
-#### Consultas Ciudadanas/Publicas: (3 - Media)
-
-Recibe informacion de las siguientes fuentes:
-
-- Ministerio de Salud (Minsal) -> https://www.minsal.cl/consultas-publicas-vigentes/
-- Direccion General de Aguas (DGA) -> https://dga.mop.gob.cl/consulta-publica/
-- Ministerio de Medio Ambiente (MMA) -> https://consultasciudadanas.mma.gob.cl/portal#consultas
-
-Hay que analizar las paginas para construir e implementar los scrapers.
-Se podrian agregar mas fuentesa futuro.
-Debera ser una nueva pestana en la sidebar
+2. Que se pueda filtrar por categoria economica, deberan mapearse las categorias economicas, requiere investigacion y definicion de las categorias.
 
 ### Dashboards (1 - Alta)
 

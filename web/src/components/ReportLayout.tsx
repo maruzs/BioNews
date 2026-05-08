@@ -99,6 +99,8 @@ const TABLE_COLUMNS: Record<string, ColumnConfig[]> = {
     { field: 'Expediente', headerName: 'Expediente', width: 140 },
     { field: 'Nombre_de_Proyecto', headerName: 'Nombre del Proyecto', flex: 1, minWidth: 250 },
     { field: 'Proponente', headerName: 'Proponente', flex: 1, minWidth: 200 },
+    { field: 'tipo_proyecto', headerName: 'Tipo', width: 100 },
+    { field: 'categoria_economica', headerName: 'Categoría Económica', width: 180 },
     { field: 'Fecha', headerName: 'Fecha', width: 120 },
     { field: 'Estado', headerName: 'Estado', width: 140 },
   ],

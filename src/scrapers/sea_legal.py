@@ -9,6 +9,7 @@ from datetime import datetime
 import sqlite3
 import json
 import os
+import re
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
@@ -16,6 +17,70 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 class PertinenciasScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
+    MAPPING_CATEGORIAS = {
+        'a': 'Infraestructura Hidráulica',
+        'b': 'Energía',
+        'c': 'Energía',
+        'd': 'Energía',
+        'e': 'Infraestructura de Transporte',
+        'f': 'Infraestructura Portuaria',
+        'g': 'Inmobiliarios',
+        'h': 'Inmobiliarios',
+        'h2': 'Instalaciones fabriles varias',
+        'i1': 'Minería',
+        'i': 'Minería',
+        'j1': 'Energía',
+        'j3': 'Minería',
+        'j4': 'Otros',
+        'k': 'Instalaciones fabriles varias',
+        'l': 'Agropecuario',
+        'm': 'Forestal',
+        'n': 'Pesca y Acuicultura',
+        'ñ': 'Otros',
+        'o': 'Saneamiento Ambiental',
+        'p': 'Otros',
+        'q': 'Agropecuario',
+        'r': 'Otros',
+        's': 'Otros',
+        't': 'Equipamiento',
+        'u': 'Otros'
+    }
+
+    def get_categoria_economica(self, typology_name):
+        if not typology_name:
+            return None
+        
+        match = re.match(r'^([a-zñ\d\.]+)\)', typology_name.lower())
+        if not match:
+            return None
+        
+        code = match.group(1)
+        
+        letter_match = re.search(r'([a-zñ]+)', code)
+        if not letter_match:
+            return "Otros"
+        
+        letter = letter_match.group(1)
+        
+        number_match = re.search(r'\.(\d+)', code)
+        if not number_match:
+            number_match = re.search(r'([a-zñ]+)(\d+)', code)
+            if number_match:
+                number = number_match.group(2)
+            else:
+                number = ""
+        else:
+            number = number_match.group(1)
+        
+        full_code = letter + number
+        if full_code in self.MAPPING_CATEGORIAS:
+            return self.MAPPING_CATEGORIAS[full_code]
+        
+        if letter in self.MAPPING_CATEGORIAS:
+            return self.MAPPING_CATEGORIAS[letter]
+        
+        return "Otros"
+
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
         usuario = "21324866-9"
@@ -131,6 +196,13 @@ class PertinenciasScraper:
                 estado_dict = item.get("state")
                 estado = estado_dict.get("valor", "") if isinstance(estado_dict, dict) else ""
                 
+                # Nuevos campos
+                tipo_proyecto_dict = item.get("projectType")
+                tipo_proyecto = tipo_proyecto_dict.get("valor") if isinstance(tipo_proyecto_dict, dict) else None
+                
+                typology_name = item.get("primaryTypologyName", "")
+                categoria_economica = self.get_categoria_economica(typology_name)
+                
                 accion = f"{url_base}/api/public/expediente/{expediente}"
                 
                 from ..utils.date_parser import parse_fecha
@@ -139,9 +211,9 @@ class PertinenciasScraper:
                 try:
                     cursor.execute('''
                         INSERT OR IGNORE INTO pertinencias 
-                        (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                        (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping, tipo_proyecto, categoria_economica)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tipo_proyecto, categoria_economica))
                     
                     if cursor.rowcount > 0:
                         nuevos_registros += 1

@@ -511,8 +511,8 @@ def global_search(q: str = "", user = Depends(get_current_user)):
         ("normativas",            ["normativa", "organismo", "suborganismo"], "normativa", "accion", "accion"),
         ("noticias",              ["titulo", "fuente"], "titulo", "link", "link"),
         ("Tribunales",            ["Rol", "Caratula"], "Caratula", "Rol", "Accion"),
-        ("pertinencias",          ["Expediente", "Nombre_de_Proyecto", "Proponente"], "Nombre_de_Proyecto", "Expediente", "Accion"),
-        ("sea_proyectos_evaluados", ["nombre", "titular", "via_ingreso", "estado_proyecto"], "nombre", "id", "url"),
+        ("pertinencias",          ["Expediente", "Nombre_de_Proyecto", "Proponente", "tipo_proyecto", "categoria_economica"], "Nombre_de_Proyecto", "Expediente", "Accion"),
+        ("sea_proyectos_evaluados", ["nombre", "titular", "via_ingreso", "estado_proyecto", "tipo_proyecto", "categoria_economica"], "nombre", "id", "url"),
     ]
     
     with db.get_connection() as conn:

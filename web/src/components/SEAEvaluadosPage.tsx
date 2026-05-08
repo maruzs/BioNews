@@ -13,6 +13,7 @@ interface SEAEvaluado {
   fecha_presentacion: string;
   subestado_proyecto: string;
   tipo_proyecto: string;
+  categoria_economica: string;
   region: string;
   url: string;
   fecha_scraping: string;
@@ -38,6 +39,7 @@ const SEAEvaluadosPage = () => {
   const [filterEstado, setFilterEstado] = useState('all');
   const [filterRegion, setFilterRegion] = useState('all');
   const [filterTipo, setFilterTipo] = useState('all');
+  const [filterCategoria, setFilterCategoria] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -135,6 +137,7 @@ const SEAEvaluadosPage = () => {
       estados: Array.from(new Set(data.map(i => i.estado_proyecto).filter(Boolean))).sort(),
       regiones: Array.from(new Set(data.map(i => i.region).filter(Boolean))).sort(),
       tipos: Array.from(new Set(data.map(i => i.tipo_proyecto).filter(Boolean))).sort(),
+      categorias: Array.from(new Set(data.map(i => i.categoria_economica).filter(Boolean))).sort(),
     };
   }, [data]);
 
@@ -149,6 +152,7 @@ const SEAEvaluadosPage = () => {
       const matchesEstado = filterEstado === 'all' || item.estado_proyecto === filterEstado;
       const matchesRegion = filterRegion === 'all' || item.region === filterRegion;
       const matchesTipo = filterTipo === 'all' || item.tipo_proyecto === filterTipo;
+      const matchesCategoria = filterCategoria === 'all' || item.categoria_economica === filterCategoria;
       
       let matchesDate = true;
       if (dateFrom || dateTo) {
@@ -157,9 +161,9 @@ const SEAEvaluadosPage = () => {
         if (dateTo && itemDate > dateTo) matchesDate = false;
       }
       
-      return matchesSearch && matchesTitular && matchesVia && matchesEstado && matchesRegion && matchesTipo && matchesDate;
+      return matchesSearch && matchesTitular && matchesVia && matchesEstado && matchesRegion && matchesTipo && matchesCategoria && matchesDate;
     });
-  }, [data, searchTerm, filterTitular, filterVia, filterEstado, filterRegion, filterTipo, dateFrom, dateTo]);
+  }, [data, searchTerm, filterTitular, filterVia, filterEstado, filterRegion, filterTipo, filterCategoria, dateFrom, dateTo]);
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -180,6 +184,7 @@ const SEAEvaluadosPage = () => {
     setFilterEstado('all');
     setFilterRegion('all');
     setFilterTipo('all');
+    setFilterCategoria('all');
     setDateFrom('');
     setDateTo('');
     setCurrentPage(1);
@@ -295,6 +300,13 @@ const SEAEvaluadosPage = () => {
             <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
               <option value="all">Todos los tipos</option>
               {options.tipos.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Categoría Económica</label>
+            <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+              <option value="all">Todas las categorías</option>
+              {options.categorias.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
@@ -475,6 +487,7 @@ const SEAEvaluadosPage = () => {
               <DetailField label="Vía Ingreso" value={selectedItem.via_ingreso} />
               <DetailField label="Región" value={selectedItem.region || 'Multiregional'} />
               <DetailField label="Tipo de Proyecto" value={selectedItem.tipo_proyecto} />
+              <DetailField label="Categoría Económica" value={selectedItem.categoria_economica} />
               <DetailField label="Razón de Ingreso" value={selectedItem.razon_ingreso} />
             </div>
 

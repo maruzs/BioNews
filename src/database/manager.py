@@ -152,6 +152,7 @@ class DatabaseManager:
                     fecha_presentacion TEXT,
                     subestado_proyecto TEXT,
                     tipo_proyecto TEXT,
+                    categoria_economica TEXT,
                     region TEXT,
                     url TEXT,
                     fecha_scraping TIMESTAMP
@@ -206,6 +207,18 @@ class DatabaseManager:
             sea_columns = [col[1] for col in cursor.fetchall()]
             if 'region' not in sea_columns:
                 cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN region TEXT")
+            if 'categoria_economica' not in sea_columns:
+                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN categoria_economica TEXT")
+            if 'tipo_proyecto' not in sea_columns:
+                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN tipo_proyecto TEXT")
+            
+            # Migración para pertinencias
+            cursor.execute("PRAGMA table_info(pertinencias)")
+            pert_columns = [col[1] for col in cursor.fetchall()]
+            if 'categoria_economica' not in pert_columns:
+                cursor.execute("ALTER TABLE pertinencias ADD COLUMN categoria_economica TEXT")
+            if 'tipo_proyecto' not in pert_columns:
+                cursor.execute("ALTER TABLE pertinencias ADD COLUMN tipo_proyecto TEXT")
                 
             conn.commit()
 
