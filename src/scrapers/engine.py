@@ -22,6 +22,7 @@ class ScrapingEngine:
 
     def get_soup(self, url, wait_for_selector=None):
         exe_path = self._get_browser_executable()
+        browser = None
         
         with sync_playwright() as p:
             try:
@@ -43,14 +44,19 @@ class ScrapingEngine:
                 page.goto(url, timeout=90000, wait_until="load")
                 
                 if wait_for_selector:
-                    page.wait_for_selector(wait_for_selector, timeout=45000)
+                    try:
+                        page.wait_for_selector(wait_for_selector, timeout=45000)
+                    except:
+                        # Si el selector no aparece, igual retornamos lo que tengamos
+                        pass
                 
                 content = page.content()
-                browser.close()
                 return BeautifulSoup(content, "html.parser")
             except Exception as e:
-                try:
-                    browser.close()
-                except:
-                    pass
                 raise RuntimeError(f"Fallo de conexion en {url}: {str(e)}")
+            finally:
+                if browser:
+                    try:
+                        browser.close()
+                    except:
+                        pass

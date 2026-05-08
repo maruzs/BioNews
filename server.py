@@ -18,6 +18,7 @@ import asyncio
 from asyncio import Queue
 from typing import Optional, List
 from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status, Header, Request, WebSocket, WebSocketDisconnect, File, UploadFile, Form
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -556,7 +557,7 @@ async def notification_stream(request: Request, token: str = ""):
     )
 
 # ─── SCRAPING ENDPOINTS ───────────────────────────────────────────────────────
-def _run_all_scrapers():
+async def _run_all_scrapers():
     """Función interna que corre todos los scrapers secuencialmente."""
     try:
         # Scrapers de noticias
@@ -625,16 +626,16 @@ def _run_all_scrapers():
     for nombre, ScraperClass in datos_scrapers:
         log.info(f"Procesando: {nombre}...")
         try:
-            scraper = ScraperClass()
-            nuevos = scraper.run()
+            scraper_inst = ScraperClass()
+            nuevos = await asyncio.to_thread(scraper_inst.run)
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
             log.info(f"{nombre}: {nuevos} nuevos registros.")
             if nuevos > 0:
                 cat = mapping.get(nombre)
                 if cat:
-                    asyncio.run(notify_new_content(cat))
+                    await notify_new_content(cat)
                     if nombre == "MINSAL Consultas":
-                        asyncio.run(notify_new_content("minsal_resultados"))
+                        await notify_new_content("minsal_resultados")
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
             log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
@@ -656,13 +657,14 @@ def _run_all_scrapers():
     for nombre, ScraperClass in noticias_scrapers:
         log.info(f"Procesando: {nombre}...")
         try:
-            items = ScraperClass().get_latest_news()
+            scraper_inst = ScraperClass()
+            items = await asyncio.to_thread(scraper_inst.get_latest_news)
             if items:
                 nuevas = db.save_news(items)
                 db.log_scraper_run(nombre, exito=True, nuevos=nuevas)
                 log.info(f"{nombre}: {nuevas} nuevas noticias.")
                 if nuevas > 0:
-                    asyncio.run(notify_new_content("noticias"))
+                    await notify_new_content("noticias")
             else:
                 db.log_scraper_run(nombre, exito=True, nuevos=0)
                 log.info(f"{nombre}: sin noticias nuevas.")
@@ -682,7 +684,7 @@ def scrape_tribunales(background_tasks: BackgroundTasks):
     background_tasks.add_task(_run_tribunales_scrapers)
     return {"message": "Scraping de tribunales iniciado."}
 
-def _run_tribunales_scrapers():
+async def _run_tribunales_scrapers():
     """Función interna que corre solo los scrapers de tribunales legales."""
     log.info("--- SCRAPING TRIBUNALES MANUAL ---")
     
@@ -704,18 +706,19 @@ def _run_tribunales_scrapers():
     for nombre, ScraperClass in scrapers:
         log.info(f"Procesando {nombre}...")
         try:
-            nuevos = ScraperClass().run()
+            scraper_inst = ScraperClass()
+            nuevos = await asyncio.to_thread(scraper_inst.run)
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
             log.info(f"{nombre}: {nuevos} nuevas causas.")
             if nuevos > 0:
-                asyncio.run(notify_new_content("Tribunales"))
+                await notify_new_content("Tribunales")
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
             log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
 
     log.info("--- SCRAPING TRIBUNALES FINALIZADO ---")
 
-def _run_news_scrapers():
+async def _run_news_scrapers():
     """Función interna que corre solo los scrapers de noticias."""
     try:
         from src.scrapers.mma import MMAScraper
@@ -747,13 +750,16 @@ def _run_news_scrapers():
     for nombre, ScraperClass in noticias_scrapers:
         log.info(f"Procesando: {nombre}...")
         try:
-            items = ScraperClass().get_latest_news()
+            # Ejecutamos el scraper (síncrono) en un hilo para no bloquear el loop principal
+            scraper_inst = ScraperClass()
+            items = await asyncio.to_thread(scraper_inst.get_latest_news)
+            
             if items:
                 nuevas = db.save_news(items)
                 db.log_scraper_run(nombre, exito=True, nuevos=nuevas)
                 log.info(f"{nombre}: {nuevas} nuevas noticias.")
                 if nuevas > 0:
-                    asyncio.run(notify_new_content("noticias"))
+                    await notify_new_content("noticias")
             else:
                 db.log_scraper_run(nombre, exito=True, nuevos=0)
                 log.info(f"{nombre}: sin noticias nuevas.")
@@ -767,13 +773,14 @@ def scrape_news(background_tasks: BackgroundTasks, admin = Depends(get_current_a
     background_tasks.add_task(_run_news_scrapers)
     return {"message": "Scraping de noticias iniciado en background."}
 
-def _run_sea_scrapers():
+async def _run_sea_scrapers():
     from src.scrapers.sea_legal import PertinenciasScraper
     try:
-        nuevos = PertinenciasScraper().run()
+        scraper_inst = PertinenciasScraper()
+        nuevos = await asyncio.to_thread(scraper_inst.run)
         db.log_scraper_run("Pertinencias SEA", exito=True, nuevos=nuevos)
         if nuevos > 0:
-            asyncio.run(notify_new_content("pertinencias"))
+            await notify_new_content("pertinencias")
     except Exception as e:
         db.log_scraper_run("Pertinencias SEA", exito=False, error=str(e))
 
@@ -782,7 +789,7 @@ def scrape_sea(background_tasks: BackgroundTasks, admin = Depends(get_current_ad
     background_tasks.add_task(_run_sea_scrapers)
     return {"message": "Scraping de SEA iniciado en background."}
 
-def _run_snifa_scrapers():
+async def _run_snifa_scrapers():
     from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
     from src.scrapers.reqSEIA import RequerimientosScraper
     from src.scrapers.snifa import SancionatoriosScraper
@@ -808,12 +815,13 @@ def _run_snifa_scrapers():
     }
     for nombre, ScraperClass in scrapers:
         try:
-            nuevos = ScraperClass().run()
+            scraper_inst = ScraperClass()
+            nuevos = await asyncio.to_thread(scraper_inst.run)
             db.log_scraper_run(nombre, exito=True, nuevos=nuevos)
             if nuevos > 0:
                 cat = mapping.get(nombre)
                 if cat:
-                    asyncio.run(notify_new_content(cat))
+                    await notify_new_content(cat)
         except Exception as e:
             db.log_scraper_run(nombre, exito=False, error=str(e))
 
@@ -822,13 +830,14 @@ def scrape_snifa(background_tasks: BackgroundTasks, admin = Depends(get_current_
     background_tasks.add_task(_run_snifa_scrapers)
     return {"message": "Scraping de SNIFA iniciado en background."}
 
-def _run_normativas_scrapers():
+async def _run_normativas_scrapers():
     from src.scrapers.diario_oficial import DiarioOficialScraper
     try:
-        nuevos = DiarioOficialScraper().run()
+        scraper_inst = DiarioOficialScraper()
+        nuevos = await asyncio.to_thread(scraper_inst.run)
         db.log_scraper_run("Diario Oficial (Normativas)", exito=True, nuevos=nuevos)
         if nuevos > 0:
-            asyncio.run(notify_new_content("normativas"))
+            await notify_new_content("normativas")
     except Exception as e:
         db.log_scraper_run("Diario Oficial (Normativas)", exito=False, error=str(e))
 
@@ -837,18 +846,19 @@ def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_cur
     background_tasks.add_task(_run_normativas_scrapers)
     return {"message": "Scraping de Normativas iniciado en background."}
 
-def _run_consultas_scrapers():
+async def _run_consultas_scrapers():
     from src.scrapers.minsal import MINSALScraper
     from src.scrapers.mma_consultas import MMAConsultasScraper
     from src.scrapers.dga_consultas import DGAConsultasScraper
     # MINSAL
     try:
         log.info("Procesando MINSAL Consultas...")
-        nuevos_minsal = MINSALScraper().run()
+        scraper_inst = MINSALScraper()
+        nuevos_minsal = await asyncio.to_thread(scraper_inst.run)
         db.log_scraper_run("MINSAL Consultas", exito=True, nuevos=nuevos_minsal)
         if nuevos_minsal > 0:
-            asyncio.run(notify_new_content("minsal_vigentes"))
-            asyncio.run(notify_new_content("minsal_resultados"))
+            await notify_new_content("minsal_vigentes")
+            await notify_new_content("minsal_resultados")
     except Exception as e:
         db.log_scraper_run("MINSAL Consultas", exito=False, error=str(e))
         log.error(f"Error en MINSAL Consultas: {e}")
@@ -856,10 +866,11 @@ def _run_consultas_scrapers():
     # MMA
     try:
         log.info("Procesando MMA Consultas...")
-        nuevos_mma = MMAConsultasScraper().run()
+        scraper_inst = MMAConsultasScraper()
+        nuevos_mma = await asyncio.to_thread(scraper_inst.run)
         db.log_scraper_run("MMA Consultas", exito=True, nuevos=nuevos_mma)
         if nuevos_mma > 0:
-            asyncio.run(notify_new_content("mma"))
+            await notify_new_content("mma")
     except Exception as e:
         db.log_scraper_run("MMA Consultas", exito=False, error=str(e))
         log.error(f"Error en MMA Consultas: {e}")
@@ -867,10 +878,11 @@ def _run_consultas_scrapers():
     # DGA
     try:
         log.info("Procesando DGA Consultas...")
-        nuevos_dga = DGAConsultasScraper().run()
+        scraper_inst = DGAConsultasScraper()
+        nuevos_dga = await asyncio.to_thread(scraper_inst.run)
         db.log_scraper_run("DGA Consultas", exito=True, nuevos=nuevos_dga)
         if nuevos_dga > 0:
-            asyncio.run(notify_new_content("dga"))
+            await notify_new_content("dga")
     except Exception as e:
         db.log_scraper_run("DGA Consultas", exito=False, error=str(e))
         log.error(f"Error en DGA Consultas: {e}")
@@ -909,7 +921,7 @@ async def scheduler_monitor():
                         horario = "1" if current_time == config.get("snifa_time_1") else "2"
                         log.info(f"ALERTA: Iniciando scrapeo programado de SNIFA (Horario {horario}) a las {current_time}")
                         # Ejecutar en background sin bloquear el monitor
-                        await asyncio.to_thread(_run_snifa_scrapers)
+                        asyncio.create_task(_run_snifa_scrapers())
 
                     # Hora de testeo específica solicitada por el usuario
                     if current_time == config.get("test_time"):
