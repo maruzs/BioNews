@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, X, HelpCircle } from 'lucide-react';
+import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -110,9 +110,18 @@ const DGAConsultasPage = () => {
                         marginBottom: '15px',
                         fontSize: '4rem',
                         color: 'var(--primary)',
-                        fontFamily: 'etmodules' // Font icon de Divi si es posible, o fallback
+                        fontFamily: 'etmodules'
                     }}>
-                      {item.imagen && item.imagen.length === 1 ? item.imagen : <HelpCircle size={64} />}
+                      {(() => {
+                        const nombre = item.nombre.toLowerCase();
+                        if (nombre.includes('condiciones técnicas') && nombre.includes('obras hidráulicas')) {
+                          return <Pencil size={64} />;
+                        }
+                        if (nombre.includes('declaración jurada') && (nombre.includes('bocatomas') || nombre.includes('cauces naturales'))) {
+                          return <ClipboardList size={64} />;
+                        }
+                        return item.imagen && item.imagen.length === 1 ? item.imagen : <HelpCircle size={64} />;
+                      })()}
                     </div>
                     <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '15px', flex: 1 }}>{item.nombre}</div>
                     <div className="card-action" style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>

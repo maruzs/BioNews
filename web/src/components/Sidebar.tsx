@@ -45,7 +45,7 @@ const Sidebar = () => {
     sea: true,
     sma: true,
     tribunales: true,
-    consultas: false
+    consultas: true
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
