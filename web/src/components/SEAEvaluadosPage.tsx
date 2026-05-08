@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 interface SEAEvaluado {
   id: string;
@@ -186,7 +186,7 @@ const SEAEvaluadosPage = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Proyectos Evaluados SEA</h1>
         <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Visualización y seguimiento de proyectos en el Sistema de Evaluación de Impacto Ambiental.</p>
@@ -206,10 +206,18 @@ const SEAEvaluadosPage = () => {
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             style={{ 
-              width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', 
+              width: '100%', padding: '10px 40px 10px 40px', borderRadius: '8px', 
               border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
             }}
           />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
         
         <button 
@@ -228,6 +236,20 @@ const SEAEvaluadosPage = () => {
           {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
+        <button 
+          onClick={resetFilters}
+          title="Restablecer todos los filtros"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'white', color: 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
+          }}
+        >
+          <RotateCcw size={18} />
+          Restablecer
+        </button>
+
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
           {filteredData.length} resultados encontrados
         </div>
@@ -238,7 +260,7 @@ const SEAEvaluadosPage = () => {
         <div style={{ 
           backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
           border: '1px solid var(--border)', marginBottom: '25px',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px'
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
         }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Titular</label>
@@ -283,12 +305,6 @@ const SEAEvaluadosPage = () => {
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Hasta</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button onClick={resetFilters} style={{ 
-              width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', 
-              backgroundColor: 'white', color: 'var(--text-dark)', cursor: 'pointer', fontWeight: 500
-            }}>Limpiar Filtros</button>
-          </div>
         </div>
       )}
 
@@ -316,14 +332,16 @@ const SEAEvaluadosPage = () => {
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
             gap: '25px',
-            marginBottom: '40px'
+            marginBottom: '40px',
+            width: '100%'
           }}>
             {paginatedData.map(item => (
               <div key={item.id} style={{ 
                 backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
                 overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
                 display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer', position: 'relative'
+                cursor: 'pointer', position: 'relative',
+                height: '100%'
               }}
               onClick={() => handleOpenModal(item)}
               onMouseOver={(e) => {

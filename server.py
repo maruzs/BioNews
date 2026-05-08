@@ -1014,8 +1014,10 @@ def health():
     return {"status": "ok"}
 
 # ─── BACKGROUND SCHEDULER MONITOR ─────────────────────────────────────────────
+running_scrapers = set()
+
 async def scheduler_monitor():
-    """Tarea que monitorea el scheduler.json y loguea ejecuciones de prueba."""
+    """Tarea que monitorea el scheduler.json y ejecuta tareas programadas."""
     last_checked_minute = ""
     while True:
         try:
@@ -1029,24 +1031,72 @@ async def scheduler_monitor():
                 now = datetime.datetime.now()
                 current_time = now.strftime("%H:%M")
                 
-                # Solo loguear una vez por minuto
+                # 1. Ejecuciones por HORARIO FIJO (Consultas y SNIFA)
                 if current_time != last_checked_minute:
-                    # Tiempos de SNIFA
+                    # Consultas Públicas
+                    if current_time == config.get("consultas_time_1") or current_time == config.get("consultas_time_2"):
+                        if "consultas" not in running_scrapers:
+                            log.info(f"ALERTA: Iniciando scrapeo programado de Consultas Públicas a las {current_time}")
+                            running_scrapers.add("consultas")
+                            asyncio.create_task(run_with_lock("consultas", _run_consultas_scrapers()))
+                    
+                    # SNIFA
                     if current_time == config.get("snifa_time_1") or current_time == config.get("snifa_time_2"):
-                        horario = "1" if current_time == config.get("snifa_time_1") else "2"
-                        log.info(f"ALERTA: Iniciando scrapeo programado de SNIFA (Horario {horario}) a las {current_time}")
-                        # Ejecutar en background sin bloquear el monitor
-                        asyncio.create_task(_run_snifa_scrapers())
+                        if "snifa" not in running_scrapers:
+                            log.info(f"ALERTA: Iniciando scrapeo programado de SNIFA a las {current_time}")
+                            running_scrapers.add("snifa")
+                            asyncio.create_task(run_with_lock("snifa", _run_snifa_scrapers()))
 
-                    # Hora de testeo específica solicitada por el usuario
+                    # Hora de testeo
                     if current_time == config.get("test_time"):
                         log.info(f"Testeo ejecutado a las {current_time}")
                     
                     last_checked_minute = current_time
+
+                # 2. Ejecuciones por INTERVALO (SEA, Noticias, Tribunales)
+                hora_inicio = config.get("hora_inicio", "07:00")
+                hora_fin = config.get("hora_fin", "19:00")
+                
+                if hora_inicio <= current_time <= hora_fin:
+                    logs = db.get_scraper_logs()
+                    
+                    def should_run(fuente_name, interval_hours, task_id):
+                        if not interval_hours or task_id in running_scrapers: 
+                            return False
+                        log_entry = next((l for l in logs if l['fuente'] == fuente_name), None)
+                        if not log_entry: return True
+                        
+                        ultimo_intento = datetime.datetime.fromisoformat(log_entry['ultimo_intento'])
+                        diff = now - ultimo_intento
+                        return diff.total_seconds() >= int(interval_hours) * 3600
+
+                    if should_run("Pertinencias SEA", config.get("pertinencias_interval"), "sea"):
+                        log.info(f"Iniciando scrapeo programado de SEA por intervalo ({config.get('pertinencias_interval')}h)")
+                        running_scrapers.add("sea")
+                        asyncio.create_task(run_with_lock("sea", _run_sea_scrapers()))
+                    
+                    if should_run("Noticias", config.get("noticias_interval"), "news"):
+                        log.info(f"Iniciando scrapeo programado de Noticias por intervalo ({config.get('noticias_interval')}h)")
+                        running_scrapers.add("news")
+                        asyncio.create_task(run_with_lock("news", _run_news_scrapers()))
+
+                    if should_run("Tribunales Ambientales", config.get("tribunales_interval"), "tribunales"):
+                        log.info(f"Iniciando scrapeo programado de Tribunales por intervalo ({config.get('tribunales_interval')}h)")
+                        running_scrapers.add("tribunales")
+                        asyncio.create_task(run_with_lock("tribunales", _run_tribunales_scrapers()))
+
         except Exception as e:
             log.error(f"Error en scheduler_monitor: {e}")
         
-        await asyncio.sleep(30) # Verificar cada 30 segundos
+        # El usuario pidió ver cada 40 minutos (2400 segundos) para evitar spam
+        await asyncio.sleep(2400)
+
+async def run_with_lock(task_id, coro):
+    try:
+        await coro
+    finally:
+        if task_id in running_scrapers:
+            running_scrapers.remove(task_id)
 
 @app.on_event("startup")
 async def startup_event():
