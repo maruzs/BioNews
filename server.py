@@ -487,6 +487,7 @@ def _run_all_scrapers():
         from src.scrapers.sanciones import RegistroSancionesScraper
         from src.scrapers.minsal import MINSALScraper
         from src.scrapers.mma_consultas import MMAConsultasScraper
+        from src.scrapers.dga_consultas import DGAConsultasScraper
     except ImportError as e:
         log.error(f"Error de importación al iniciar scrapers: {e}")
         return
@@ -506,6 +507,7 @@ def _run_all_scrapers():
         ("SNIFA Registro Sanciones",   RegistroSancionesScraper),
         ("MINSAL Consultas",           MINSALScraper),
         ("MMA Consultas",              MMAConsultasScraper),
+        ("DGA Consultas",              DGAConsultasScraper),
     ]
 
     log.info("--- SCRAPING DATOS ---")
@@ -522,6 +524,7 @@ def _run_all_scrapers():
         "SNIFA Registro Sanciones": "registroSanciones",
         "MINSAL Consultas": "minsal_vigentes",
         "MMA Consultas": "mma",
+        "DGA Consultas": "dga",
     }
     for nombre, ScraperClass in datos_scrapers:
         log.info(f"Procesando: {nombre}...")
@@ -741,6 +744,7 @@ def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_cur
 def _run_consultas_scrapers():
     from src.scrapers.minsal import MINSALScraper
     from src.scrapers.mma_consultas import MMAConsultasScraper
+    from src.scrapers.dga_consultas import DGAConsultasScraper
     # MINSAL
     try:
         log.info("Procesando MINSAL Consultas...")
@@ -763,6 +767,17 @@ def _run_consultas_scrapers():
     except Exception as e:
         db.log_scraper_run("MMA Consultas", exito=False, error=str(e))
         log.error(f"Error en MMA Consultas: {e}")
+        
+    # DGA
+    try:
+        log.info("Procesando DGA Consultas...")
+        nuevos_dga = DGAConsultasScraper().run()
+        db.log_scraper_run("DGA Consultas", exito=True, nuevos=nuevos_dga)
+        if nuevos_dga > 0:
+            asyncio.run(notify_new_content("dga"))
+    except Exception as e:
+        db.log_scraper_run("DGA Consultas", exito=False, error=str(e))
+        log.error(f"Error en DGA Consultas: {e}")
 
 @app.post("/api/scrape/consultas")
 def scrape_consultas(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):

@@ -153,6 +153,16 @@ class DatabaseManager:
                     fecha_scraping TIMESTAMP
                 )
             """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dga_consultas (
+                    id TEXT PRIMARY KEY,
+                    nombre TEXT,
+                    imagen TEXT,
+                    url TEXT,
+                    fecha_scraping TIMESTAMP
+                )
+            """)
             conn.commit()
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
@@ -216,7 +226,8 @@ class DatabaseManager:
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales',
-            'minsal_vigentes', 'minsal_resultados',            'mma_abiertas', 'mma_cerradas'
+            'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas',
+            'dga_consultas'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -260,7 +271,7 @@ class DatabaseManager:
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos',
             'minsal_vigentes', 'minsal_resultados',
-            'mma_abiertas', 'mma_cerradas'
+            'mma_abiertas', 'mma_cerradas', 'dga_consultas'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
@@ -567,7 +578,7 @@ class DatabaseManager:
             "noticias", "normativas", "pertinencias", "fiscalizaciones", 
             "sancionatorios", "registroSanciones", "programasDeCumplimiento", 
             "medidas_provisionales", "requerimientos", "Tribunales",
-            "minsal_vigentes", "minsal_resultados", "mma"
+            "minsal_vigentes", "minsal_resultados", "mma", "dga"
         ]
         
         status = {}
@@ -593,7 +604,8 @@ class DatabaseManager:
             "Tribunales": "Tribunales",
             "minsal_vigentes": "minsal_vigentes",
             "minsal_resultados": "minsal_resultados",
-            "mma": ["mma_abiertas", "mma_cerradas"]
+            "mma": ["mma_abiertas", "mma_cerradas"],
+            "dga": "dga_consultas"
         }
         
         table = table_mapping.get(category_slug)

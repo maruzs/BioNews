@@ -34,6 +34,8 @@ DEFAULT_CONFIG = {
     "pertinencias_interval": 1,
     "noticias_interval": 1,
     "tribunales_interval": 1,
+    "consultas_time_1": "08:30",
+    "consultas_time_2": "15:30",
     "hora_inicio": "07:00",
     "hora_fin": "19:00"
 }
@@ -180,6 +182,17 @@ def run_noticias():
         ("Segundo Tribunal",             SegundoTribunalNewsScraper),
     ]
     ejecutar_noticias(lista, "SCRAPING NOTICIAS")
+    
+def run_consultas():
+    from src.scrapers.minsal import MINSALScraper
+    from src.scrapers.mma_consultas import MMAConsultasScraper
+    from src.scrapers.dga_consultas import DGAConsultasScraper
+    lista = [
+        ("MINSAL Consultas", MINSALScraper),
+        ("MMA Consultas",    MMAConsultasScraper),
+        ("DGA Consultas",    DGAConsultasScraper),
+    ]
+    ejecutar_scrapers(lista, "SCRAPING CONSULTAS PUBLICAS")
 
 def setup_schedule():
     schedule.clear()
@@ -202,6 +215,10 @@ def setup_schedule():
     schedule.every(p_interval).hours.at(":10").do(run_pertinencias)
     schedule.every(n_interval).hours.at(":15").do(run_noticias)
     schedule.every(t_interval).hours.at(":20").do(run_tribunales)
+    
+    # Consultas
+    schedule.every().day.at(config.get("consultas_time_1", "08:30")).do(run_consultas)
+    schedule.every().day.at(config.get("consultas_time_2", "15:30")).do(run_consultas)
 
 last_mtime = 0
 def main():
