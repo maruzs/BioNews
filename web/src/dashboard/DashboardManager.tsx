@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Grid, Typography, Button, Stack, useTheme, alpha } from '@mui/material';
+import { Box, Grid, Typography, Button, Stack } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 import { LayoutDashboard, FilterX, Download, ExternalLink, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

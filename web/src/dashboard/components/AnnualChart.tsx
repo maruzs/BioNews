@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { useTheme, alpha } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useDashboardTheme } from '../utils/dashboardTheme';
 import DashboardTooltip from './DashboardTooltip';
@@ -55,7 +55,7 @@ const AnnualChart: React.FC<AnnualChartProps> = ({
           strokeWidth={3}
           fillOpacity={1} 
           fill="url(#colorCount)" 
-          onClick={(entry) => toggleFilter(filterKey as any, entry[xAxisKey])}
+          onClick={(entry: any) => toggleFilter(filterKey as any, entry[xAxisKey])}
           style={{ cursor: 'pointer' }}
           activeDot={{ r: 6, strokeWidth: 0 }}
         />

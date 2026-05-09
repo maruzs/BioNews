@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useDashboardStore } from '../store/dashboardStore';
 import { normalizeLabel } from '../utils/normalizeLabels';
-import { DashboardFilters } from '../types/dashboard';
+import type { DashboardFilters } from '../types/dashboard';
 
 export const useDashboardFilters = (data: any[]) => {
   const filters = useDashboardStore((state) => state.filters);

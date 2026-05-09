@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Paper, Typography, alpha } from '@mui/material';
+import { Box, Paper, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 

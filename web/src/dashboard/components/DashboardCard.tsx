@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Paper, Typography, IconButton, Tooltip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Maximize2, Download, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -96,9 +97,5 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   );
 };
 
-// Helper function to simulate alpha since it's not directly available in standard CSS objects here
-function alpha(color: string, opacity: number) {
-  return `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`;
-}
 
 export default DashboardCard;

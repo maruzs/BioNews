@@ -68,7 +68,7 @@ const GroupedBarChart: React.FC<GroupedBarChartProps> = ({
             fill={getColorForValue(key, colors)} 
             radius={[4, 4, 0, 0]}
             stackId={groupField ? 'a' : undefined}
-            onClick={(entry) => toggleFilter(filterKey as any, entry[xAxisKey])}
+            onClick={(entry: any) => toggleFilter(filterKey as any, entry[xAxisKey])}
             style={{ cursor: 'pointer' }}
           >
             {data.map((entry, index) => (

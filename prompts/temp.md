@@ -6,6 +6,12 @@ No tienes acceso a la carpeta notasDesarrollador/, no intentes acceder a ella.
 No toques cosas que no debas tocar.
 No leas analisisEjecucion.md, esa carpeta es solo para mi investigacion.
 
+## INSTRUCCIONES OBLIGATORIAS
+
+No tienes acceso a la carpeta notasDesarrollador/, no intentes acceder a ella.
+No toques cosas que no debas tocar.
+No leas analisisEjecucion.md, esa carpeta es solo para mi investigacion.
+
 # CONTEXTO GENERAL
 
 Estoy refactorizando completamente el sistema de dashboards de mi plataforma BioNews.
