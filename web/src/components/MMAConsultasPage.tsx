@@ -27,7 +27,7 @@ const MMAConsultasPage = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [tipoFilter, setTipoFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState('reporte');
+  const [activeTab] = useState('reporte');
 
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
@@ -37,15 +37,6 @@ const MMAConsultasPage = () => {
     setAppliedSearch(search);
     setAppliedFilter(filter);
     setAppliedTipo(tipoFilter);
-  };
-
-  const resetFilters = () => {
-    setSearch('');
-    setFilter('abiertas');
-    setTipoFilter('all');
-    setAppliedSearch('');
-    setAppliedFilter('abiertas');
-    setAppliedTipo('all');
   };
 
   const category = 'mma';

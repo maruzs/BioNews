@@ -1,12 +1,11 @@
 import React from 'react';
 import { Box, Typography, Button, Container, Paper } from '@mui/material';
 import { ArrowLeft, Download } from 'lucide-react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ExpandChartPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { chartId } = useParams<{ chartId: string }>();
 
   // This page would ideally receive the data and config via state or context
   const { title, children } = location.state || { title: 'Gráfico', children: null };

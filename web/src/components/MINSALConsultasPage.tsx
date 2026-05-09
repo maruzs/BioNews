@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, FileText, X, Info, Download, Heart, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Search, Calendar, FileText, X, Info, Download, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -28,8 +28,6 @@ const MINSALConsultasPage = () => {
   const [documents, setDocuments] = useState<Documento[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [filter, setFilter] = useState<'vigentes' | 'resultados'>('vigentes');
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState('reporte');
 
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState<'vigentes' | 'resultados'>('vigentes');
@@ -37,13 +35,6 @@ const MINSALConsultasPage = () => {
   const handleApplyFilters = () => {
     setAppliedSearch(search);
     setAppliedFilter(filter);
-  };
-
-  const resetFilters = () => {
-    setSearch('');
-    setFilter('vigentes');
-    setAppliedSearch('');
-    setAppliedFilter('vigentes');
   };
 
 
@@ -232,14 +223,7 @@ const MINSALConsultasPage = () => {
         </div>
       </div>
 
-      {activeTab === 'dashboard' ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de MINSAL</h3>
-          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
-        </div>
-      ) : (
-        <div className="content-wrapper" style={{ padding: '0' }}>
+      <div className="content-wrapper" style={{ padding: '0' }}>
           {loading ? (
           <p>Cargando consultas...</p>
         ) : (
@@ -296,7 +280,6 @@ const MINSALConsultasPage = () => {
           </div>
         )}
       </div>
-      )}
 
       {selectedItem && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedItem(null)}>

@@ -82,14 +82,6 @@ const NewsPage = () => {
     return sources.sort();
   }, [news]);
 
-  const handleSourceChange = (source: string) => {
-    setSelectedSources(prev => {
-      const next = new Set(prev);
-      if (next.has(source)) next.delete(source);
-      else next.add(source);
-      return next;
-    });
-  };
 
   const filteredNews = news.filter(item => {
     const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;

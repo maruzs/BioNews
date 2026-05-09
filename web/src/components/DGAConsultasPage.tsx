@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList, Heart, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -20,8 +20,6 @@ const DGAConsultasPage = () => {
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<DGAConsulta | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState('reporte');
 
   const [appliedSearch, setAppliedSearch] = useState('');
 
@@ -29,10 +27,6 @@ const DGAConsultasPage = () => {
     setAppliedSearch(search);
   };
 
-  const resetFilters = () => {
-    setSearch('');
-    setAppliedSearch('');
-  };
 
   const category = 'dga';
 

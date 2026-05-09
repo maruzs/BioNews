@@ -1,7 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Box } from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useDashboardTheme, getColorForValue } from '../utils/dashboardTheme';
 import DashboardTooltip from './DashboardTooltip';
@@ -15,7 +14,7 @@ interface PieDonutChartProps {
 const PieDonutChart: React.FC<PieDonutChartProps> = ({ data, filterKey }) => {
   const { filters, toggleFilter } = useDashboardStore();
   const { colors } = useDashboardTheme();
-  const theme = useTheme();
+// const theme = useTheme();
   const activeValue = filters[filterKey as keyof typeof filters];
 
   return (

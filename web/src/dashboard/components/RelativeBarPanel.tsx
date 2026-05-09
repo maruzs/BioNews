@@ -11,7 +11,7 @@ interface RelativeBarPanelProps {
   filterKey: string;
 }
 
-const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ title, data, filterKey }) => {
+const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) => {
   const { filters, toggleFilter } = useDashboardStore();
   const { colors } = useDashboardTheme();
   
@@ -21,7 +21,7 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ title, data, filter
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <AnimatePresence>
-        {data.map((item, index) => {
+        {data.map((item) => {
           const isSelected = activeValue === item.name;
           const isAnySelected = activeValue !== undefined && activeValue !== null;
           const color = getColorForValue(item.name, colors);

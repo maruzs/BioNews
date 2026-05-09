@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Box, Grid, Typography, Button, Stack } from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
-import { LayoutDashboard, FilterX, Download, ExternalLink, RefreshCcw } from 'lucide-react';
+import { alpha } from '@mui/material/styles';
+import { LayoutDashboard, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useDashboardStore } from './store/dashboardStore';
@@ -23,14 +23,12 @@ interface DashboardManagerProps {
 
 const DashboardManager: React.FC<DashboardManagerProps> = ({ data, config }) => {
   const { filteredData, activeFilters } = useDashboardFilters(data);
-  //const { clearFilters, toggleFilter } = useDashboardStore(); // NO BORRAR ESTA LINEA, ES UN RESPALDO POR SI LUEGO NO FUNCIONA EL CAMBIO
-  const { clearFilters } = useDashboardStore(); // toggleFilter eliminado
+  const { clearFilters } = useDashboardStore();
   const [expandedChart, setExpandedChart] = useState<{ idx: number; dim: any } | null>(null);
-  //const theme = useTheme(); // NO BORRAR ESTA LINEA, ES UN RESPALDO POR SI LUEGO NO FUNCIONA EL CAMBIO
 
   const isFiltered = Object.keys(activeFilters).length > 0;
 
-  const renderChart = (dim: any, height: number | string = '100%') => {
+  const renderChart = (dim: any) => {
     const chartData = aggregateData(filteredData, dim);
 
     switch (dim.type) {
@@ -182,7 +180,7 @@ const DashboardManager: React.FC<DashboardManagerProps> = ({ data, config }) => 
         onExport={(format) => expandedChart && exportToImage('expanded-chart', expandedChart.dim.label, format)}
       >
         <Box id="expanded-chart" sx={{ width: '100%', height: 500 }}>
-          {expandedChart && renderChart(expandedChart.dim, 500)}
+          {expandedChart && renderChart(expandedChart.dim)}
         </Box>
       </DashboardModal>
     </Box>

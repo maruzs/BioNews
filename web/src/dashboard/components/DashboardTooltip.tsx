@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper, useTheme } from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 
 interface DashboardTooltipProps {
   active?: boolean;
@@ -14,7 +14,6 @@ const DashboardTooltip: React.FC<DashboardTooltipProps> = ({
   label,
   valueFormatter
 }) => {
-  const theme = useTheme();
 
   if (active && payload && payload.length) {
     return (

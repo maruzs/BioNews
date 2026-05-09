@@ -3,9 +3,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useDashboardTheme } from '../utils/dashboardTheme';
 import DashboardTooltip from './DashboardTooltip';
 
 interface AnnualChartProps {
@@ -20,10 +19,7 @@ const AnnualChart: React.FC<AnnualChartProps> = ({
   filterKey
 }) => {
   const theme = useTheme();
-  const { filters, toggleFilter } = useDashboardStore();
-  const { colors } = useDashboardTheme();
-  
-  const activeValue = filters[filterKey as keyof typeof filters];
+  const { toggleFilter } = useDashboardStore();
   const primaryColor = theme.palette.primary.main;
 
   return (

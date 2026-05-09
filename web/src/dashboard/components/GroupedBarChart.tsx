@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, Cell 
 } from 'recharts';
-import { Box, useTheme } from '@mui/material';
+import { useTheme } from '@mui/material';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useDashboardTheme, getColorForValue } from '../utils/dashboardTheme';
 import DashboardTooltip from './DashboardTooltip';
