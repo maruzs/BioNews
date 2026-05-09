@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
+import AdvancedDashboard from './AdvancedDashboard';
 
 interface SEAEvaluado {
   id: string;
@@ -411,11 +412,20 @@ const SEAEvaluadosPage = () => {
       )}
 
       {activeTab === 'dashboard' ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de SEA</h3>
-          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
-        </div>
+        <AdvancedDashboard 
+          data={data}
+          config={{
+            title: 'Proyectos Evaluados SEA',
+            dimensions: [
+              { key: 'categoria_economica', label: 'Proyectos por Categoría Económica', type: 'bar-horizontal' as const },
+              { key: 'region', label: 'Proyectos por Región', type: 'bar-horizontal' as const },
+              { key: 'estado_proyecto', label: 'Proyectos por Estado', type: 'pie' as const },
+              { key: 'tipo_proyecto', label: 'Proyectos por Tipo', type: 'relative-bar' as const },
+              { key: 'fecha_presentacion', label: 'Proyectos por Año', type: 'grouped-vertical' as const, groupField: 'tipo_proyecto' }
+            ]
+          }}
+          onClose={() => setActiveTab('reporte')}
+        />
       ) : (
         <>
           {loading ? (

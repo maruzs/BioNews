@@ -6,7 +6,7 @@ import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import DashboardView from './DashboardView';
+import AdvancedDashboard from './AdvancedDashboard';
 
 export interface LegalItem {
   [key: string]: any;
@@ -138,6 +138,59 @@ const TABLE_ACTION_FIELDS: Record<string, string> = {
   normativas: 'accion',
 };
 
+
+
+const getDashboardConfig = (tableName: string | undefined, title: string) => {
+  const baseConfig = {
+    title: title,
+    dimensions: [] as any[]
+  };
+
+  switch (tableName) {
+    case 'normativas':
+      baseConfig.dimensions = [
+        { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
+        { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
+        { key: 'fecha', label: 'Normativas por Año', type: 'grouped-vertical', groupField: 'tipo_normativa' }
+      ];
+      break;
+    case 'pertinencias':
+      baseConfig.dimensions = [
+        { key: 'categoria_economica', label: 'Pertinencias por Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' },
+        { key: 'Estado', label: 'Pertinencias por Estado', type: 'pie' },
+        { key: 'tipo_proyecto', label: 'Pertinencias por Tipo', type: 'relative-bar' },
+        { key: 'Fecha', label: 'Pertinencias por Año y Tipo', type: 'grouped-vertical', groupField: 'tipo_proyecto' }
+      ];
+      break;
+    case 'Tribunales':
+      baseConfig.dimensions = [
+        { key: 'Tribunal', label: 'Causas por Tribunal', type: 'bar-horizontal' },
+        { key: 'Tipo_de_Procedimiento', label: 'Causas por Tipo de Procedimiento', type: 'pie' },
+        { key: 'Estado_Procesal', label: 'Causas por Estado Procesal', type: 'pie' },
+        { key: 'Fecha', label: 'Causas por Año y Tribunal', type: 'grouped-vertical', groupField: 'Tribunal' }
+      ];
+      break;
+    case 'fiscalizaciones':
+    case 'sancionatorios':
+    case 'registroSanciones':
+    case 'medidas_provisionales':
+    case 'requerimientos':
+    case 'programasDeCumplimiento':
+      baseConfig.dimensions = [
+        { key: 'categoria', label: 'Registros por Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'estado', label: 'Registros por Estado', type: 'pie' },
+        { key: 'expediente', label: 'Registros por Año', type: 'grouped-vertical' }
+      ];
+      break;
+    default:
+      baseConfig.dimensions = [
+        { key: 'estado', label: 'Registros por Estado', type: 'pie' },
+      ];
+  }
+  return baseConfig;
+};
 
 const ReportLayout: React.FC<ReportLayoutProps> = ({ 
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
@@ -661,7 +714,13 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       </div>
 
       {activeTab === 'dashboard' ? (
-        <DashboardView tableName={tableName || ''} title={title} />
+        <div style={{ marginTop: '20px' }}>
+          <AdvancedDashboard 
+            data={data}
+            config={getDashboardConfig(tableName, title)}
+            onClose={() => setActiveTab('reporte')}
+          />
+        </div>
       ) : (
         <>
           {/* Advanced Filters */}

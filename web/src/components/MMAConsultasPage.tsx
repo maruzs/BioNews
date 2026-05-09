@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, ExternalLink, X, Info, Heart, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Search, Calendar, ExternalLink, X, Info, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
+import AdvancedDashboard from './AdvancedDashboard';
 
 interface MMAConsulta {
   id: string;
@@ -26,7 +27,6 @@ const MMAConsultasPage = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [tipoFilter, setTipoFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('reporte');
 
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -231,11 +231,19 @@ const MMAConsultasPage = () => {
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de MMA</h3>
-          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
-        </div>
+        <AdvancedDashboard 
+          data={data.map(d => ({...d, estado: filter === 'abiertas' ? 'Abierta' : 'Cerrada'}))}
+          config={{
+            title: 'Consultas Ciudadanas MMA',
+            dimensions: [
+              { key: 'tipo_instrumento', label: 'Consultas por Tipo de Instrumento', type: 'bar-horizontal' as const },
+              { key: 'ambito_territorial', label: 'Consultas por Ámbito Territorial', type: 'bar-horizontal' as const },
+              { key: 'estado', label: 'Consultas por Estado', type: 'pie' as const },
+              { key: 'fecha_inicio', label: 'Consultas por Año', type: 'grouped-vertical' as const, groupField: 'tipo_instrumento' }
+            ]
+          }}
+          onClose={() => setActiveTab('reporte')}
+        />
       ) : (
         <div className="content-wrapper" style={{ padding: '0' }}>
           {loading ? (
