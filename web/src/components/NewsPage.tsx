@@ -142,33 +142,48 @@ const NewsPage = () => {
       <div style={{ 
         backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-        marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
+        marginBottom: '15px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
-        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar por palabras clave..." 
-            value={searchWord}
-            onChange={(e) => setSearchWord(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleApplyFilters();
-              }
+        <div style={{ position: 'relative', width: '400px', display: 'flex', gap: '10px' }}>
+          <div style={{ position: 'relative', flexGrow: 1 }}>
+            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+            <input 
+              type="text" 
+              placeholder="Buscar por palabras clave..." 
+              value={searchWord}
+              onChange={(e) => {
+                setSearchWord(e.target.value);
+                if (e.target.value === '') setAppliedSearch('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleApplyFilters();
+                }
+              }}
+              style={{ 
+                width: '100%', padding: '10px 40px', borderRadius: '8px', 
+                border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+              }}
+            />
+            {searchWord && (
+              <button 
+                onClick={() => { setSearchWord(''); setAppliedSearch(''); }}
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={handleApplyFilters}
+            style={{
+              padding: '10px 20px', borderRadius: '8px', border: 'none',
+              background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer',
+              fontSize: '14px'
             }}
-            style={{ 
-              width: '100%', padding: '10px 40px', borderRadius: '8px', 
-              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
-            }}
-          />
-          {searchWord && (
-            <button 
-              onClick={() => { setSearchWord(''); setAppliedSearch(''); }}
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
-            >
-              <X size={16} />
-            </button>
-          )}
+          >
+            Buscar
+          </button>
         </div>
         
         <button 
@@ -192,6 +207,39 @@ const NewsPage = () => {
         </div>
       </div>
 
+      {/* Real-time Source Filters */}
+      <div style={{ 
+        display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '25px', 
+        padding: '0 5px'
+      }}>
+        {uniqueSources.map(source => (
+          <label key={source} style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', 
+            background: appliedSources.has(source) ? 'var(--primary-light)' : 'white', 
+            padding: '6px 14px', borderRadius: '20px', 
+            border: '1px solid ' + (appliedSources.has(source) ? 'var(--primary)' : 'var(--border)'),
+            fontSize: '13px', transition: 'all 0.2s', 
+            color: appliedSources.has(source) ? 'var(--primary)' : 'var(--text-dark)',
+            fontWeight: appliedSources.has(source) ? 600 : 400,
+            boxShadow: appliedSources.has(source) ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+          }}>
+            <input
+              type="checkbox"
+              checked={appliedSources.has(source)}
+              onChange={() => {
+                const next = new Set(appliedSources);
+                if (next.has(source)) next.delete(source);
+                else next.add(source);
+                setAppliedSources(next);
+                setSelectedSources(next); // Sync selectedSources for the clear button
+              }}
+              style={{ display: 'none' }}
+            />
+            {source}
+          </label>
+        ))}
+      </div>
+
       {/* Advanced Filters */}
       {showFilters && (
         <div style={{ 
@@ -207,27 +255,6 @@ const NewsPage = () => {
               onChange={(e) => setFilterDate(e.target.value)} 
               style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
             />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '10px' }}>Organismo</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {uniqueSources.map(source => (
-                <label key={source} style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', 
-                  background: selectedSources.has(source) ? 'var(--primary-light)' : 'white', 
-                  padding: '6px 12px', borderRadius: '20px', border: '1px solid ' + (selectedSources.has(source) ? 'var(--primary)' : 'var(--border)'),
-                  fontSize: '13px', transition: 'all 0.2s', color: selectedSources.has(source) ? 'var(--primary)' : 'var(--text-dark)'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSources.has(source)}
-                    onChange={() => handleSourceChange(source)}
-                    style={{ display: 'none' }}
-                  />
-                  {source}
-                </label>
-              ))}
-            </div>
           </div>
           
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>

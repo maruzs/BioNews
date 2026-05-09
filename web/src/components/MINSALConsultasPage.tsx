@@ -164,13 +164,16 @@ const MINSALConsultasPage = () => {
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
-        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+        <div style={{ position: 'relative', width: '400px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
           <input 
             type="text" 
             placeholder="Buscar por título..." 
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (e.target.value === '') setAppliedSearch('');
+            }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
             style={{ 
               width: '100%', padding: '10px 40px', borderRadius: '8px', 
@@ -187,125 +190,47 @@ const MINSALConsultasPage = () => {
           )}
         </div>
         
-        <button 
-          onClick={() => setShowFilters(!showFilters)}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
-            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
-            border: '1px solid ' + (showFilters ? 'var(--primary)' : 'var(--border)'),
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: 'all 0.2s'
-          }}
-        >
-          <Filter size={18} />
-          Filtros Avanzados
-          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        <button 
-          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
-            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
-            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: '0.2s'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
-          }}
-        >
-          {activeTab === 'dashboard' ? (
-            <>
-              <BookOpen size={18} style={{ color: '#22c55e' }} />
-              Registros
-            </>
-          ) : (
-            <>
-              <LayoutDashboard size={18} />
-              Dashboard
-            </>
-          )}
-        </button>
+        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+          <button 
+            onClick={() => { setFilter('vigentes'); setAppliedFilter('vigentes'); }}
+            style={{ 
+              padding: '8px 20px', 
+              borderRadius: '8px', 
+              border: 'none', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '13px',
+              backgroundColor: filter === 'vigentes' ? 'white' : 'transparent',
+              color: filter === 'vigentes' ? 'var(--primary)' : 'var(--text-light)',
+              boxShadow: filter === 'vigentes' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Vigentes
+          </button>
+          <button 
+            onClick={() => { setFilter('resultados'); setAppliedFilter('resultados'); }}
+            style={{ 
+              padding: '8px 20px', 
+              borderRadius: '8px', 
+              border: 'none', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '13px',
+              backgroundColor: filter === 'resultados' ? 'white' : 'transparent',
+              color: filter === 'resultados' ? 'var(--primary)' : 'var(--text-light)',
+              boxShadow: filter === 'resultados' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Resultados
+          </button>
+        </div>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
           {filteredData.length} resultados encontrados
         </div>
       </div>
-
-      {/* Advanced Filters */}
-      {showFilters && (
-        <div style={{ 
-          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
-          border: '1px solid var(--border)', marginBottom: '25px',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
-        }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '10px' }}>Tipo de Consulta</label>
-            <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: 'fit-content' }}>
-              <button 
-                onClick={() => setFilter('vigentes')}
-                style={{ 
-                  padding: '8px 20px', 
-                  borderRadius: '8px', 
-                  border: 'none', 
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  backgroundColor: filter === 'vigentes' ? 'white' : 'transparent',
-                  color: filter === 'vigentes' ? 'var(--primary)' : 'var(--text-light)',
-                  boxShadow: filter === 'vigentes' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Vigentes
-              </button>
-              <button 
-                onClick={() => setFilter('resultados')}
-                style={{ 
-                  padding: '8px 20px', 
-                  borderRadius: '8px', 
-                  border: 'none', 
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  backgroundColor: filter === 'resultados' ? 'white' : 'transparent',
-                  color: filter === 'resultados' ? 'var(--primary)' : 'var(--text-light)',
-                  boxShadow: filter === 'resultados' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Resultados
-              </button>
-            </div>
-          </div>
-          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
-            <button 
-              onClick={resetFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
-              }}
-            >
-              LIMPIAR FILTROS
-            </button>
-            <button 
-              onClick={handleApplyFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
-              }}
-            >
-              APLICAR FILTROS
-            </button>
-          </div>
-        </div>
-      )}
 
       {activeTab === 'dashboard' ? (
         <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>

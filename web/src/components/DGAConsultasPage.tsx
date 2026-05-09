@@ -133,13 +133,16 @@ const DGAConsultasPage = () => {
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
-        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+        <div style={{ position: 'relative', width: '400px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
           <input 
             type="text" 
             placeholder="Buscar por nombre..." 
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (e.target.value === '') setAppliedSearch('');
+            }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
             style={{ 
               width: '100%', padding: '10px 40px', borderRadius: '8px', 
@@ -156,104 +159,12 @@ const DGAConsultasPage = () => {
           )}
         </div>
         
-        <button 
-          onClick={() => setShowFilters(!showFilters)}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
-            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
-            border: '1px solid ' + (showFilters ? 'var(--primary)' : 'var(--border)'),
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: 'all 0.2s'
-          }}
-        >
-          <Filter size={18} />
-          Filtros Avanzados
-          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        <button 
-          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
-            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
-            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: '0.2s'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
-          }}
-        >
-          {activeTab === 'dashboard' ? (
-            <>
-              <BookOpen size={18} style={{ color: '#22c55e' }} />
-              Registros
-            </>
-          ) : (
-            <>
-              <LayoutDashboard size={18} />
-              Dashboard
-            </>
-          )}
-        </button>
-
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
           {filteredData.length} resultados encontrados
         </div>
       </div>
-      {/* Advanced Filters */}
-      {showFilters && (
-        <div style={{ 
-          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
-          border: '1px solid var(--border)', marginBottom: '25px',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
-        }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Nombre</label>
-            <input 
-              type="text" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-              placeholder="Buscar..."
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
-            />
-          </div>
-          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
-            <button 
-              onClick={resetFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
-              }}
-            >
-              LIMPIAR FILTROS
-            </button>
-            <button 
-              onClick={handleApplyFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
-              }}
-            >
-              APLICAR FILTROS
-            </button>
-          </div>
-        </div>
-      )}
 
-      {activeTab === 'dashboard' ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de DGA</h3>
-          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
-        </div>
-      ) : (
-        <div className="content-wrapper" style={{ padding: '0' }}>
+      <div className="content-wrapper" style={{ padding: '0' }}>
           {loading ? (
             <p>Cargando consultas...</p>
           ) : (
@@ -317,7 +228,7 @@ const DGAConsultasPage = () => {
           </div>
         )}
       </div>
-      )}
+      
 
       {selectedItem && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedItem(null)}>
