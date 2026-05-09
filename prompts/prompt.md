@@ -1,93 +1,99 @@
-## INSTRUCCIONES OBLIGATORIAS
+Quiero que el formato de la interfaz de Proyectos evaluados se aplique en Todas las categorias.
+Esto es para toda la pagina menos lo que respecta a las tablas, las cosas que tengan tablas actualmente no deben convertirse en cards.
+Solo hay que cambiar el apartado de arriba que vemos en SEA - Proyectos evaluados
 
-No tienes acceso a la carpeta notasDesarrollador/, no intentes acceder a ella.
-No toques cosas que no debas tocar.
-No leas analisisEjecucion.md, esa carpeta es solo para mi investigacion.
+```html
+<div
+  style="background-color: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: rgba(0, 0, 0, 0.03) 0px 2px 10px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center;"
+  data-protonpass-form=""
+>
+  <div style="flex-grow: 1; position: relative; min-width: 300px;">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-search"
+      aria-hidden="true"
+      style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light);"
+    >
+      <path d="m21 21-4.34-4.34"></path>
+      <circle cx="11" cy="11" r="8"></circle></svg
+    ><input
+      placeholder="Buscar por nombre o titular..."
+      style="width: 100%; padding: 10px 40px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 14px;"
+      type="text"
+      value=""
+    />
+  </div>
+  <button
+    style="display: flex; align-items: center; gap: 8px; padding: 10px 15px; background-color: white; color: var(--text-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; transition: 0.2s;"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-funnel"
+      aria-hidden="true"
+    >
+      <path
+        d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"
+      ></path></svg
+    >Filtros Avanzados<svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-chevron-down"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6"></path>
+    </svg></button
+  ><button
+    title="Restablecer todos los filtros"
+    style="display: flex; align-items: center; gap: 8px; padding: 10px 15px; background-color: white; color: var(--text-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px;"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-rotate-ccw"
+      aria-hidden="true"
+    >
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+      <path d="M3 3v5h5"></path></svg
+    >Restablecer
+  </button>
+  <div style="color: var(--text-light); font-size: 14px; margin-left: auto;">
+    0 resultados encontrados
+  </div>
+</div>
+```
 
-### EXPLICACION
+Tambien deberas implementar un boton para los dashboards (Aunque no haga nada) que sea del mismo color que se ha usado en la pagina y que este al lado del boton 'Restablecer', debe ser rectangular y tener el icono que se ha usado para los dashboards actualmente.
 
-Los dashboards que tengo ahora estan horribles y funcionan mal, por lo que quiero hacerlos nuevamente y esta vez traigo una plantilla de ejemplo (dashboards/dashboardEjemplo.html y dashboards/dashboardEjemplo.css)
+Ese boton para los dashboards debe implementarse en todas las categorias.
 
-Para las siguientes categorias deberas implementar un apartado para dashboards:
-
-#### Diario oficial - Normativas
-
-Este es el mas diferente asi que esta especificado:
-
-Cada tipo de normativa tiene sus propios colores, debe estar en la plantilla de ejemplo (General, Particular, Boletin Oficial Mineria)
-
-Total Normativas a la fecha -> Tarjetas de KPI
-Normativas por tipo -> Grafico de barras con Valor relativo por colores
-Normativas por region -> Gráficos de Barras Agrupadas horizontales
-Normativas por Año -> Gráficos de Barras Agrupadas verticales, una barra por tipo de normativa
-Normativas por organismo -> Un grafico de barras horizontales por tipo de Normativa y una barra por suborganismo (si no tiene suborganismo en esa categoria usar el organismo)
-
-SEA - Pertinencias
-
-SEA - Proyectos evaluados
-
-SNIFA/SMA - Fiscalizaciones
-
-SNIFA/SMA - Sancionatorios
-
-SNIFA/SMA - Sanciones
-
-SNIFA/SMA - Programas de Cumplimiento
-
-SNIFA/SMA - Medidas provisionales
-
-SNIFA/SMA - Requerimientos de ingreso
-
-Tribunales Ambientales
-
-Consultas publicas - MMA
-
-### INSTRUCCIONES
-
-Proyectos evaluados debe tener tambien un dashboard, por lo que hay que implementarle un boton para que pueda acceder al dashboard de proyectos evaluados dentro de la interfaz de proyectos evaluados.
-
-Quiero crear/implementar los dashboards para las categorias
-
-### Indicaciones de formato:
-
-Necesito que el dashboard soporte 'cross-filtering'. Si el usuario selecciona un segmento en el gráfico de barras (ej. una región o categoría), todos los demás componentes (KPIs, gráficos de líneas, mapas, etc) deben actualizar sus estados para reflejar solo los datos de esa selección.
-
-Los dashboards deben estar claramente relacionados a las columnas de la tabla en la bd
-
-- Tarjetas de KPI: Crea tarjetas de resumen en la parte superior con valores únicos.
-- Grafico Circular -> Grafico circular (Vacio al centro) basado en porcentaje (cantidad estado/total registros)
-- Grafico de barras con Valor relativo: Barras horizontales por tipo relativas al total, el total debe verse abajo y cada barra al final debe indicar su cantidad, al pasar el mouse por encima debera mostrar su porcentaje.
-- Gráficos de Barras Agrupadas horizontales: Para rankings
-- Graficos de Barras Agrupadas verticales: Para comparativas temporales por año
-  Al final de cada barra debe indicarse la cantidad. Y al pasar el mouse por encima debera indicarse su total y su categoria (o el año)
-
-Estos son los graficos generales que casi todas las categorias comparten:
-
-Cantidad de registros -> Tarjetas de KPI
-Registros por Categoria economica -> grafico de barras horizontal
-Registros por Region -> Grafico de barras horizontal
-Estado por registros -> Grafico circular con porcentajes por estado (basado en el total)
-Registros por tipo -> Grafico de barras con valor relativo
-Registros por Anio -> Grafico de barras vertical agrupadas (si hay tipos)
-
-A veces ocurre que tipo o estado tienen cosas repetidas (archivada y archivadas, o suspendida y suspendidas), en ese caso se asume que son la misma categoria
-
-Tambien ocurre que tienen filtros muy largos que incluyen '/' (ej. Agroindustrias / Forestal o Subsecretaría de Agricultura / Servicio Agrícola y Ganadero / Región de Atacama) en ese caso se toma hasta el primer '/' (ej. Agroindustrias / Forestal -> se considera que es Agroindustrias)
-
-En general como dije debe estar basado en las columnas de las tablas y mas o menos esta seria la asociacion
-
-Si es por anio -> Grafico de barras verticales
-Si es por anio y hay distintas fuentes (Por ejemplo los 3 tribunales, Normas Generales, Normas particulares, Boletin Oficial mineria, ) -> Grafico de barras verticales agrupadas
-
-Si es por tipo de documentos -> Grafico de barras con valor relativo
-Si es por estado -> Grafico circular con porcentajes por estado (basado en el total), pero aqui hay que tener cuidado con casos raros como los siguientes ejemplos: archivada y archivadas (son lo mismo), Terminado - absolucion y terminado - Sancion (Son distintos, esto ocurre a veces en las tablas de SMA/SNIFA)
-
-Si es por categoria economica -> Grafico de barras horizontal (cuidado con los que tienen '/', ocurre en algunas tablas de SMA/SNIFA)
-
-etc.
-
-En resumen implementa un dashboard bonito basado en la informacion de las tablas
-
-Usa la tecnologia mas rapida, moderna y bonita que puedas encontrar
-
-Si necesitas inspiracion puedes revisar la carpeta dashboards/
+Este cambio de formato no debe afectar a la funcionalidad de los filtros ni la barra de busqueda (debe activarse al hacer enter)
