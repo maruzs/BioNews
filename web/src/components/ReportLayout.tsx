@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, Trash2, LayoutDashboard, Download, Heart, Eye } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, Download, Heart, Eye, BookOpen } from 'lucide-react';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
@@ -626,20 +626,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         </button>
 
         <button 
-          onClick={handleClearFilters}
-          title="Restablecer todos los filtros"
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'white', color: 'var(--text-dark)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
-          }}
-        >
-          <RotateCcw size={18} />
-          Restablecer
-        </button>
-
-        <button 
           onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
           style={{ 
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
@@ -656,8 +642,17 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
           }}
         >
-          <LayoutDashboard size={18} />
-          Dashboard
+          {activeTab === 'dashboard' ? (
+            <>
+              <BookOpen size={18} style={{ color: '#22c55e' }} />
+              Registros
+            </>
+          ) : (
+            <>
+              <LayoutDashboard size={18} />
+              Dashboard
+            </>
+          )}
         </button>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>

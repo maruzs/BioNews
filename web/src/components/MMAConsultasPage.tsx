@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, ExternalLink, X, Info, Heart, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
+import { Search, Calendar, ExternalLink, X, Info, Heart, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -27,11 +27,25 @@ const MMAConsultasPage = () => {
   const [filter, setFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [tipoFilter, setTipoFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('reporte');
+
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedFilter, setAppliedFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
+  const [appliedTipo, setAppliedTipo] = useState('all');
+
+  const handleApplyFilters = () => {
+    setAppliedSearch(search);
+    setAppliedFilter(filter);
+    setAppliedTipo(tipoFilter);
+  };
 
   const resetFilters = () => {
     setSearch('');
     setFilter('abiertas');
     setTipoFilter('all');
+    setAppliedSearch('');
+    setAppliedFilter('abiertas');
+    setAppliedTipo('all');
   };
 
   const category = 'mma';
@@ -68,7 +82,7 @@ const MMAConsultasPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filter]);
+  }, [appliedFilter]);
 
   const handleOpenModal = (item: MMAConsulta) => {
     setSelectedItem(item);
@@ -79,8 +93,8 @@ const MMAConsultasPage = () => {
   };
 
   const filteredData = data.filter(item => {
-    const matchesSearch = item.nombre_instrumento.toLowerCase().includes(search.toLowerCase());
-    const matchesTipo = tipoFilter === 'all' || item.tipo_instrumento.toLowerCase().includes(tipoFilter.toLowerCase());
+    const matchesSearch = item.nombre_instrumento.toLowerCase().includes(appliedSearch.toLowerCase());
+    const matchesTipo = appliedTipo === 'all' || item.tipo_instrumento.toLowerCase().includes(appliedTipo.toLowerCase());
     return matchesSearch && matchesTipo;
   });
 
@@ -140,6 +154,7 @@ const MMAConsultasPage = () => {
             placeholder="Buscar por título..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
             style={{ 
               width: '100%', padding: '10px 40px', borderRadius: '8px', 
               border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
@@ -147,7 +162,7 @@ const MMAConsultasPage = () => {
           />
           {search && (
             <button 
-              onClick={() => setSearch('')}
+              onClick={() => { setSearch(''); setAppliedSearch(''); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
               <X size={16} />
@@ -172,32 +187,33 @@ const MMAConsultasPage = () => {
         </button>
 
         <button 
-          onClick={resetFilters}
-          title="Restablecer todos los filtros"
+          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
           style={{ 
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'white', color: 'var(--text-dark)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
-          }}
-        >
-          <RotateCcw size={18} />
-          Restablecer
-        </button>
-
-        <button 
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'var(--primary)', color: 'white',
-            border: 'none',
+            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
+            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
+            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
             borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
             transition: '0.2s'
           }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseOver={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseOut={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
+          }}
         >
-          <LayoutDashboard size={18} />
-          Dashboard
+          {activeTab === 'dashboard' ? (
+            <>
+              <BookOpen size={18} style={{ color: '#22c55e' }} />
+              Registros
+            </>
+          ) : (
+            <>
+              <LayoutDashboard size={18} />
+              Dashboard
+            </>
+          )}
         </button>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
@@ -265,13 +281,40 @@ const MMAConsultasPage = () => {
               <option value="Especies">Clasificación de Especies</option>
             </select>
           </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
+            <button 
+              onClick={resetFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              LIMPIAR FILTROS
+            </button>
+            <button 
+              onClick={handleApplyFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: 'none', 
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              APLICAR FILTROS
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="content-wrapper">
-        {loading ? (
-          <p>Cargando consultas...</p>
-        ) : (
+      {activeTab === 'dashboard' ? (
+        <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de MMA</h3>
+          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
+        </div>
+      ) : (
+        <div className="content-wrapper" style={{ padding: '0' }}>
+          {loading ? (
+            <p>Cargando consultas...</p>
+          ) : (
           <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
             {filteredData.length === 0 ? (
               <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
@@ -331,6 +374,7 @@ const MMAConsultasPage = () => {
           </div>
         )}
       </div>
+      )}
 
       {selectedItem && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedItem(null)}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
+import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
 
 interface SEAEvaluado {
   id: string;
@@ -46,6 +46,59 @@ const SEAEvaluadosPage = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  const [activeTab, setActiveTab] = useState('reporte');
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    titular: 'all',
+    via: 'all',
+    estado: 'all',
+    region: 'all',
+    tipo: 'all',
+    categoria: 'all',
+    dateFrom: '',
+    dateTo: '',
+    search: ''
+  });
+
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      titular: filterTitular,
+      via: filterVia,
+      estado: filterEstado,
+      region: filterRegion,
+      tipo: filterTipo,
+      categoria: filterCategoria,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      search: searchTerm
+    });
+    setCurrentPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterTitular('all');
+    setFilterVia('all');
+    setFilterEstado('all');
+    setFilterRegion('all');
+    setFilterTipo('all');
+    setFilterCategoria('all');
+    setDateFrom('');
+    setDateTo('');
+    setAppliedFilters({
+      titular: 'all',
+      via: 'all',
+      estado: 'all',
+      region: 'all',
+      tipo: 'all',
+      categoria: 'all',
+      dateFrom: '',
+      dateTo: '',
+      search: ''
+    });
+    setCurrentPage(1);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -143,27 +196,27 @@ const SEAEvaluadosPage = () => {
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      const matchesSearch = !searchTerm || 
-        item.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.titular?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !appliedFilters.search || 
+        item.nombre?.toLowerCase().includes(appliedFilters.search.toLowerCase()) || 
+        item.titular?.toLowerCase().includes(appliedFilters.search.toLowerCase());
       
-      const matchesTitular = filterTitular === 'all' || item.titular === filterTitular;
-      const matchesVia = filterVia === 'all' || item.via_ingreso === filterVia;
-      const matchesEstado = filterEstado === 'all' || item.estado_proyecto === filterEstado;
-      const matchesRegion = filterRegion === 'all' || item.region === filterRegion;
-      const matchesTipo = filterTipo === 'all' || item.tipo_proyecto === filterTipo;
-      const matchesCategoria = filterCategoria === 'all' || item.categoria_economica === filterCategoria;
+      const matchesTitular = appliedFilters.titular === 'all' || item.titular === appliedFilters.titular;
+      const matchesVia = appliedFilters.via === 'all' || item.via_ingreso === appliedFilters.via;
+      const matchesEstado = appliedFilters.estado === 'all' || item.estado_proyecto === appliedFilters.estado;
+      const matchesRegion = appliedFilters.region === 'all' || item.region === appliedFilters.region;
+      const matchesTipo = appliedFilters.tipo === 'all' || item.tipo_proyecto === appliedFilters.tipo;
+      const matchesCategoria = appliedFilters.categoria === 'all' || item.categoria_economica === appliedFilters.categoria;
       
       let matchesDate = true;
-      if (dateFrom || dateTo) {
+      if (appliedFilters.dateFrom || appliedFilters.dateTo) {
         const itemDate = item.fecha_presentacion.split('/').reverse().join('-');
-        if (dateFrom && itemDate < dateFrom) matchesDate = false;
-        if (dateTo && itemDate > dateTo) matchesDate = false;
+        if (appliedFilters.dateFrom && itemDate < appliedFilters.dateFrom) matchesDate = false;
+        if (appliedFilters.dateTo && itemDate > appliedFilters.dateTo) matchesDate = false;
       }
       
       return matchesSearch && matchesTitular && matchesVia && matchesEstado && matchesRegion && matchesTipo && matchesCategoria && matchesDate;
     });
-  }, [data, searchTerm, filterTitular, filterVia, filterEstado, filterRegion, filterTipo, filterCategoria, dateFrom, dateTo]);
+  }, [data, appliedFilters]);
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -209,7 +262,8 @@ const SEAEvaluadosPage = () => {
             type="text" 
             placeholder="Buscar por nombre o titular..." 
             value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => { setSearchTerm(e.target.value); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
             style={{ 
               width: '100%', padding: '10px 40px 10px 40px', borderRadius: '8px', 
               border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
@@ -217,7 +271,7 @@ const SEAEvaluadosPage = () => {
           />
           {searchTerm && (
             <button 
-              onClick={() => setSearchTerm('')}
+              onClick={() => { setSearchTerm(''); handleApplyFilters(); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
               <X size={16} />
@@ -242,32 +296,33 @@ const SEAEvaluadosPage = () => {
         </button>
 
         <button 
-          onClick={resetFilters}
-          title="Restablecer todos los filtros"
+          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
           style={{ 
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'white', color: 'var(--text-dark)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
-          }}
-        >
-          <RotateCcw size={18} />
-          Restablecer
-        </button>
-
-        <button 
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'var(--primary)', color: 'white',
-            border: 'none',
+            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
+            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
+            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
             borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
             transition: '0.2s'
           }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseOver={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseOut={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
+          }}
         >
-          <LayoutDashboard size={18} />
-          Dashboard
+          {activeTab === 'dashboard' ? (
+            <>
+              <BookOpen size={18} style={{ color: '#22c55e' }} />
+              Registros
+            </>
+          ) : (
+            <>
+              <LayoutDashboard size={18} />
+              Dashboard
+            </>
+          )}
         </button>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
@@ -332,135 +387,165 @@ const SEAEvaluadosPage = () => {
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Hasta</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} />
           </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
+            <button 
+              onClick={handleClearFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              LIMPIAR FILTROS
+            </button>
+            <button 
+              onClick={handleApplyFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: 'none', 
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              APLICAR FILTROS
+            </button>
+          </div>
         </div>
       )}
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '100px 0' }}>
-          <div className="loader" style={{ marginBottom: '20px' }}></div>
-          <p style={{ color: 'var(--text-light)' }}>Cargando proyectos evaluados...</p>
-        </div>
-      ) : error ? (
-        <div style={{ textAlign: 'center', padding: '60px', backgroundColor: '#fee2e2', borderRadius: '12px', color: '#b91c1c' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>Error al cargar los datos</h3>
-          <p>{error}</p>
-          <button onClick={fetchData} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Reintentar</button>
-        </div>
-      ) : filteredData.length === 0 ? (
+      {activeTab === 'dashboard' ? (
         <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-          <Search size={48} color="var(--text-light)" style={{ marginBottom: '20px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>No se encontraron proyectos</h3>
-          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Intenta ajustando los términos de búsqueda o los filtros.</p>
-          <button onClick={resetFilters} style={{ marginTop: '20px', color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Limpiar todos los filtros</button>
+          <LayoutDashboard size={48} color="var(--primary)" style={{ marginBottom: '20px', opacity: 0.5 }} />
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Dashboard de SEA</h3>
+          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Vista de estadísticas y gráficos en desarrollo.</p>
         </div>
       ) : (
         <>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
-            gap: '25px',
-            marginBottom: '40px',
-            width: '100%'
-          }}>
-            {paginatedData.map(item => (
-              <div key={item.id} style={{ 
-                backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
-                overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
-                display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer', position: 'relative',
-                height: '100%'
-              }}
-              onClick={() => handleOpenModal(item)}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
-              }}
-              >
-                {/* Header with Status and Favorite */}
-                <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getStatusColor(item.estado_proyecto) }}></div>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      {item.estado_proyecto}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    {item.is_new && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
-                    <button 
-                      onClick={(e) => toggleFavorite(e, item)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                    >
-                      <Heart size={20} fill={favorites.has(item.id) ? "#ef4444" : "none"} color={favorites.has(item.id) ? "#ef4444" : "var(--text-light)"} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div style={{ padding: '20px', flexGrow: 1 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase' }}>
-                    {item.via_ingreso} • {item.region || 'Multiregional'}
-                  </div>
-                  <h3 style={{ 
-                    fontSize: '17px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
-                    marginBottom: '15px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                  }}>
-                    {item.nombre}
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '13px' }}>
-                      <Calendar size={14} />
-                      <span>{item.fecha_presentacion}</span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 600 }}>Titular:</span> {item.titular}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div style={{ padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>
-                  <span>VER DETALLES COMPLETOS</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center' }}>
-              <button 
-                onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0,0); }}
-                disabled={currentPage === 1}
-                style={{ 
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                  background: currentPage === 1 ? '#f1f5f9' : 'white', 
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  fontWeight: 600, color: 'var(--text-dark)'
-                }}
-              >
-                Anterior
-              </button>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
-                <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
-              </div>
-              <button 
-                onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0,0); }}
-                disabled={currentPage === totalPages}
-                style={{ 
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                  background: currentPage === totalPages ? '#f1f5f9' : 'white', 
-                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  fontWeight: 600, color: 'var(--text-dark)'
-                }}
-              >
-                Siguiente
-              </button>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <div className="loader" style={{ marginBottom: '20px' }}></div>
+              <p style={{ color: 'var(--text-light)' }}>Cargando proyectos evaluados...</p>
             </div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '60px', backgroundColor: '#fee2e2', borderRadius: '12px', color: '#b91c1c' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>Error al cargar los datos</h3>
+              <p>{error}</p>
+              <button onClick={fetchData} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Reintentar</button>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+              <Search size={48} color="var(--text-light)" style={{ marginBottom: '20px', opacity: 0.5 }} />
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>No se encontraron proyectos</h3>
+              <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Intenta ajustando los términos de búsqueda o los filtros.</p>
+              <button onClick={resetFilters} style={{ marginTop: '20px', color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Limpiar todos los filtros</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+                gap: '25px',
+                marginBottom: '40px',
+                width: '100%'
+              }}>
+                {paginatedData.map(item => (
+                  <div key={item.id} style={{ 
+                    backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
+                    overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+                    display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer', position: 'relative',
+                    height: '100%'
+                  }}
+                  onClick={() => handleOpenModal(item)}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-6px)';
+                    e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
+                  }}
+                  >
+                    {/* Header with Status and Favorite */}
+                    <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getStatusColor(item.estado_proyecto) }}></div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {item.estado_proyecto}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        {item.is_new && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
+                        <button 
+                          onClick={(e) => toggleFavorite(e, item)}
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Heart size={20} fill={favorites.has(item.id) ? "#ef4444" : "none"} color={favorites.has(item.id) ? "#ef4444" : "var(--text-light)"} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ padding: '20px', flexGrow: 1 }}>
+                      <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase' }}>
+                        {item.via_ingreso} • {item.region || 'Multiregional'}
+                      </div>
+                      <h3 style={{ 
+                        fontSize: '17px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
+                        marginBottom: '15px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {item.nombre}
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '13px' }}>
+                          <Calendar size={14} />
+                          <span>{item.fecha_presentacion}</span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 600 }}>Titular:</span> {item.titular}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>
+                      <span>VER DETALLES COMPLETOS</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0,0); }}
+                    disabled={currentPage === 1}
+                    style={{ 
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                      background: currentPage === 1 ? '#f1f5f9' : 'white', 
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, color: 'var(--text-dark)'
+                    }}
+                  >
+                    Anterior
+                  </button>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
+                    <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
+                  </div>
+                  <button 
+                    onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0,0); }}
+                    disabled={currentPage === totalPages}
+                    style={{ 
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                      background: currentPage === totalPages ? '#f1f5f9' : 'white', 
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, color: 'var(--text-dark)'
+                    }}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

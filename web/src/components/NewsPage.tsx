@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -25,10 +25,24 @@ const NewsPage = () => {
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
 
+  // Applied Filter States
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedDate, setAppliedDate] = useState('');
+  const [appliedSources, setAppliedSources] = useState<Set<string>>(new Set());
+
+  const handleApplyFilters = () => {
+    setAppliedSearch(searchWord);
+    setAppliedDate(filterDate);
+    setAppliedSources(new Set(selectedSources));
+  };
+
   const resetFilters = () => {
     setSearchWord('');
     setFilterDate('');
     setSelectedSources(new Set());
+    setAppliedSearch('');
+    setAppliedDate('');
+    setAppliedSources(new Set());
   };
 
   useEffect(() => {
@@ -80,12 +94,12 @@ const NewsPage = () => {
   const filteredNews = news.filter(item => {
     const fuenteNormalizada = item.fuente === 'Tribunal Ambiental' ? 'Segundo Tribunal' : item.fuente;
 
-    const matchesSearch = item.titulo?.toLowerCase().includes(searchWord.toLowerCase()) ||
-      fuenteNormalizada?.toLowerCase().includes(searchWord.toLowerCase());
+    const matchesSearch = item.titulo?.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+      fuenteNormalizada?.toLowerCase().includes(appliedSearch.toLowerCase());
 
-    const matchesDate = filterDate ? item.fecha.startsWith(filterDate) : true;
+    const matchesDate = appliedDate ? item.fecha.startsWith(appliedDate) : true;
 
-    const matchesSource = selectedSources.size > 0 ? selectedSources.has(fuenteNormalizada) : true;
+    const matchesSource = appliedSources.size > 0 ? appliedSources.has(fuenteNormalizada) : true;
 
     return matchesSearch && matchesDate && matchesSource;
   });
@@ -139,7 +153,7 @@ const NewsPage = () => {
             onChange={(e) => setSearchWord(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                // Search already works via searchWord state in filteredNews
+                handleApplyFilters();
               }
             }}
             style={{ 
@@ -149,7 +163,7 @@ const NewsPage = () => {
           />
           {searchWord && (
             <button 
-              onClick={() => setSearchWord('')}
+              onClick={() => { setSearchWord(''); setAppliedSearch(''); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
               <X size={16} />
@@ -173,35 +187,6 @@ const NewsPage = () => {
           {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <button 
-          onClick={resetFilters}
-          title="Restablecer todos los filtros"
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'white', color: 'var(--text-dark)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
-          }}
-        >
-          <RotateCcw size={18} />
-          Restablecer
-        </button>
-
-        <button 
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: 'var(--primary)', color: 'white',
-            border: 'none',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: '0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-        >
-          <LayoutDashboard size={18} />
-          Dashboard
-        </button>
-
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
           {filteredNews.length} resultados encontrados
         </div>
@@ -223,7 +208,7 @@ const NewsPage = () => {
               style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
             />
           </div>
-          <div style={{ gridColumn: 'span 2' }}>
+          <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '10px' }}>Organismo</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {uniqueSources.map(source => (
@@ -244,14 +229,35 @@ const NewsPage = () => {
               ))}
             </div>
           </div>
+          
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
+            <button 
+              onClick={resetFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              LIMPIAR FILTROS
+            </button>
+            <button 
+              onClick={handleApplyFilters}
+              style={{ 
+                padding: '10px 20px', borderRadius: '8px', border: 'none', 
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              }}
+            >
+              APLICAR FILTROS
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="content-wrapper">
+      <div style={{ marginTop: '20px' }}>
         {loading ? (
           <p className="empty-state">Cargando noticias...</p>
         ) : (
-          <div className="news-grid">
+          <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px', width: '100%' }}>
             {filteredNews.length === 0 ? (
               <p className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No se encontraron noticias con estos filtros.</p>
             ) : (
