@@ -23,9 +23,10 @@ interface AdvancedDashboardProps {
 }
 
 const COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
-  '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#a855f7', 
-  '#d946ef', '#f43f5e', '#fbbf24', '#22c55e', '#14b8a6'
+  '#0d9488', '#2563eb', '#f59e0b', '#db2777', '#8b5cf6', 
+  '#14b8a6', '#3b82f6', '#f97316', '#ec4899', '#a855f7', 
+  '#0f766e', '#1d4ed8', '#d97706', '#be185d', '#7c3aed',
+  '#115e59', '#1e40af', '#b45309', '#9d174d', '#6d28d9'
 ];
 
 // Persistent color map to keep colors consistent across charts
@@ -211,7 +212,7 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                 </button>
               </div>
               <div className="chart-body">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={380}>
                   {dim.type === 'pie' ? (
                     <PieChart>
                       <Pie
@@ -221,6 +222,8 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                         innerRadius={60}
                         outerRadius={100}
                         paddingAngle={5}
+                        label={({ name, percent }) => `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={true}
                         onClick={(data) => toggleFilter(dim.key, String(data.name || ''))}
                         style={{ cursor: 'pointer' }}
                       >
@@ -232,7 +235,8 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                           />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: any, _name: any, props: any) => [`${value} (${props.payload?.percentage || 0}%)`, 'Cantidad']} />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                     </PieChart>
                   ) : dim.type === 'bar-horizontal' || dim.type === 'relative-bar' ? (
                     <BarChart 
@@ -246,8 +250,9 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                       <YAxis 
                         dataKey="name" 
                         type="category" 
-                        width={90} 
+                        width={200} 
                         style={{ fontSize: '11px', fontWeight: 500 }} 
+                        tick={{ width: 200 }}
                       />
                       <Tooltip 
                         formatter={(value: any, _name: any, props: any) => [
@@ -278,12 +283,25 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                       <Tooltip />
                       <Legend />
                       {/* We need to dynamically find all unique keys for grouping */}
-                      {dim.groupField && Array.from(new Set(filteredData.map(item => cleanLabel(item[dim.groupField!], dim.groupField!)))).slice(0, 10).map((key, kIdx) => (
+                      {dim.groupField ? (
+                        Array.from(new Set(filteredData.map(item => cleanLabel(item[dim.groupField!], dim.groupField!)))).slice(0, 10).map((key, kIdx) => (
+                          <Bar 
+                            key={kIdx} 
+                            dataKey={key} 
+                            stackId="a" 
+                            fill={getColorForValue(key as string)} 
+                            radius={[4, 4, 0, 0]} 
+                            onClick={(data: any) => {
+                              if (data && data.activeLabel) {
+                                toggleFilter(dim.key, data.activeLabel as string);
+                              }
+                            }}
+                          />
+                        ))
+                      ) : (
                         <Bar 
-                          key={kIdx} 
-                          dataKey={key} 
-                          stackId={dim.type === 'grouped-vertical' ? undefined : 'a'} 
-                          fill={getColorForValue(key)} 
+                          dataKey="count" 
+                          fill="var(--primary)" 
                           radius={[4, 4, 0, 0]} 
                           onClick={(data: any) => {
                             if (data && data.activeLabel) {
@@ -291,7 +309,7 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                             }
                           }}
                         />
-                      ))}
+                      )}
                     </BarChart>
                   ) : (
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -562,7 +580,7 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
           padding: 40px;
         }
         .chart-body {
-          min-height: 300px;
+          min-height: 380px;
         }
         .refresh-animation { animation: spin 1s linear infinite reverse; animation-play-state: paused; }
         .clear-filters-btn:hover .refresh-animation { animation-play-state: running; }
@@ -636,20 +654,22 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                         innerRadius={100}
                         outerRadius={180}
                         paddingAngle={5}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                        labelLine={true}
                       >
                         {expandedChart.data.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={getColorForValue(entry.name)} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: any, _name: any, props: any) => [`${value} (${props.payload?.percentage || 0}%)`, 'Cantidad']} />
                       <Legend />
                     </PieChart>
                   ) : expandedChart.dim.type === 'bar-horizontal' || expandedChart.dim.type === 'relative-bar' ? (
-                    <BarChart data={expandedChart.data} layout="vertical" margin={{ left: 150, right: 50 }}>
+                    <BarChart data={expandedChart.data} layout="vertical" margin={{ left: 250, right: 50 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={140} />
-                      <Tooltip />
+                      <YAxis dataKey="name" type="category" width={240} style={{ fontSize: '13px' }} tick={{ width: 240 }} />
+                      <Tooltip formatter={(value: any, _name: any, props: any) => [`${value} (${props.payload?.percentage || 0}%)`, 'Cantidad']} />
                       <Bar dataKey="count">
                         {expandedChart.data.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={getColorForValue(entry.name)} />
@@ -658,17 +678,31 @@ const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ data, config, onC
                       </Bar>
                     </BarChart>
                   ) : (
-                    <BarChart data={expandedChart.data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <BarChart data={expandedChart.data} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} style={{ fontSize: '13px' }} />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="count">
-                        {expandedChart.data.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={getColorForValue(entry.name)} />
-                        ))}
-                        <LabelList dataKey="count" position="top" />
-                      </Bar>
+                      {expandedChart.dim.type === 'grouped-vertical' && expandedChart.dim.groupField ? (
+                        <>
+                          <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: '20px' }} />
+                          {Array.from(new Set(filteredData.map(item => cleanLabel(item[expandedChart.dim.groupField!], expandedChart.dim.groupField!)))).slice(0, 10).map((key, kIdx) => (
+                            <Bar 
+                              key={kIdx} 
+                              dataKey={key as string} 
+                              stackId="a" 
+                              fill={getColorForValue(key as string)} 
+                            />
+                          ))}
+                        </>
+                      ) : (
+                        <Bar dataKey="count">
+                          {expandedChart.data.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={getColorForValue(entry.name)} />
+                          ))}
+                          <LabelList dataKey="count" position="top" />
+                        </Bar>
+                      )}
                     </BarChart>
                   )}
                </ResponsiveContainer>
