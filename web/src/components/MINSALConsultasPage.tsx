@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, FileText, X, Info, Download, Heart } from 'lucide-react';
+import { Search, Calendar, FileText, X, Info, Download, Heart, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -28,6 +28,12 @@ const MINSALConsultasPage = () => {
   const [documents, setDocuments] = useState<Documento[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [filter, setFilter] = useState<'vigentes' | 'resultados'>('vigentes');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const resetFilters = () => {
+    setSearch('');
+    setFilter('vigentes');
+  };
 
 
   useEffect(() => {
@@ -135,61 +141,138 @@ const MINSALConsultasPage = () => {
   };
 
   return (
-    <div className="report-container">
-      <div className="report-header-text">
-        <h1 className="report-title">MINSAL - Consultas Públicas</h1>
-        <p className="report-description">Consultas ciudadanas del Ministerio de Salud.</p>
+    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      <div style={{ marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>MINSAL - Consultas Públicas</h1>
+        <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Consultas ciudadanas del Ministerio de Salud.</p>
       </div>
 
-      <div className="news-filters" style={{ marginBottom: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
-          <button 
-            onClick={() => setFilter('vigentes')}
-            style={{ 
-              padding: '8px 20px', 
-              borderRadius: '8px', 
-              border: 'none', 
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              backgroundColor: filter === 'vigentes' ? 'white' : 'transparent',
-              color: filter === 'vigentes' ? 'var(--primary)' : 'var(--text-light)',
-              boxShadow: filter === 'vigentes' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            Vigentes
-          </button>
-          <button 
-            onClick={() => setFilter('resultados')}
-            style={{ 
-              padding: '8px 20px', 
-              borderRadius: '8px', 
-              border: 'none', 
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              backgroundColor: filter === 'resultados' ? 'white' : 'transparent',
-              color: filter === 'resultados' ? 'var(--primary)' : 'var(--text-light)',
-              boxShadow: filter === 'resultados' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            Resultados
-          </button>
-        </div>
-
-        <div className="search-bar" style={{ maxWidth: '400px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', display: 'flex', alignItems: 'center', flex: 1 }}>
-          <Search size={18} color="var(--primary)" style={{ marginRight: '10px' }} />
-          <input
-            type="text"
-            placeholder="Buscar por título..."
+      {/* Control Bar */}
+      <div style={{ 
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+        border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
+      }}>
+        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+          <input 
+            type="text" 
+            placeholder="Buscar por título..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ border: 'none', outline: 'none', width: '100%' }}
+            style={{ 
+              width: '100%', padding: '10px 40px', borderRadius: '8px', 
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            }}
           />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
+            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
+            border: '1px solid ' + (showFilters ? 'var(--primary)' : 'var(--border)'),
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Filter size={18} />
+          Filtros Avanzados
+          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        <button 
+          onClick={resetFilters}
+          title="Restablecer todos los filtros"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'white', color: 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
+          }}
+        >
+          <RotateCcw size={18} />
+          Restablecer
+        </button>
+
+        <button 
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'var(--primary)', color: 'white',
+            border: 'none',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: '0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
+        </button>
+
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
+          {filteredData.length} resultados encontrados
         </div>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div style={{ 
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+          border: '1px solid var(--border)', marginBottom: '25px',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
+        }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '10px' }}>Tipo de Consulta</label>
+            <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: 'fit-content' }}>
+              <button 
+                onClick={() => setFilter('vigentes')}
+                style={{ 
+                  padding: '8px 20px', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  backgroundColor: filter === 'vigentes' ? 'white' : 'transparent',
+                  color: filter === 'vigentes' ? 'var(--primary)' : 'var(--text-light)',
+                  boxShadow: filter === 'vigentes' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Vigentes
+              </button>
+              <button 
+                onClick={() => setFilter('resultados')}
+                style={{ 
+                  padding: '8px 20px', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  backgroundColor: filter === 'resultados' ? 'white' : 'transparent',
+                  color: filter === 'resultados' ? 'var(--primary)' : 'var(--text-light)',
+                  boxShadow: filter === 'resultados' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Resultados
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="content-wrapper">
         {loading ? (

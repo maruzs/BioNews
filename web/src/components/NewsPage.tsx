@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -23,6 +23,13 @@ const NewsPage = () => {
   const [searchWord, setSearchWord] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+
+  const resetFilters = () => {
+    setSearchWord('');
+    setFilterDate('');
+    setSelectedSources(new Set());
+  };
 
   useEffect(() => {
     setCategoryActive('noticias', true);
@@ -84,19 +91,21 @@ const NewsPage = () => {
   });
 
   return (
-    <div>
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 className="page-title">Noticias Recientes</h1>
+    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Noticias Recientes</h1>
+          <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Mantente al día con las últimas novedades del sector.</p>
+        </div>
         <button
           onClick={async () => {
             await markAllRead('noticias');
             setNews(prev => prev.map(item => ({ ...item, is_new: false })));
           }}
-          className="btn-mark-read"
           style={{
             fontSize: '13px',
-            padding: '6px 12px',
-            borderRadius: '20px',
+            padding: '8px 16px',
+            borderRadius: '8px',
             border: '1px solid var(--primary)',
             color: 'var(--primary)',
             background: 'white',
@@ -104,50 +113,139 @@ const NewsPage = () => {
             fontWeight: 600,
             transition: 'all 0.2s ease'
           }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = 'var(--primary-light)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'white';
+          }}
         >
           Marcar todo como leído
         </button>
       </div>
 
-      <div className="news-filters" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-          <div className="search-bar" style={{ flex: 1, minWidth: '250px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', display: 'flex', alignItems: 'center' }}>
-            <Search size={18} color="var(--primary)" style={{ marginRight: '10px' }} />
-            <input
-              type="text"
-              placeholder="Buscar por palabras clave..."
-              value={searchWord}
-              onChange={(e) => setSearchWord(e.target.value)}
-              style={{ border: 'none', outline: 'none', width: '100%' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', flex: 1, minWidth: '200px' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500 }}>Fecha:</span>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              style={{ border: 'none', outline: 'none', color: 'var(--text-dark)', width: '100%', backgroundColor: 'transparent' }}
-            />
-          </div>
+      {/* Control Bar */}
+      <div style={{ 
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+        border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
+      }}>
+        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+          <input 
+            type="text" 
+            placeholder="Buscar por palabras clave..." 
+            value={searchWord}
+            onChange={(e) => setSearchWord(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                // Search already works via searchWord state in filteredNews
+              }
+            }}
+            style={{ 
+              width: '100%', padding: '10px 40px', borderRadius: '8px', 
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            }}
+          />
+          {searchWord && (
+            <button 
+              onClick={() => setSearchWord('')}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
+        
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
+            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
+            border: '1px solid ' + (showFilters ? 'var(--primary)' : 'var(--border)'),
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Filter size={18} />
+          Filtros Avanzados
+          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-          <span className="filter-label" style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Filtrar por Organismo:</span>
-          {uniqueSources.map(source => (
-            <label key={source} className="filter-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 12px', borderRadius: '20px', border: '1px solid var(--border)' }}>
-              <input
-                type="checkbox"
-                checked={selectedSources.has(source)}
-                onChange={() => handleSourceChange(source)}
-              />
-              {source}
-            </label>
-          ))}
+        <button 
+          onClick={resetFilters}
+          title="Restablecer todos los filtros"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'white', color: 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
+          }}
+        >
+          <RotateCcw size={18} />
+          Restablecer
+        </button>
+
+        <button 
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'var(--primary)', color: 'white',
+            border: 'none',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: '0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
+        </button>
+
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
+          {filteredNews.length} resultados encontrados
         </div>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div style={{ 
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+          border: '1px solid var(--border)', marginBottom: '25px',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
+        }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Fecha</label>
+            <input 
+              type="date" 
+              value={filterDate} 
+              onChange={(e) => setFilterDate(e.target.value)} 
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
+            />
+          </div>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '10px' }}>Organismo</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {uniqueSources.map(source => (
+                <label key={source} style={{ 
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', 
+                  background: selectedSources.has(source) ? 'var(--primary-light)' : 'white', 
+                  padding: '6px 12px', borderRadius: '20px', border: '1px solid ' + (selectedSources.has(source) ? 'var(--primary)' : 'var(--border)'),
+                  fontSize: '13px', transition: 'all 0.2s', color: selectedSources.has(source) ? 'var(--primary)' : 'var(--text-dark)'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedSources.has(source)}
+                    onChange={() => handleSourceChange(source)}
+                    style={{ display: 'none' }}
+                  />
+                  {source}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="content-wrapper">
         {loading ? (

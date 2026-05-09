@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Search, ChevronDown, ChevronUp, Trash2, LayoutDashboard, Download, Heart, Eye } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, Trash2, LayoutDashboard, Download, Heart, Eye } from 'lucide-react';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
@@ -575,17 +575,93 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
   return (
     <div className="report-container">
-      <div className="report-header-text">
-        <h1 className="report-title">Reporte de {title}</h1>
-        <p className="report-description">{description}</p>
+      <div style={{ marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Reporte de {title}</h1>
+        <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>{description}</p>
       </div>
 
-      <div className="report-tabs">
-        <div className={`tab ${activeTab === 'reporte' ? 'active' : 'inactive'}`} onClick={() => setActiveTab('reporte')}>
-          <span className="tab-icon">📖</span> Reporte de {title}
+      {/* Control Bar */}
+      <div style={{ 
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+        border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
+      }}>
+        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+          <input 
+            type="text" 
+            placeholder="Buscar por palabra clave..." 
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search); } }}
+            style={{ 
+              width: '100%', padding: '10px 40px', borderRadius: '8px', 
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            }}
+          />
+          {search && (
+            <button 
+              onClick={() => { setSearch(''); setAppliedSearch(''); }}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
-        <div className={`tab ${activeTab === 'dashboard' ? 'active' : 'inactive'}`} onClick={() => setActiveTab('dashboard')}>
-          <LayoutDashboard size={18} /> Dashboard
+        
+        <button 
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: filtersOpen ? 'var(--primary-light)' : 'white',
+            color: filtersOpen ? 'var(--primary)' : 'var(--text-dark)',
+            border: '1px solid ' + (filtersOpen ? 'var(--primary)' : 'var(--border)'),
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Filter size={18} />
+          Filtros Avanzados
+          {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        <button 
+          onClick={handleClearFilters}
+          title="Restablecer todos los filtros"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'white', color: 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
+          }}
+        >
+          <RotateCcw size={18} />
+          Restablecer
+        </button>
+
+        <button 
+          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
+            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
+            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: '0.2s'
+          }}
+          onMouseOver={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseOut={(e) => {
+            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
+          }}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
+        </button>
+
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
+          {filteredData.length} resultados encontrados
         </div>
       </div>
 
@@ -593,152 +669,133 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         <DashboardView tableName={tableName || ''} title={title} />
       ) : (
         <>
-          <div className="filter-section">
-        <div className="filter-top">
-          <div className="search-bar" style={{ display: 'flex', alignItems: 'center' }}>
-            <Search className="search-icon" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar por palabra clave" 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search); } }}
-            />
-            <button
-              onClick={() => setAppliedSearch(search)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '6px 14px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                marginLeft: '8px'
-              }}
-            >
-              Buscar
-            </button>
-          </div>
-          
-          <div className="filter-actions">
-            <button 
-              className={`toggle-filter-btn ${filtersOpen ? 'open' : 'closed'}`}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              {filtersOpen ? 'Minimizar Filtro' : 'Desplegar Filtro'} 
-              {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-            <button className="trash-btn" onClick={handleClearFilters}>
-              <Trash2 size={18} />
-            </button>
-          </div>
-        </div>
+          {/* Advanced Filters */}
+          {filtersOpen && (
+            <div style={{ 
+              backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+              border: '1px solid var(--border)', marginBottom: '25px'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+                {activeColumns
+                  .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
+                  .map(col => {
+                    const categoricalFields = [
+                      'estado', 'Estado', 'Estado_Procesal', 
+                      'organismo', 'Tribunal', 'categoria', 
+                      'region', 'tipo_normativa', 'suborganismo', 
+                      'Tipo_de_Procedimiento', 'materia', 'resultado',
+                      'pago_multa'
+                    ];
+                    
+                    // Specific requirement for pertinencias dropdowns
+                    const isPertinenciasSpecial = tableName === 'pertinencias' && (col.field === 'categoria_economica' || col.field === 'tipo_proyecto');
+                    
+                    const isCategorical = categoricalFields.includes(col.field) || isPertinenciasSpecial;
+                    
+                    if (isCategorical) {
+                      const options = Array.from(new Set(data.map(item => item[col.field]).filter(Boolean))).sort();
+                      return (
+                        <div key={col.field}>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>{col.headerName}</label>
+                          <select 
+                            style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
+                            value={columnFilters[col.field] || ''} 
+                            onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})}
+                          >
+                            <option value="">Todos</option>
+                            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        </div>
+                      );
+                    }
 
-        {filtersOpen && (
-          <div className="filter-dropdowns">
-            <div className="filter-grid" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {activeColumns
-                .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
-                .map(col => {
-                  const categoricalFields = [
-                    'estado', 'Estado', 'Estado_Procesal', 
-                    'organismo', 'Tribunal', 'categoria', 
-                    'region', 'tipo_normativa', 'suborganismo', 
-                    'Tipo_de_Procedimiento', 'materia', 'resultado',
-                    'pago_multa'
-                  ];
-                  const isCategorical = categoricalFields.includes(col.field);
-                  
-                  if (isCategorical) {
-                    const options = Array.from(new Set(data.map(item => item[col.field]).filter(Boolean))).sort();
                     return (
-                      <div key={col.field} style={{ flex: '1 1 200px' }}>
-                        <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
-                        <select 
-                          className="filter-select" 
+                      <div key={col.field}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>{col.headerName}</label>
+                        <input 
+                          type="text" 
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
                           value={columnFilters[col.field] || ''} 
-                          onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})}
-                        >
-                          <option value="">Todos</option>
-                          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
+                          onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} 
+                          placeholder={`Buscar ${col.headerName.toLowerCase()}`} 
+                        />
                       </div>
                     );
-                  }
-
-                  return (
-                    <div key={col.field} style={{ flex: '1 1 200px' }}>
-                      <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por {col.headerName}</h4>
-                      <input type="text" className="filter-select" value={columnFilters[col.field] || ''} onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} placeholder={`Buscar ${col.headerName.toLowerCase()}`} />
-                    </div>
-                  );
-              })}
-              {activeColumns.some(c => ['expediente', 'Expediente'].includes(c.field)) && (
-                <>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Filtrar por Año (Expediente)</h4>
-                    <select 
-                      className="filter-select" 
-                      value={columnFilters['expediente_year'] || ''} 
-                      onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
-                    >
-                      <option value="">Todos los Años</option>
-                      {Array.from(new Set(
-                        data.map(item => {
-                          const exp = String(item['expediente'] || item['Expediente'] || '');
-                          const parts = exp.split('-');
-                          const yearPart = parts.find(p => /^\d{4}$/.test(p));
-                          return yearPart || null;
-                        }).filter((y): y is string => Boolean(y))
-                      )).sort((a, b) => Number(b) - Number(a)).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {tableName === 'fiscalizaciones' && (
-                    <div style={{ flex: '1 1 200px' }}>
-                      <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Tipo de Documento</h4>
+                })}
+                {activeColumns.some(c => ['expediente', 'Expediente'].includes(c.field)) && (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Año (Expediente)</label>
                       <select 
-                        className="filter-select" 
-                        value={columnFilters['expediente_tipo'] || ''} 
-                        onChange={(e) => setColumnFilters({...columnFilters, 'expediente_tipo': e.target.value})}
+                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
+                        value={columnFilters['expediente_year'] || ''} 
+                        onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
                       >
-                        <option value="">Todos los Tipos</option>
-                        {['RCA', 'PC', 'PPDA', 'NE', 'LEY', 'MP', 'NC', 'SRCA'].map(tipo => (
-                          <option key={tipo} value={tipo}>{tipo}</option>
+                        <option value="">Todos los Años</option>
+                        {Array.from(new Set(
+                          data.map(item => {
+                            const exp = String(item['expediente'] || item['Expediente'] || '');
+                            const parts = exp.split('-');
+                            const yearPart = parts.find(p => /^\d{4}$/.test(p));
+                            return yearPart || null;
+                          }).filter((y): y is string => Boolean(y))
+                        )).sort((a, b) => Number(b) - Number(a)).map(year => (
+                          <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
                     </div>
-                  )}
-                </>
-              )}
-              {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
-                <div style={{ flex: '1 1 300px' }}>
-                  <h4 style={{ marginBottom: '10px', color: 'var(--text-dark)' }}>Rango de Fechas</h4>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input type="date" className="filter-select" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
-                    <span style={{ alignSelf: 'center' }}>-</span>
-                    <input type="date" className="filter-select" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
+
+                    {tableName === 'fiscalizaciones' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Tipo de Documento</label>
+                        <select 
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
+                          value={columnFilters['expediente_tipo'] || ''} 
+                          onChange={(e) => setColumnFilters({...columnFilters, 'expediente_tipo': e.target.value})}
+                        >
+                          <option value="">Todos los Tipos</option>
+                          {['RCA', 'PC', 'PPDA', 'NE', 'LEY', 'MP', 'NC', 'SRCA'].map(tipo => (
+                            <option key={tipo} value={tipo}>{tipo}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+                {activeColumns.some(c => c.field.toLowerCase() === 'fecha' || c.field.toLowerCase() === 'fecha_agregado') && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Rango de Fechas</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
+                      <span style={{ alignSelf: 'center' }}>-</span>
+                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              {children}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                <button 
+                  onClick={handleClearFilters}
+                  style={{ 
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
+                    background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+                  }}
+                >
+                  LIMPIAR FILTROS
+                </button>
+                <button 
+                  onClick={handleApplyFilters}
+                  style={{ 
+                    padding: '10px 20px', borderRadius: '8px', border: 'none', 
+                    background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+                  }}
+                >
+                  APLICAR FILTROS
+                </button>
+              </div>
             </div>
-            {children}
-            <div className="filter-apply-row">
-              <button className="btn-primary" onClick={handleApplyFilters}>
-                <span style={{marginRight: 6}}>⚖</span> APLICAR FILTRO
-              </button>
-              <button className="btn-secondary" onClick={handleClearFilters}>
-                <Trash2 size={14} style={{marginRight: 6}}/> LIMPIAR FILTRO
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
 
       {isFavoritesPage && (
         <div className="manual-favorite-section" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '10px' }}>

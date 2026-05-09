@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, FileText, Download, X } from 'lucide-react';
+import { Search, Calendar, FileText, Download, X, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
@@ -35,6 +35,11 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
   const [selectedItem, setSelectedItem] = useState<Consulta | null>(null);
   const [documents, setDocuments] = useState<Documento[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const resetFilters = () => {
+    setSearch('');
+  };
 
   useEffect(() => {
     setCategoryActive(category, true);
@@ -90,24 +95,99 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
   );
 
   return (
-    <div className="report-container">
-      <div className="report-header-text">
-        <h1 className="report-title">{title}</h1>
-        <p className="report-description">{description}</p>
+    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      <div style={{ marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>{title}</h1>
+        <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>{description}</p>
       </div>
 
-      <div className="news-filters" style={{ marginBottom: '20px' }}>
-        <div className="search-bar" style={{ maxWidth: '400px', background: 'white', border: '1px solid var(--border)', borderRadius: '30px', padding: '10px 20px', display: 'flex', alignItems: 'center' }}>
-          <Search size={18} color="var(--primary)" style={{ marginRight: '10px' }} />
-          <input
-            type="text"
-            placeholder="Buscar consulta..."
+      {/* Control Bar */}
+      <div style={{ 
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+        border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
+      }}>
+        <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+          <input 
+            type="text" 
+            placeholder="Buscar consulta..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ border: 'none', outline: 'none', width: '100%' }}
+            style={{ 
+              width: '100%', padding: '10px 40px', borderRadius: '8px', 
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            }}
           />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
+            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
+            border: '1px solid ' + (showFilters ? 'var(--primary)' : 'var(--border)'),
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Filter size={18} />
+          Filtros Avanzados
+          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        <button 
+          onClick={resetFilters}
+          title="Restablecer todos los filtros"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'white', color: 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px'
+          }}
+        >
+          <RotateCcw size={18} />
+          Restablecer
+        </button>
+
+        <button 
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'var(--primary)', color: 'white',
+            border: 'none',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: '0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
+        </button>
+
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
+          {filteredData.length} resultados encontrados
         </div>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div style={{ 
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+          border: '1px solid var(--border)', marginBottom: '25px'
+        }}>
+           <p style={{ color: 'var(--text-light)', fontSize: '14px' }}>No hay filtros avanzados disponibles para esta sección.</p>
+        </div>
+      )}
 
       <div className="content-wrapper">
         {loading ? (

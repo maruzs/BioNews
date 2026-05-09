@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, RotateCcw, LayoutDashboard } from 'lucide-react';
 
 interface SEAEvaluado {
   id: string;
@@ -253,6 +253,21 @@ const SEAEvaluadosPage = () => {
         >
           <RotateCcw size={18} />
           Restablecer
+        </button>
+
+        <button 
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: 'var(--primary)', color: 'white',
+            border: 'none',
+            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+            transition: '0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
         </button>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
