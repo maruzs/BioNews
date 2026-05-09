@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Calendar, ExternalLink, X, Info, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import AdvancedDashboard from './AdvancedDashboard';
+import DashboardManager from '../dashboard/DashboardManager';
 
 interface MMAConsulta {
   id: string;
@@ -231,10 +231,11 @@ const MMAConsultasPage = () => {
       </div>
 
       {activeTab === 'dashboard' ? (
-        <AdvancedDashboard 
+        <DashboardManager 
           data={data.map(d => ({...d, estado: filter === 'abiertas' ? 'Abierta' : 'Cerrada'}))}
           config={{
             title: 'Consultas Ciudadanas MMA',
+            tableName: 'ConsultasMMA',
             dimensions: [
               { key: 'tipo_instrumento', label: 'Consultas por Tipo de Instrumento', type: 'bar-horizontal' as const },
               { key: 'ambito_territorial', label: 'Consultas por Ámbito Territorial', type: 'bar-horizontal' as const },
@@ -242,7 +243,6 @@ const MMAConsultasPage = () => {
               { key: 'fecha_inicio', label: 'Consultas por Año', type: 'grouped-vertical' as const, groupField: 'tipo_instrumento' }
             ]
           }}
-          onClose={() => setActiveTab('reporte')}
         />
       ) : (
         <div className="content-wrapper" style={{ padding: '0' }}>

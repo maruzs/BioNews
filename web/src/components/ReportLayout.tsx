@@ -6,7 +6,8 @@ import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import AdvancedDashboard from './AdvancedDashboard';
+import type { DashboardConfig } from '../dashboard/types/dashboard';
+import DashboardManager from '../dashboard/DashboardManager';
 
 export interface LegalItem {
   [key: string]: any;
@@ -140,10 +141,11 @@ const TABLE_ACTION_FIELDS: Record<string, string> = {
 
 
 
-const getDashboardConfig = (tableName: string | undefined, title: string) => {
-  const baseConfig = {
+const getDashboardConfig = (tableName: string | undefined, title: string): DashboardConfig => {
+  const baseConfig: DashboardConfig = {
     title: title,
-    dimensions: [] as any[]
+    tableName: tableName || 'unknown',
+    dimensions: []
   };
 
   switch (tableName) {
@@ -151,24 +153,34 @@ const getDashboardConfig = (tableName: string | undefined, title: string) => {
       baseConfig.dimensions = [
         { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
         { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
-        { key: 'fecha', label: 'Normativas por Año', type: 'grouped-vertical', groupField: 'tipo_normativa' }
+        { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical', groupField: 'tipo_normativa' },
+        { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' }
       ];
       break;
     case 'pertinencias':
       baseConfig.dimensions = [
-        { key: 'categoria_economica', label: 'Pertinencias por Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' },
-        { key: 'Estado', label: 'Pertinencias por Estado', type: 'pie' },
         { key: 'tipo_proyecto', label: 'Pertinencias por Tipo', type: 'relative-bar' },
-        { key: 'Fecha', label: 'Pertinencias por Año y Tipo', type: 'grouped-vertical', groupField: 'tipo_proyecto' }
+        { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' },
+        { key: 'Estado', label: 'Estado del Proceso', type: 'pie' },
+        { key: 'Fecha', label: 'Evolución Anual por Tipo', type: 'grouped-vertical', groupField: 'tipo_proyecto' }
+      ];
+      break;
+    case 'SEAEvaluados':
+      baseConfig.dimensions = [
+        { key: 'tipo_presentacion', label: 'Tipo de Presentación', type: 'relative-bar' },
+        { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Proyectos por Región', type: 'bar-horizontal' },
+        { key: 'estado', label: 'Estado de Evaluación', type: 'pie' },
+        { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical', groupField: 'tipo_presentacion' }
       ];
       break;
     case 'Tribunales':
       baseConfig.dimensions = [
-        { key: 'Tribunal', label: 'Causas por Tribunal', type: 'bar-horizontal' },
-        { key: 'Tipo_de_Procedimiento', label: 'Causas por Tipo de Procedimiento', type: 'pie' },
-        { key: 'Estado_Procesal', label: 'Causas por Estado Procesal', type: 'pie' },
-        { key: 'Fecha', label: 'Causas por Año y Tribunal', type: 'grouped-vertical', groupField: 'Tribunal' }
+        { key: 'Tribunal', label: 'Causas por Tribunal', type: 'relative-bar' },
+        { key: 'Tipo_de_Procedimiento', label: 'Tipo de Procedimiento', type: 'bar-horizontal' },
+        { key: 'Estado_Procesal', label: 'Estado Procesal', type: 'pie' },
+        { key: 'Fecha', label: 'Ingreso Anual de Causas', type: 'grouped-vertical', groupField: 'Tribunal' }
       ];
       break;
     case 'fiscalizaciones':
@@ -178,22 +190,30 @@ const getDashboardConfig = (tableName: string | undefined, title: string) => {
     case 'requerimientos':
     case 'programasDeCumplimiento':
       baseConfig.dimensions = [
-        { key: 'categoria', label: 'Registros por Categoría Económica', type: 'bar-horizontal' },
+        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
         { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
-        { key: 'estado', label: 'Registros por Estado', type: 'pie' },
-        { key: 'expediente', label: 'Registros por Año', type: 'grouped-vertical' }
+        { key: 'estado', label: 'Estado del Expediente', type: 'pie' },
+        { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
+      ];
+      break;
+    case 'ConsultasMMA':
+      baseConfig.dimensions = [
+        { key: 'estado', label: 'Estado de la Consulta', type: 'pie' },
+        { key: 'materia', label: 'Materias de Interés', type: 'bar-horizontal' },
+        { key: 'fecha_inicio', label: 'Consultas por Año', type: 'grouped-vertical' }
       ];
       break;
     default:
       baseConfig.dimensions = [
-        { key: 'estado', label: 'Registros por Estado', type: 'pie' },
+        { key: 'estado', label: 'Distribución por Estado', type: 'pie' },
+        { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
       ];
   }
   return baseConfig;
 };
 
-const ReportLayout: React.FC<ReportLayoutProps> = ({ 
-  title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children 
+const ReportLayout: React.FC<ReportLayoutProps> = ({
+  title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children
 }) => {
   const { token, user } = useAuth();
   const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
@@ -216,21 +236,21 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const handleManualFavoriteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualFav.id || !manualFav.fuente || !manualFav.nombre) return;
-    
+
     try {
       await fetch('/api/favorites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-          id_o_link: manualFav.id, 
-          fuente: manualFav.fuente, 
+        body: JSON.stringify({
+          id_o_link: manualFav.id,
+          fuente: manualFav.fuente,
           nombre: manualFav.nombre,
           accion: manualFav.accion
         })
       });
       // Refresh the page or data
       window.location.reload();
-    } catch(err) {
+    } catch (err) {
       console.error("Error saving manual fav", err);
     }
   };
@@ -246,12 +266,12 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         } else if (['fiscalizaciones', 'sancionatorios', 'registroSanciones', 'programasDeCumplimiento', 'medidas_provisionales', 'requerimientos'].includes(tableName || '') && prefs.sma?.length > 0) {
           initialFilters['categoria'] = prefs.sma.join('; ');
         }
-        
+
         if (Object.keys(initialFilters).length > 0) {
           setColumnFilters(initialFilters);
           setAppliedColumnFilters(initialFilters);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [user, tableName, token]);
 
@@ -317,7 +337,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     const isFav = favorites.has(itemId);
     try {
       if (isFav) {
-        await fetch(`/api/favorites/${encodeURIComponent(itemId)}`, { 
+        await fetch(`/api/favorites/${encodeURIComponent(itemId)}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -344,7 +364,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           return next;
         });
       }
-    } catch(err) {
+    } catch (err) {
       console.error("Fav error", err);
     }
   };
@@ -353,8 +373,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     let result = data;
     if (appliedSearch) {
       const lowerSearch = appliedSearch.toLowerCase();
-      result = result.filter(item => 
-        Object.values(item).some(val => 
+      result = result.filter(item =>
+        Object.values(item).some(val =>
           val && String(val).toLowerCase().includes(lowerSearch)
         )
       );
@@ -390,7 +410,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           });
           return;
         }
-        
+
         const lowerValue = value.toLowerCase();
         result = result.filter(item => {
           const itemVal = item[field];
@@ -398,7 +418,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           const strVal = String(itemVal).toLowerCase();
           const terms = value.split(';').map(t => t.trim().toLowerCase()).filter(Boolean);
           if (terms.length > 1) {
-             return terms.some(t => strVal === t || strVal.includes(t));
+            return terms.some(t => strVal === t || strVal.includes(t));
           }
           return strVal.includes(lowerValue);
         });
@@ -447,9 +467,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
   const downloadExcel = () => {
     if (filteredData.length === 0) return;
-    
+
     const colFields = activeColumns.filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion');
-    
+
     const excelData = filteredData.map((row) => {
       const rowData: Record<string, any> = {};
       colFields.forEach(c => {
@@ -457,11 +477,11 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       });
       return rowData;
     });
-    
+
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte");
-    
+
     XLSX.writeFile(workbook, `${title.toLowerCase().replace(/\s+/g, '_')}_export.xlsx`);
   };
 
@@ -484,7 +504,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     const baseId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
     // Si el baseId no es suficientemente único (como en normativas), combinamos con otros campos o el índice
     const uniqueId = baseId ? `${baseId}-${item.fecha || item.Fecha || ''}-${index}` : `row-${index}`;
-    
+
     return {
       ...item,
       id: uniqueId,
@@ -494,23 +514,23 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
   const columns: GridColDef[] = useMemo(() => {
     const cols: GridColDef[] = [
-      { 
-        field: 'rowNumber', 
-        headerName: 'Nº', 
-        width: 80, 
+      {
+        field: 'rowNumber',
+        headerName: 'Nº',
+        width: 80,
         filterable: false,
         renderCell: (params: GridRenderCellParams) => {
           const isNew = params.row.is_new;
           return (
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px', height: '100%'}}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '100%' }}>
               <span>{params.row.rowNumber}</span>
               {isNew && (
-                <span style={{ 
-                  backgroundColor: '#22c55e', 
-                  color: 'white', 
-                  fontSize: '9px', 
-                  padding: '2px 5px', 
-                  borderRadius: '10px', 
+                <span style={{
+                  backgroundColor: '#22c55e',
+                  color: 'white',
+                  fontSize: '9px',
+                  padding: '2px 5px',
+                  borderRadius: '10px',
                   fontWeight: 'bold',
                   textTransform: 'uppercase'
                 }}>NUEVO</span>
@@ -519,19 +539,19 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           );
         }
       },
-      { 
-        field: 'fav', 
-        headerName: 'Fav', 
-        width: 60, 
-        sortable: false, 
+      {
+        field: 'fav',
+        headerName: 'Fav',
+        width: 60,
+        sortable: false,
         filterable: false,
         renderCell: (params: GridRenderCellParams) => {
           const itemId = isFavoritesPage ? params.row._id : (params.row[effectiveIdField] || '');
           return (
-            <div style={{display: 'flex', alignItems: 'center', height: '100%'}}>
-              <Heart 
-                size={18} 
-                style={{ cursor: 'pointer', fill: favorites.has(itemId) ? 'var(--orange)' : 'none', color: favorites.has(itemId) ? 'var(--orange)' : 'var(--text-light)' }} 
+            <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+              <Heart
+                size={18}
+                style={{ cursor: 'pointer', fill: favorites.has(itemId) ? 'var(--orange)' : 'none', color: favorites.has(itemId) ? 'var(--orange)' : 'var(--text-light)' }}
                 onClick={() => toggleFavorite(params.row)}
               />
             </div>
@@ -583,21 +603,21 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     });
 
     // Agregar columna de acción
-    cols.push({ 
-      field: 'accion', 
-      headerName: 'Acción', 
-      width: 80, 
-      sortable: false, 
+    cols.push({
+      field: 'accion',
+      headerName: 'Acción',
+      width: 80,
+      sortable: false,
       filterable: false,
       renderCell: (params: GridRenderCellParams) => {
         const link = isFavoritesPage ? params.row._action : (params.row[effectiveActionField] || '');
         if (!link) return null;
-        
+
         const handleActionClick = () => {
           if (category && !isFavoritesPage) {
             const itemId = params.row[effectiveIdField] || '';
             markItemViewed(category, String(itemId));
-            
+
             // Actualizar estado local para quitar etiqueta "Nuevo" inmediatamente
             setData(prev => prev.map(item => {
               const currentId = item[effectiveIdField] || '';
@@ -610,11 +630,11 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         };
 
         return (
-          <a 
-            href={link} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style={{color: 'var(--primary)', display: 'flex', alignItems: 'center', height: '100%'}}
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', height: '100%' }}
             onClick={handleActionClick}
           >
             <Eye size={20} />
@@ -634,26 +654,26 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       </div>
 
       {/* Control Bar */}
-      <div style={{ 
-        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+      <div style={{
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px',
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
         <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar por palabra clave..." 
+          <input
+            type="text"
+            placeholder="Buscar por palabra clave..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search); } }}
-            style={{ 
-              width: '100%', padding: '10px 40px', borderRadius: '8px', 
-              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            style={{
+              width: '100%', padding: '10px 40px', borderRadius: '8px',
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px'
             }}
           />
           {search && (
-            <button 
+            <button
               onClick={() => { setSearch(''); setAppliedSearch(''); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
@@ -661,10 +681,10 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             </button>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setFiltersOpen(!filtersOpen)}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: filtersOpen ? 'var(--primary-light)' : 'white',
             color: filtersOpen ? 'var(--primary)' : 'var(--text-dark)',
@@ -678,9 +698,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <button 
+        <button
           onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
             color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
@@ -715,18 +735,17 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
       {activeTab === 'dashboard' ? (
         <div style={{ marginTop: '20px' }}>
-          <AdvancedDashboard 
+          <DashboardManager
             data={data}
             config={getDashboardConfig(tableName, title)}
-            onClose={() => setActiveTab('reporte')}
           />
         </div>
       ) : (
         <>
           {/* Advanced Filters */}
           {filtersOpen && (
-            <div style={{ 
-              backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+            <div style={{
+              backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px',
               border: '1px solid var(--border)', marginBottom: '25px'
             }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
@@ -734,27 +753,27 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                   .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== effectiveIdField && c.field.toLowerCase() !== 'fecha' && c.field.toLowerCase() !== 'fecha_agregado')
                   .map(col => {
                     const categoricalFields = [
-                      'estado', 'Estado', 'Estado_Procesal', 
-                      'organismo', 'Tribunal', 'categoria', 
-                      'region', 'tipo_normativa', 'suborganismo', 
+                      'estado', 'Estado', 'Estado_Procesal',
+                      'organismo', 'Tribunal', 'categoria',
+                      'region', 'tipo_normativa', 'suborganismo',
                       'Tipo_de_Procedimiento', 'materia', 'resultado',
                       'pago_multa'
                     ];
-                    
+
                     // Specific requirement for pertinencias dropdowns
                     const isPertinenciasSpecial = tableName === 'pertinencias' && (col.field === 'categoria_economica' || col.field === 'tipo_proyecto');
-                    
+
                     const isCategorical = categoricalFields.includes(col.field) || isPertinenciasSpecial;
-                    
+
                     if (isCategorical) {
                       const options = Array.from(new Set(data.map(item => item[col.field]).filter(Boolean))).sort();
                       return (
                         <div key={col.field}>
                           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>{col.headerName}</label>
-                          <select 
+                          <select
                             style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
-                            value={columnFilters[col.field] || ''} 
-                            onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})}
+                            value={columnFilters[col.field] || ''}
+                            onChange={(e) => setColumnFilters({ ...columnFilters, [col.field]: e.target.value })}
                           >
                             <option value="">Todos</option>
                             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -766,24 +785,24 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     return (
                       <div key={col.field}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>{col.headerName}</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
-                          value={columnFilters[col.field] || ''} 
-                          onChange={(e) => setColumnFilters({...columnFilters, [col.field]: e.target.value})} 
-                          placeholder={`Buscar ${col.headerName.toLowerCase()}`} 
+                          value={columnFilters[col.field] || ''}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, [col.field]: e.target.value })}
+                          placeholder={`Buscar ${col.headerName.toLowerCase()}`}
                         />
                       </div>
                     );
-                })}
+                  })}
                 {activeColumns.some(c => ['expediente', 'Expediente'].includes(c.field)) && (
                   <>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Año (Expediente)</label>
-                      <select 
+                      <select
                         style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
-                        value={columnFilters['expediente_year'] || ''} 
-                        onChange={(e) => setColumnFilters({...columnFilters, 'expediente_year': e.target.value})}
+                        value={columnFilters['expediente_year'] || ''}
+                        onChange={(e) => setColumnFilters({ ...columnFilters, 'expediente_year': e.target.value })}
                       >
                         <option value="">Todos los Años</option>
                         {Array.from(new Set(
@@ -802,10 +821,10 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     {tableName === 'fiscalizaciones' && (
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Tipo de Documento</label>
-                        <select 
+                        <select
                           style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
-                          value={columnFilters['expediente_tipo'] || ''} 
-                          onChange={(e) => setColumnFilters({...columnFilters, 'expediente_tipo': e.target.value})}
+                          value={columnFilters['expediente_tipo'] || ''}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, 'expediente_tipo': e.target.value })}
                         >
                           <option value="">Todos los Tipos</option>
                           {['RCA', 'PC', 'PPDA', 'NE', 'LEY', 'MP', 'NC', 'SRCA'].map(tipo => (
@@ -820,29 +839,29 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Rango de Fechas</label>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
+                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} />
                       <span style={{ alignSelf: 'center' }}>-</span>
-                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
+                      <input type="date" style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} />
                     </div>
                   </div>
                 )}
               </div>
               {children}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-                <button 
+                <button
                   onClick={handleClearFilters}
-                  style={{ 
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                    background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer'
                   }}
                 >
                   LIMPIAR FILTROS
                 </button>
-                <button 
+                <button
                   onClick={handleApplyFilters}
-                  style={{ 
-                    padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                    background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: 'none',
+                    background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer'
                   }}
                 >
                   APLICAR FILTROS
@@ -851,106 +870,106 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             </div>
           )}
 
-      {isFavoritesPage && (
-        <div className="manual-favorite-section" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '10px' }}>
-          <h3 style={{ fontSize: '15px', marginBottom: '15px', color: 'var(--text-dark)' }}>Agregar Favorito Manualmente</h3>
-          <form onSubmit={handleManualFavoriteSubmit} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: '1 1 120px' }}>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>ID del Registro</label>
-              <input type="text" className="filter-select" required placeholder="Ej: R-157-2026" value={manualFav.id} onChange={e => setManualFav({...manualFav, id: e.target.value})} />
+          {isFavoritesPage && (
+            <div className="manual-favorite-section" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '10px' }}>
+              <h3 style={{ fontSize: '15px', marginBottom: '15px', color: 'var(--text-dark)' }}>Agregar Favorito Manualmente</h3>
+              <form onSubmit={handleManualFavoriteSubmit} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: '1 1 120px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>ID del Registro</label>
+                  <input type="text" className="filter-select" required placeholder="Ej: R-157-2026" value={manualFav.id} onChange={e => setManualFav({ ...manualFav, id: e.target.value })} />
+                </div>
+                <div style={{ flex: '2 1 200px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>Nombre / Descripción</label>
+                  <input type="text" className="filter-select" required placeholder="Ej: Proyecto Hidroeléctrico..." value={manualFav.nombre} onChange={e => setManualFav({ ...manualFav, nombre: e.target.value })} />
+                </div>
+                <div style={{ flex: '1 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>Fuente</label>
+                  <select className="filter-select" required value={manualFav.fuente} onChange={e => setManualFav({ ...manualFav, fuente: e.target.value })}>
+                    <option value="">Seleccione...</option>
+                    <option value="SNIFA">SNIFA</option>
+                    <option value="SEA">SEA</option>
+                    <option value="Tribunales">Tribunales</option>
+                    <option value="Diario Oficial">Diario Oficial</option>
+                    <option value="Noticias">Noticias Generales</option>
+                  </select>
+                </div>
+                <div style={{ flex: '2 1 250px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>URL de Acción (Opcional)</label>
+                  <input type="url" className="filter-select" placeholder="https://..." value={manualFav.accion} onChange={e => setManualFav({ ...manualFav, accion: e.target.value })} />
+                </div>
+                <button type="submit" className="btn-primary" style={{ height: '42px', borderRadius: '6px' }}>
+                  + Agregar
+                </button>
+              </form>
             </div>
-            <div style={{ flex: '2 1 200px' }}>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>Nombre / Descripción</label>
-              <input type="text" className="filter-select" required placeholder="Ej: Proyecto Hidroeléctrico..." value={manualFav.nombre} onChange={e => setManualFav({...manualFav, nombre: e.target.value})} />
-            </div>
-            <div style={{ flex: '1 1 150px' }}>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>Fuente</label>
-              <select className="filter-select" required value={manualFav.fuente} onChange={e => setManualFav({...manualFav, fuente: e.target.value})}>
-                <option value="">Seleccione...</option>
-                <option value="SNIFA">SNIFA</option>
-                <option value="SEA">SEA</option>
-                <option value="Tribunales">Tribunales</option>
-                <option value="Diario Oficial">Diario Oficial</option>
-                <option value="Noticias">Noticias Generales</option>
-              </select>
-            </div>
-            <div style={{ flex: '2 1 250px' }}>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: 'var(--text-light)', fontWeight: 600 }}>URL de Acción (Opcional)</label>
-              <input type="url" className="filter-select" placeholder="https://..." value={manualFav.accion} onChange={e => setManualFav({...manualFav, accion: e.target.value})} />
-            </div>
-            <button type="submit" className="btn-primary" style={{ height: '42px', borderRadius: '6px' }}>
-              + Agregar
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="list-header">
-        <h2 className="list-title">Listado de {listTitle}</h2>
-        <div className="list-meta" style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
-          {!isFavoritesPage && category && (
-            <button 
-              onClick={async () => {
-                await markAllRead(category);
-                setData(prev => prev.map(item => ({ ...item, is_new: false })));
-              }}
-              className="btn-mark-read"
-              style={{
-                fontSize: '12px',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: '1px solid var(--primary)',
-                color: 'var(--primary)',
-                background: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              Marcar todo como leído
-            </button>
           )}
-          <span>Total de registros: {filteredData.length}</span>
-          <button onClick={downloadExcel} style={{display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600}}>
-            <Download size={16} /> Descargar XLSX
-          </button>
-        </div>
-      </div>
 
-      <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
-        <DataGrid 
-          rows={rows} 
-          columns={columns} 
-          loading={loading}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 10 } },
-          }}
-          pageSizeOptions={[10, 25, 50]}
-          disableRowSelectionOnClick
-          localeText={esES.components.MuiDataGrid.defaultProps.localeText}
-          getRowClassName={(params) => {
-            return params.row.is_new ? 'new-record-highlight' : '';
-          }}
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-cell:focus': { outline: 'none' },
-            '& .new-record-highlight': {
-              backgroundColor: 'rgba(34, 197, 94, 0.12)',
-              fontWeight: '500',
-              borderLeft: '5px solid var(--primary)',
-            },
-            '& .MuiDataGrid-row.new-record-highlight:hover': {
-              backgroundColor: 'rgba(34, 197, 94, 0.18)',
-            },
-            '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid #f0f0f0',
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#f8f9fa',
-              borderBottom: '2px solid #e0e0e0',
-              fontWeight: 'bold',
-            },
-          }}
-        />
-      </div>
+          <div className="list-header">
+            <h2 className="list-title">Listado de {listTitle}</h2>
+            <div className="list-meta" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              {!isFavoritesPage && category && (
+                <button
+                  onClick={async () => {
+                    await markAllRead(category);
+                    setData(prev => prev.map(item => ({ ...item, is_new: false })));
+                  }}
+                  className="btn-mark-read"
+                  style={{
+                    fontSize: '12px',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--primary)',
+                    color: 'var(--primary)',
+                    background: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Marcar todo como leído
+                </button>
+              )}
+              <span>Total de registros: {filteredData.length}</span>
+              <button onClick={downloadExcel} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
+                <Download size={16} /> Descargar XLSX
+              </button>
+            </div>
+          </div>
+
+          <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              loading={loading}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+              getRowClassName={(params) => {
+                return params.row.is_new ? 'new-record-highlight' : '';
+              }}
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                '& .new-record-highlight': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                  fontWeight: '500',
+                  borderLeft: '5px solid var(--primary)',
+                },
+                '& .MuiDataGrid-row.new-record-highlight:hover': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: '1px solid #f0f0f0',
+                },
+                '& .MuiDataGrid-columnHeaders': {
+                  backgroundColor: '#f8f9fa',
+                  borderBottom: '2px solid #e0e0e0',
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          </div>
         </>
       )}
     </div>
