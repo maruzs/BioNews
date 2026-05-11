@@ -14,31 +14,61 @@ export const aggregateData = (data: any[], dim: DimensionConfig): ChartDataPoint
       counts[primary][secondary] = (counts[primary][secondary] || 0) + 1;
       counts[primary].total = (counts[primary].total || 0) + 1;
     });
-    return Object.values(counts).sort((a, b) => a.name.localeCompare(b.name));
+    const result = Object.values(counts);
+    if (dim.key.toLowerCase().includes('anio') || dim.key.toLowerCase().includes('año') || dim.key.toLowerCase().includes('fecha') || dim.label.toLowerCase().includes('evolucion') || dim.label.toLowerCase().includes('evolución') || dim.label.toLowerCase().includes('año')) {
+      return result.sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   data.forEach(item => {
-    const val = normalizeLabel(item[dim.key], dim.key);
+    let val = normalizeLabel(item[dim.key], dim.key);
+    
+    // Custom filtering rules
+    if (dim.label === 'Normativas por Organismo') {
+      const org = String(item.organismo || '').toLowerCase();
+      const suborg = String(item.suborganismo || '').toLowerCase();
+      if (org.includes('regi') || org.includes('provincia') || suborg.includes('provincia')) {
+        return; // skip Region and Provincia
+      }
+    }
+    
+    if (dim.label === 'Distribución por Región') {
+      // Si estamos en normativas y la llave es region, tomamos del organismo
+      // si el organismo es 'Región'
+      if (item.tableName === 'normativas' || !item.region) {
+         const org = String(item.organismo || '').toLowerCase();
+         if (org.includes('regi')) {
+            val = normalizeLabel(item.organismo, 'region');
+         } else if (item.region) {
+            val = normalizeLabel(item.region, 'region');
+         } else {
+            return;
+         }
+      }
+      if (val === 'No especificado' || val === 'no especificado') return;
+    }
+
     counts[val] = (counts[val] || 0) + 1;
   });
 
-  const total = data.length;
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   const result = Object.entries(counts).map(([name, count]) => ({
     name,
     count: count as number,
-    percentage: Number(((count / total) * 100).toFixed(1))
+    percentage: total > 0 ? Number(((count / total) * 100).toFixed(1)) : 0
   }));
+
+  // Year sorting (numeric if possible, cronológico)
+  if (dim.key.toLowerCase().includes('anio') || dim.key.toLowerCase().includes('año') || dim.key.toLowerCase().includes('fecha') || dim.label.toLowerCase().includes('evolucion') || dim.label.toLowerCase().includes('evolución') || dim.label.toLowerCase().includes('año')) {
+    return result.sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+  }
 
   // Sorting based on type
   if (dim.type === 'bar-horizontal' || dim.type === 'relative-bar') {
     return result.sort((a, b) => b.count - a.count);
   }
   
-  // Year sorting (numeric if possible)
-  if (dim.key.toLowerCase().includes('anio') || dim.key.toLowerCase().includes('año')) {
-    return result.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-  }
-
   return result.sort((a, b) => b.count - a.count);
 };
 

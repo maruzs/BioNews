@@ -59,15 +59,14 @@ const GroupedBarChart: React.FC<GroupedBarChartProps> = ({
           tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
         />
         <Tooltip content={<DashboardTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-        <Legend content={<DashboardLegend />} />
+        {keys.length > 1 || (keys.length === 1 && keys[0] !== 'count') ? <Legend content={<DashboardLegend />} /> : null}
         {keys.map((key) => (
           <Bar 
             key={key} 
             dataKey={key} 
-            name={key}
+            name={key === 'count' ? 'Cantidad' : key}
             fill={getColorForValue(key, colors)} 
             radius={[4, 4, 0, 0]}
-            stackId={groupField ? 'a' : undefined}
             onClick={(entry: any) => toggleFilter(filterKey as any, entry[xAxisKey])}
             style={{ cursor: 'pointer' }}
           >

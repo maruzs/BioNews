@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, Download, Heart, Eye, BookOpen } from 'lucide-react';
 import { DataGrid } from '@mui/x-data-grid';
+import { Autocomplete, TextField } from '@mui/material';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
 import { useAuth } from '../context/AuthContext';
@@ -153,7 +154,7 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
       baseConfig.dimensions = [
         { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
         { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
-        { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical', groupField: 'tipo_normativa' },
+        { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical' }, // Desacopladas (sin groupField)
         { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' }
       ];
       break;
@@ -161,18 +162,18 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
       baseConfig.dimensions = [
         { key: 'tipo_proyecto', label: 'Pertinencias por Tipo', type: 'relative-bar' },
         { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' },
+        // { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' }, // Actualmente no tienen region
         { key: 'Estado', label: 'Estado del Proceso', type: 'pie' },
-        { key: 'Fecha', label: 'Evolución Anual por Tipo', type: 'grouped-vertical', groupField: 'tipo_proyecto' }
+        { key: 'Fecha', label: 'Evolución Anual por Tipo', type: 'grouped-vertical' } // Desacopladas
       ];
       break;
     case 'SEAEvaluados':
       baseConfig.dimensions = [
-        { key: 'tipo_presentacion', label: 'Tipo de Presentación', type: 'relative-bar' },
+        { key: 'razon_ingreso', label: 'Razón de Ingreso', type: 'relative-bar' },
         { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
         { key: 'region', label: 'Proyectos por Región', type: 'bar-horizontal' },
-        { key: 'estado', label: 'Estado de Evaluación', type: 'pie' },
-        { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical', groupField: 'tipo_presentacion' }
+        { key: 'estado_proyecto', label: 'Estado de Evaluación', type: 'pie' },
+        { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical' } // Desacopladas
       ];
       break;
     case 'Tribunales':
@@ -180,19 +181,32 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
         { key: 'Tribunal', label: 'Causas por Tribunal', type: 'relative-bar' },
         { key: 'Tipo_de_Procedimiento', label: 'Tipo de Procedimiento', type: 'bar-horizontal' },
         { key: 'Estado_Procesal', label: 'Estado Procesal', type: 'pie' },
-        { key: 'Fecha', label: 'Ingreso Anual de Causas', type: 'grouped-vertical', groupField: 'Tribunal' }
+        { key: 'Fecha', label: 'Ingreso Anual de Causas', type: 'grouped-vertical' } // Desacopladas
       ];
       break;
     case 'fiscalizaciones':
     case 'sancionatorios':
+      baseConfig.dimensions = [
+        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'estado', label: 'Estado del Expediente', type: 'pie' },
+        { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
+      ];
+      break;
     case 'registroSanciones':
+      baseConfig.dimensions = [
+        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
+        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'pago_multa', label: 'Multas', type: 'pie' },
+        { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
+      ];
+      break;
     case 'medidas_provisionales':
     case 'requerimientos':
     case 'programasDeCumplimiento':
       baseConfig.dimensions = [
         { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
         { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
-        { key: 'estado', label: 'Estado del Expediente', type: 'pie' },
         { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
       ];
       break;
@@ -698,42 +712,44 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <button
-          onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
-            backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
-            color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
-            border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
-            borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-            transition: '0.2s'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
-          }}
-        >
-          {activeTab === 'dashboard' ? (
-            <>
-              <BookOpen size={18} style={{ color: '#22c55e' }} />
-              Registros
-            </>
-          ) : (
-            <>
-              <LayoutDashboard size={18} />
-              Dashboard
-            </>
-          )}
-        </button>
+        {!isFavoritesPage && (
+          <button
+            onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+              backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
+              color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
+              border: activeTab === 'dashboard' ? '1px solid var(--primary)' : 'none',
+              borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
+              transition: '0.2s'
+            }}
+            onMouseOver={(e) => {
+              if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseOut={(e) => {
+              if (activeTab !== 'dashboard') e.currentTarget.style.opacity = '1';
+            }}
+          >
+            {activeTab === 'dashboard' ? (
+              <>
+                <BookOpen size={18} style={{ color: '#22c55e' }} />
+                Registros
+              </>
+            ) : (
+              <>
+                <LayoutDashboard size={18} />
+                Dashboard
+              </>
+            )}
+          </button>
+        )}
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
           {filteredData.length} resultados encontrados
         </div>
       </div>
 
-      {activeTab === 'dashboard' ? (
+      {activeTab === 'dashboard' && !isFavoritesPage ? (
         <div style={{ marginTop: '20px' }}>
           <DashboardManager
             data={data}
@@ -770,14 +786,22 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                       return (
                         <div key={col.field}>
                           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>{col.headerName}</label>
-                          <select
-                            style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '14px' }}
-                            value={columnFilters[col.field] || ''}
-                            onChange={(e) => setColumnFilters({ ...columnFilters, [col.field]: e.target.value })}
-                          >
-                            <option value="">Todos</option>
-                            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
+                          <Autocomplete
+                            options={options}
+                            value={columnFilters[col.field] || null}
+                            onChange={(_, newValue) => setColumnFilters({ ...columnFilters, [col.field]: newValue || '' })}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                placeholder="Todos"
+                                size="small"
+                                sx={{
+                                  bgcolor: 'white',
+                                  '& .MuiOutlinedInput-root': { borderRadius: '6px' }
+                                }}
+                              />
+                            )}
+                          />
                         </div>
                       );
                     }

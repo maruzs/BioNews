@@ -27,6 +27,18 @@ export const normalizeLabel = (label: any, key?: string): string => {
     'aprobada': 'Aprobada',
     'rechazado': 'Rechazada',
     'rechazada': 'Rechazada',
+    'terminada': 'Terminada',
+    'terminadas': 'Terminada',
+    'en tramitacion': 'En tramitación',
+    'en tramitación': 'En tramitación',
+    'tramitacion': 'En tramitación',
+    'tramitación': 'En tramitación',
+    'reclamación': 'Reclamación',
+    'reclamacion': 'Reclamación',
+    'solicitud': 'Solicitud',
+    'solicitud sma': 'Solicitud',
+    'demanda ejecutiva ': 'Demanda Ejecutiva',
+    'demanda ejecutiva': 'Demanda Ejecutiva',
   };
 
   if (stateMappings[lower]) return stateMappings[lower];

@@ -44,19 +44,42 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
         baseConfig.dimensions = [
           { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
           { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
-          { key: 'fecha', label: 'Normativas por Año', type: 'grouped-vertical', groupField: 'tipo_normativa' },
+          { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical' }, // Desacopladas
           { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' }
         ];
         break;
       case 'fiscalizaciones':
       case 'sancionatorios':
+        baseConfig.dimensions = [
+          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
+          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'estado', label: 'Estado', type: 'pie' },
+          { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
+        ];
+        break;
+      case 'registroSanciones':
+        baseConfig.dimensions = [
+          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
+          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'pago_multa', label: 'Multas', type: 'pie' },
+          { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
+        ];
+        break;
       case 'medidas_provisionales':
+      case 'programasDeCumplimiento':
+      case 'requerimientos':
+        baseConfig.dimensions = [
+          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
+          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
+        ];
+        break;
       case 'Tribunales':
         baseConfig.dimensions = [
-          { key: tableName === 'Tribunales' ? 'Tribunal' : 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
+          { key: 'Tribunal', label: 'Distribución Principal', type: 'bar-horizontal' },
           { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
-          { key: tableName === 'Tribunales' ? 'Estado_Procesal' : 'estado', label: 'Estado', type: 'pie' },
-          { key: tableName === 'Tribunales' ? 'Fecha' : 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
+          { key: 'Estado_Procesal', label: 'Estado', type: 'pie' },
+          { key: 'Fecha', label: 'Evolución Temporal', type: 'grouped-vertical' }
         ];
         break;
       default:

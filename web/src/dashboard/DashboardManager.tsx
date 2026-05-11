@@ -131,7 +131,7 @@ const DashboardManager: React.FC<DashboardManagerProps> = ({ data, config }) => 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KPIStatCard
-            title="Total de Registros"
+            title={config.tableName === 'normativas' ? 'Total Normativas' : `Total de ${config.title}`}
             value={filteredData.length.toLocaleString()}
             icon={LayoutDashboard}
             subtitle={isFiltered ? `De un total de ${data.length.toLocaleString()}` : 'Base de datos completa'}
