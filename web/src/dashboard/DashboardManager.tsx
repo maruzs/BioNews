@@ -54,6 +54,7 @@ const DashboardManager: React.FC<DashboardManagerProps> = ({ data, config }) => 
             xAxisKey="name"
             groupField={dim.groupField}
             filterKey={dim.key}
+            layout="horizontal"
           />
         );
       case 'bar-horizontal':
@@ -62,6 +63,7 @@ const DashboardManager: React.FC<DashboardManagerProps> = ({ data, config }) => 
             data={chartData}
             xAxisKey="name"
             filterKey={dim.key}
+            layout="vertical"
           />
         );
       default:

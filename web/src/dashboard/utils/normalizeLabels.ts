@@ -51,13 +51,17 @@ export const normalizeLabel = (label: any, key?: string): string => {
   // 3. Extracción de año si es una fecha
   const dateFields = ['fecha', 'Fecha', 'fecha_inicio', 'fecha_termino', 'fecha_presentacion', 'fecha_agregado'];
   if (key && (dateFields.includes(key) || key.toLowerCase().includes('fecha'))) {
+    // Buscar primero YYYY en cualquier parte
     const yearMatch = cleaned.match(/\b(19|20)\d{2}\b/);
     if (yearMatch) return yearMatch[0];
     
-    if (cleaned.includes('/')) {
-      const parts = cleaned.split('/');
-      const last = parts[parts.length - 1];
+    // Si no lo encuentra, buscar split por - o /
+    if (cleaned.includes('/') || cleaned.includes('-')) {
+      const separator = cleaned.includes('/') ? '/' : '-';
+      const parts = cleaned.split(separator);
+      const last = parts[parts.length - 1].split(' ')[0]; // quitar la hora si existe
       if (last.length === 4) return last;
+      if (parts[0].length === 4) return parts[0];
     }
   }
 

@@ -14,13 +14,15 @@ interface GroupedBarChartProps {
   xAxisKey: string;
   groupField?: string;
   filterKey: string;
+  layout?: 'horizontal' | 'vertical';
 }
 
 const GroupedBarChart: React.FC<GroupedBarChartProps> = ({ 
   data, 
   xAxisKey, 
   groupField,
-  filterKey
+  filterKey,
+  layout = 'horizontal'
 }) => {
   const { colors } = useDashboardTheme();
   const { filters, toggleFilter } = useDashboardStore();
@@ -45,19 +47,41 @@ const GroupedBarChart: React.FC<GroupedBarChartProps> = ({
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-        <XAxis 
-          dataKey={xAxisKey} 
-          axisLine={false} 
-          tickLine={false}
-          tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
-        />
-        <YAxis 
-          axisLine={false} 
-          tickLine={false}
-          tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
-        />
+      <BarChart data={data} layout={layout} margin={{ top: 10, right: 30, left: layout === 'vertical' ? 100 : 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={layout !== 'vertical'} horizontal={layout !== 'horizontal'} stroke={theme.palette.divider} />
+        {layout === 'horizontal' ? (
+          <>
+            <XAxis 
+              dataKey={xAxisKey} 
+              axisLine={false} 
+              tickLine={false}
+              tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+            />
+            <YAxis 
+              axisLine={false} 
+              tickLine={false}
+              tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+            />
+          </>
+        ) : (
+          <>
+            <XAxis 
+              type="number"
+              axisLine={false} 
+              tickLine={false}
+              tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+              hide={true}
+            />
+            <YAxis 
+              type="category"
+              dataKey={xAxisKey} 
+              axisLine={false} 
+              tickLine={false}
+              tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+              width={150}
+            />
+          </>
+        )}
         <Tooltip content={<DashboardTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
         {keys.length > 1 || (keys.length === 1 && keys[0] !== 'count') ? <Legend content={<DashboardLegend />} /> : null}
         {keys.map((key) => (
