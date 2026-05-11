@@ -153,16 +153,16 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
     case 'normativas':
       baseConfig.dimensions = [
         { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
-        { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
+        { key: 'organismo', label: 'Normativas por Organismo', type: 'relative-bar' },
         { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical' }, // Desacopladas (sin groupField)
-        { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' }
+        { key: 'region', label: 'Distribución por Región', type: 'relative-bar' }
       ];
       break;
     case 'pertinencias':
       baseConfig.dimensions = [
         { key: 'tipo_proyecto', label: 'Pertinencias por Tipo', type: 'relative-bar' },
-        { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
-        // { key: 'region', label: 'Pertinencias por Región', type: 'bar-horizontal' }, // Actualmente no tienen region
+        { key: 'categoria_economica', label: 'Categoría Económica', type: 'relative-bar' },
+        // { key: 'region', label: 'Pertinencias por Región', type: 'relative-bar' }, // Actualmente no tienen region
         { key: 'Estado', label: 'Estado del Proceso', type: 'pie' },
         { key: 'Fecha', label: 'Evolución Anual por Tipo', type: 'grouped-vertical' } // Desacopladas
       ];
@@ -170,8 +170,8 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
     case 'SEAEvaluados':
       baseConfig.dimensions = [
         { key: 'razon_ingreso', label: 'Razón de Ingreso', type: 'relative-bar' },
-        { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Proyectos por Región', type: 'bar-horizontal' },
+        { key: 'categoria_economica', label: 'Categoría Económica', type: 'relative-bar' },
+        { key: 'region', label: 'Proyectos por Región', type: 'relative-bar' },
         { key: 'estado_proyecto', label: 'Estado de Evaluación', type: 'pie' },
         { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical' } // Desacopladas
       ];
@@ -187,16 +187,16 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
     case 'fiscalizaciones':
     case 'sancionatorios':
       baseConfig.dimensions = [
-        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'categoria', label: 'Categoría Económica', type: 'relative-bar' },
+        { key: 'region', label: 'Registros por Región', type: 'relative-bar' },
         { key: 'estado', label: 'Estado del Expediente', type: 'pie' },
         { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
       ];
       break;
     case 'registroSanciones':
       baseConfig.dimensions = [
-        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'categoria', label: 'Categoría Económica', type: 'relative-bar' },
+        { key: 'region', label: 'Registros por Región', type: 'relative-bar' },
         { key: 'pago_multa', label: 'Multas', type: 'pie' },
         { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
       ];
@@ -205,8 +205,8 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
     case 'requerimientos':
     case 'programasDeCumplimiento':
       baseConfig.dimensions = [
-        { key: 'categoria', label: 'Categoría Económica', type: 'bar-horizontal' },
-        { key: 'region', label: 'Registros por Región', type: 'bar-horizontal' },
+        { key: 'categoria', label: 'Categoría Económica', type: 'relative-bar' },
+        { key: 'region', label: 'Registros por Región', type: 'relative-bar' },
         { key: 'expediente', label: 'Evolución Anual', type: 'grouped-vertical' }
       ];
       break;
@@ -220,7 +220,7 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
     default:
       baseConfig.dimensions = [
         { key: 'estado', label: 'Distribución por Estado', type: 'pie' },
-        { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+        { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
       ];
   }
   return baseConfig;

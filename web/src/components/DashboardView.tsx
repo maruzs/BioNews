@@ -43,24 +43,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
       case 'normativas':
         baseConfig.dimensions = [
           { key: 'tipo_normativa', label: 'Normativas por Tipo', type: 'relative-bar' },
-          { key: 'organismo', label: 'Normativas por Organismo', type: 'bar-horizontal' },
+          { key: 'organismo', label: 'Normativas por Organismo', type: 'relative-bar' },
           { key: 'fecha', label: 'Normativas por Año y Tipo', type: 'grouped-vertical' }, // Desacopladas
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' }
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' }
         ];
         break;
       case 'fiscalizaciones':
       case 'sancionatorios':
         baseConfig.dimensions = [
-          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'categoria', label: 'Distribución Principal', type: 'relative-bar' },
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
           { key: 'estado', label: 'Estado', type: 'pie' },
           { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
         ];
         break;
       case 'registroSanciones':
         baseConfig.dimensions = [
-          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'categoria', label: 'Distribución Principal', type: 'relative-bar' },
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
           { key: 'pago_multa', label: 'Multas', type: 'pie' },
           { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
         ];
@@ -69,15 +69,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
       case 'programasDeCumplimiento':
       case 'requerimientos':
         baseConfig.dimensions = [
-          { key: 'categoria', label: 'Distribución Principal', type: 'bar-horizontal' },
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'categoria', label: 'Distribución Principal', type: 'relative-bar' },
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
           { key: 'expediente', label: 'Evolución Temporal', type: 'grouped-vertical' }
         ];
         break;
       case 'Tribunales':
         baseConfig.dimensions = [
-          { key: 'Tribunal', label: 'Distribución Principal', type: 'bar-horizontal' },
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'Tribunal', label: 'Distribución Principal', type: 'relative-bar' },
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
           { key: 'Estado_Procesal', label: 'Estado', type: 'pie' },
           { key: 'Fecha', label: 'Evolución Temporal', type: 'grouped-vertical' }
         ];
@@ -85,7 +85,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
       default:
         baseConfig.dimensions = [
           { key: 'estado', label: 'Distribución por Estado', type: 'pie' },
-          { key: 'region', label: 'Distribución por Región', type: 'bar-horizontal' },
+          { key: 'region', label: 'Distribución por Región', type: 'relative-bar' },
         ];
     }
     return baseConfig;

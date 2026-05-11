@@ -46,17 +46,17 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
                   variant="body2" 
                   sx={{ 
                     fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.85rem',
+                    fontSize: '0.9rem',
                     color: isSelected ? 'primary.main' : 'text.primary',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: '80%'
+                    maxWidth: '85%'
                   }}
                 >
                   {item.name}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.85rem' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.9rem' }}>
                   {item.count.toLocaleString()}
                 </Typography>
               </Box>
@@ -67,7 +67,7 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
                 placement="top"
               >
                 <Box sx={{ 
-                  height: 12, 
+                  height: 20, 
                   width: '100%', 
                   bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
                   borderRadius: 6,

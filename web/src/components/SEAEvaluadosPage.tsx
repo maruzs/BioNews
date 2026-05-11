@@ -418,11 +418,11 @@ const SEAEvaluadosPage = () => {
             title: 'Proyectos Evaluados SEA',
             tableName: 'SEAEvaluados',
             dimensions: [
-              { key: 'tipo_presentacion', label: 'Tipo de Presentación', type: 'relative-bar' as const },
-              { key: 'categoria_economica', label: 'Categoría Económica', type: 'bar-horizontal' as const },
-              { key: 'region', label: 'Proyectos por Región', type: 'bar-horizontal' as const },
-              { key: 'estado', label: 'Estado de Evaluación', type: 'pie' as const },
-              { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical' as const, groupField: 'tipo_presentacion' }
+              { key: 'razon_ingreso', label: 'Razón de Ingreso', type: 'relative-bar' as const },
+              { key: 'categoria_economica', label: 'Categoría Económica', type: 'relative-bar' as const },
+              { key: 'region', label: 'Proyectos por Región', type: 'relative-bar' as const },
+              { key: 'estado_proyecto', label: 'Estado de Evaluación', type: 'pie' as const },
+              { key: 'fecha_presentacion', label: 'Presentaciones por Año', type: 'grouped-vertical' as const }
             ]
           }}
         />
