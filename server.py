@@ -904,6 +904,38 @@ def scrape_sea(background_tasks: BackgroundTasks, admin = Depends(get_current_ad
     background_tasks.add_task(_run_sea_scrapers)
     return {"message": "Scraping de SEA iniciado en background."}
 
+class SEAManualRequest(BaseModel):
+    start_date: str
+    end_date: str
+
+async def _run_sea_scrapers_manual(start_date: str, end_date: str):
+    # 1. Pertinencias
+    try:
+        scraper_pert = PertinenciasScraper()
+        nuevos_pert = await asyncio.to_thread(scraper_pert.run, start_date, end_date)
+        db.log_scraper_run("Pertinencias SEA (Manual)", exito=True, nuevos=nuevos_pert)
+        if nuevos_pert > 0:
+            await notify_new_content("pertinencias")
+    except Exception as e:
+        db.log_scraper_run("Pertinencias SEA (Manual)", exito=False, error=str(e))
+
+    # 2. Proyectos Evaluados
+    try:
+        scraper_eval = SEAEvaluadosScraper()
+        nuevos_eval = await asyncio.to_thread(scraper_eval.run, start_date, end_date)
+        db.log_scraper_run("Proyectos Evaluados SEA (Manual)", exito=True, nuevos=nuevos_eval)
+        if nuevos_eval > 0:
+            await notify_new_content("sea_proyectos_evaluados")
+    except Exception as e:
+        db.log_scraper_run("Proyectos Evaluados SEA (Manual)", exito=False, error=str(e))
+
+@app.post("/api/scrape/sea/manual")
+def scrape_sea_manual(req: SEAManualRequest, background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    if not req.start_date or not req.end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date are required")
+    background_tasks.add_task(_run_sea_scrapers_manual, req.start_date, req.end_date)
+    return {"message": f"Scraping manual de SEA iniciado en background para el rango {req.start_date} al {req.end_date}."}
+
 async def _run_snifa_scrapers():
     from src.scrapers.fiscalizaciones import SnifaFiscalizacionScraper
     from src.scrapers.reqSEIA import RequerimientosScraper

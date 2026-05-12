@@ -59,24 +59,60 @@ class SEAEvaluadosScraper:
         
         return self.MAPPING_CATEGORIAS.get(letter, "Otros")
 
-    def run(self):
+    def run(self, start_date=None, end_date=None):
         url_base = "https://seia.sea.gob.cl"
         url_buscar = f"{url_base}/busqueda/buscarProyectoResumen.php"
         url_api = f"{url_base}/busqueda/buscarProyectoResumenAction.php"
         
-        # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
+        fecha_hoy = datetime.now().strftime('%d/%m/%Y')
+        fecha_hoy_iso = datetime.now().strftime('%Y-%m-%d')
+        fecha_desde = fecha_hoy
+        fecha_hasta = fecha_hoy
         is_empty = True
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
-            count = cursor.fetchone()[0]
-            if count > 0:
+        
+        if start_date and end_date:
+            # Manual trigger
+            try:
+                # Convert from YYYY-MM-DD to DD/MM/YYYY
+                fecha_desde = datetime.strptime(start_date, '%Y-%m-%d').strftime('%d/%m/%Y')
+                fecha_hasta = datetime.strptime(end_date, '%Y-%m-%d').strftime('%d/%m/%Y')
                 is_empty = False
-        except Exception as e:
-            print(f"Error verificando DB: {e}")
-        finally:
-            conn.close()
+            except Exception as e:
+                print(f"Error parsing dates: {e}")
+        else:
+            # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
+                count = cursor.fetchone()[0]
+                if count > 0:
+                    is_empty = False
+                    
+                    # Fetch recent unique scrape dates to find gaps
+                    cursor.execute("""
+                        SELECT DISTINCT DATE(fecha_scraping) 
+                        FROM sea_proyectos_evaluados 
+                        WHERE fecha_scraping IS NOT NULL
+                        ORDER BY DATE(fecha_scraping) DESC 
+                        LIMIT 2
+                    """)
+                    scrape_dates = cursor.fetchall()
+                    
+                    if len(scrape_dates) > 0:
+                        last_date_str = scrape_dates[0][0]
+                        if last_date_str == fecha_hoy_iso and len(scrape_dates) > 1:
+                            prev_date_str = scrape_dates[1][0]
+                            prev_date_obj = datetime.strptime(prev_date_str, '%Y-%m-%d')
+                            fecha_desde = prev_date_obj.strftime('%d/%m/%Y')
+                        else:
+                            last_date_obj = datetime.strptime(last_date_str, '%Y-%m-%d')
+                            fecha_desde = last_date_obj.strftime('%d/%m/%Y')
+            except Exception as e:
+                print(f"Error verificando DB: {e}")
+            finally:
+                if 'conn' in locals():
+                    conn.close()
 
         session = requests.Session()
         session.headers.update({
@@ -85,7 +121,6 @@ class SEAEvaluadosScraper:
             "X-Requested-With": "XMLHttpRequest"
         })
 
-        fecha_hoy = datetime.now().strftime('%d/%m/%Y')
         limit = 100
         offset = 0
         
@@ -97,8 +132,8 @@ class SEAEvaluadosScraper:
             "selectComuna": "",
             "tipoPresentacion": "Ambos",
             "projectStatus": "",
-            "PresentacionMin": "" if is_empty else fecha_hoy,
-            "PresentacionMax": "" if is_empty else fecha_hoy,
+            "PresentacionMin": "" if is_empty else fecha_desde,
+            "PresentacionMax": "" if is_empty else fecha_hasta,
             "CalificaMin": "",
             "CalificaMax": "",
             "sectores_economicos": "",

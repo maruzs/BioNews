@@ -11,6 +11,8 @@ const AdminPanel = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [scraping, setScraping] = useState<string | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [seaStartDate, setSeaStartDate] = useState<string>('');
+  const [seaEndDate, setSeaEndDate] = useState<string>('');
   const [schedulerConfig, setSchedulerConfig] = useState<any>({
     snifa_time_1: "07:00",
     snifa_time_2: "14:00",
@@ -134,6 +136,31 @@ const AdminPanel = () => {
       alert('Scraping iniciado en segundo plano. Los logs se actualizarán cuando finalice.');
     } catch(err) {
       console.error(err);
+    }
+    setScraping(null);
+  };
+
+  const handleSeaManualScrape = async () => {
+    if (!seaStartDate || !seaEndDate) {
+      alert("Por favor selecciona una fecha de inicio y una fecha de fin.");
+      return;
+    }
+    setScraping('sea-manual');
+    try {
+      const res = await fetch('/api/scrape/sea/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ start_date: seaStartDate, end_date: seaEndDate })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+      } else {
+        alert('Error: ' + data.detail);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error de conexión');
     }
     setScraping(null);
   };
@@ -328,6 +355,20 @@ const AdminPanel = () => {
                 <RefreshCw size={16} /> Refrescar Logs
               </button>
             </div>
+          </div>
+          
+          <div style={{ marginTop: '20px', background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'flex-end', gap: '15px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>SEA: Fecha Inicio</label>
+              <input type="date" value={seaStartDate} onChange={(e) => setSeaStartDate(e.target.value)} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>SEA: Fecha Fin</label>
+              <input type="date" value={seaEndDate} onChange={(e) => setSeaEndDate(e.target.value)} className="filter-select" />
+            </div>
+            <button onClick={handleSeaManualScrape} disabled={!!scraping} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '42px' }}>
+              <Play size={16} /> {scraping === 'sea-manual' ? 'Iniciando...' : 'Scrapeo SEA por Rango'}
+            </button>
           </div>
           
           <div className="table-container" style={{ width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '0', overflow: 'auto', marginTop: '15px' }}>

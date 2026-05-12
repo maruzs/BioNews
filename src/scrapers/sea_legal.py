@@ -81,7 +81,7 @@ class PertinenciasScraper:
         
         return "Otros"
 
-    def run(self):
+    def run(self, start_date=None, end_date=None):
         """Ejecuta el scraper y guarda directamente en la BD."""
         usuario = "21324866-9"
         password = "Memr2026."
@@ -93,6 +93,36 @@ class PertinenciasScraper:
         url_logout = f"{url_base}/logout"
         
         fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+        fecha_desde = fecha_hoy
+        fecha_hasta = fecha_hoy
+        
+        if start_date and end_date:
+            fecha_desde = start_date
+            fecha_hasta = end_date
+        else:
+            # Opcion 2: Buscar ultima fecha de scraping
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT DISTINCT DATE(fecha_scraping) 
+                    FROM pertinencias 
+                    WHERE fecha_scraping IS NOT NULL
+                    ORDER BY DATE(fecha_scraping) DESC 
+                    LIMIT 2
+                """)
+                scrape_dates = cursor.fetchall()
+                if len(scrape_dates) > 0:
+                    last_date_str = scrape_dates[0][0]
+                    if last_date_str == fecha_hoy and len(scrape_dates) > 1:
+                        fecha_desde = scrape_dates[1][0]
+                    else:
+                        fecha_desde = last_date_str
+            except Exception as e:
+                print(f"Error verificando DB pertinencias: {e}")
+            finally:
+                if 'conn' in locals():
+                    conn.close()
         
         session = requests.Session()
         session.headers.update({
@@ -139,7 +169,7 @@ class PertinenciasScraper:
             xsrf_cookie = session.cookies.get('XSRF-TOKEN')
             xsrf_token = urllib.parse.unquote(xsrf_cookie) if xsrf_cookie else ''
 
-            print(f"3. Consultando API para la fecha: {fecha_hoy}")
+            print(f"3. Consultando API para el rango: {fecha_desde} a {fecha_hasta}")
             headers_api = {
                 "Accept": "application/json, text/plain, */*",
                 "Content-Type": "application/json",
@@ -152,8 +182,8 @@ class PertinenciasScraper:
             payload = {
                 "pertinenciaFilter": {
                     "estado": "",
-                    "fechaPresentacionDesde": fecha_hoy,
-                    "fechaPresentacionHasta": "",
+                    "fechaPresentacionDesde": fecha_desde,
+                    "fechaPresentacionHasta": fecha_hasta,
                     "fechaRespuestaDesde": "",
                     "fechaRespuestaHasta": "",
                     "id": "",
