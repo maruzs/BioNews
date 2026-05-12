@@ -13,6 +13,8 @@ const AdminPanel = () => {
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [seaStartDate, setSeaStartDate] = useState<string>('');
   const [seaEndDate, setSeaEndDate] = useState<string>('');
+  const [normativasStartDate, setNormativasStartDate] = useState<string>('');
+  const [normativasEndDate, setNormativasEndDate] = useState<string>('');
   const [schedulerConfig, setSchedulerConfig] = useState<any>({
     snifa_time_1: "07:00",
     snifa_time_2: "14:00",
@@ -151,6 +153,31 @@ const AdminPanel = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ start_date: seaStartDate, end_date: seaEndDate })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+      } else {
+        alert('Error: ' + data.detail);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error de conexión');
+    }
+    setScraping(null);
+  };
+
+  const handleNormativasManualScrape = async () => {
+    if (!normativasStartDate || !normativasEndDate) {
+      alert("Por favor selecciona una fecha de inicio y una fecha de fin.");
+      return;
+    }
+    setScraping('normativas-manual');
+    try {
+      const res = await fetch('/api/scrape/normativas/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ start_date: normativasStartDate, end_date: normativasEndDate })
       });
       const data = await res.json();
       if (res.ok) {
@@ -368,6 +395,20 @@ const AdminPanel = () => {
             </div>
             <button onClick={handleSeaManualScrape} disabled={!!scraping} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '42px' }}>
               <Play size={16} /> {scraping === 'sea-manual' ? 'Iniciando...' : 'Scrapeo SEA por Rango'}
+            </button>
+          </div>
+          
+          <div style={{ marginTop: '20px', background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'flex-end', gap: '15px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Normativas: Fecha Inicio</label>
+              <input type="date" value={normativasStartDate} onChange={(e) => setNormativasStartDate(e.target.value)} className="filter-select" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>Normativas: Fecha Fin</label>
+              <input type="date" value={normativasEndDate} onChange={(e) => setNormativasEndDate(e.target.value)} className="filter-select" />
+            </div>
+            <button onClick={handleNormativasManualScrape} disabled={!!scraping} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '42px' }}>
+              <Play size={16} /> {scraping === 'normativas-manual' ? 'Iniciando...' : 'Scrapeo Normativas por Rango'}
             </button>
           </div>
           

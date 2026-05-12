@@ -7,35 +7,37 @@ Siempre revisa bien el codigo antes de confirmar, muchas veces hay problemas de 
 
 ## INSTRUCCION
 
-## CORRECCION DE ERRORES:
+### MEJORAS Y CAMBIOS
 
-El mismo error que estaba ocurriendo en SEA (de que si no se ejecutaba en varios dias se perdian registros) esta ocurriendo ahora con el scraper de Normativas (Diario Oficial).
-Quiero que hagas lo mismo que hiciste para el SEA para las normativas del diario oficial, pero la verdad me interesa solo el nuevo boton con filtro por fecha en el panel de administrador. Ya que si apago el servidor es mi responsabilidad actualizar la informacion manualmente.
+Boton para cambiar vista entre tabla y tarjeta (Para todas las Categorias menos 'Noticias')
 
-Para las normativas el revisar otras fechas es distinto pero no es tan dificl, mira
+Las barras del dashboard hay que corregirlas, deberia ser en base al total de registros pero se muestra una barra muy larga hasta el final, como si fuera un 100% o mas
 
-Esto es para el dia de hoy
-Normativas Generales (Martes):
-https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php?date=12-05-2026&edition=44447
-Normativas Particulares:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/normas_particulares.php?date=12-05-2026&edition=44447
-Boletin Oficial de Mineria:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/bom.php?date=12-05-2026&edition=44447
+Por ejemplo pero ocurre en general para categoria economica, por region, por tipo, etc.
 
-Esto es para ayer (Lunes):
-Normativas Generales:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php?date=11-05-2026&edition=44446
-Normativas Particulares:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/normas_particulares.php?date=11-05-2026&edition=44446
-Boletin Oficial de Mineria:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/bom.php?date=11-05-2026&edition=44446
+En el dashboard de las normativas, en 'Normativas por tipo' y Normativas por 'Organismo' la barra se llena hasta el final, como si fuera 100%, cuando en realidad deberia mostrar el porcentaje real de registros que hay en cada categoria, region, tipo, etc. basado en el total. por ejemplo:
 
-Y como los domingos no tenemos nada, este es el del sabado:
-Normativas Generales (Sabado):
-https://www.diariooficial.interior.gob.cl/edicionelectronica/index.php?date=09-05-2026&edition=44445
-Normativas Particulares:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/normas_particulares.php?date=09-05-2026&edition=44445
-Boletin Oficial de Mineria:
-https://www.diariooficial.interior.gob.cl/edicionelectronica/bom.php?date=09-05-2026&edition=44445
+En normativas por tipo tenemos que hay un total de 432 normativas, las cuales 177 son Normas Generales, 132 son Normas particulares y 123 son del Boletin Oficial Mineria, sin embargo la barra de Normas Generales se muestra hasta el final, cuando en realidad deberia ser 41.0% del total de normativas, se entiende mas o menos la idea? Esto ocurre para las siguientes tarjetas de los dashboards:
 
-En general es asi
+Normativas: - Normativas por tipo - Normativas por Organismo - Distribucion por region
+
+SEA - Pertinencias: - Pertinencias por Tipo - Categoria Economica
+
+SEA - Proyectos Evaluados: - Razon de Ingreso - Categoria Economica - Proyectos por Region
+
+SMA - Fiscalizaciones: - Categoria Economica - Registros por Region
+
+SMA - Sancionatorios: - Categoria Economica - Registros por Region
+
+SMA - Sanciones: - Categoria Economica - Registros por Region
+
+SMA - Programas de cumplimiento (Programas): - Categoria Economica - Registros por Region
+
+SMA - Medidas Provisionales (Medidas): - Categoria Economica - Registros por Region
+
+SMA - Requerimientos de ingreso SEIA(Requerimientos): - Categoria Economica - Registros por Region
+
+Tribunales Ambientles - Resoluciones: - Causas por Tribunal - Tipo de Procedimiento (Este grafico es distinto al resto, haz que sea el mismo tipo pero para los Tipos de Procedimientos)
+
+Ademas otra cosa, aunque por paginacion solo permitamos que se muestren 5000 registros maximos por categoria, el dashboard debe estar basado en el total de registros, no en los registros que se muestran por paginacion, se entiende la diferencia?
+De hecho esto se nota principalmente en lo que es SEA - Pertinencias, ya que son mas de 25000 registros en total y obviamente en el dashboard todo se esta haciendo bajo el maximo de 25k

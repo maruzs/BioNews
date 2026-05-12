@@ -120,7 +120,7 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
 class DiarioOficialScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
-    def run(self):
+    def run(self, start_date=None, end_date=None):
         """Ejecuta el scraper y guarda directamente en la BD."""
         if not os.path.exists(DB_PATH):
             print("La base de datos no existe.")
@@ -130,7 +130,6 @@ class DiarioOficialScraper:
         cursor = conn.cursor()
         crear_tabla_si_no_existe(conn)
         
-        fecha_actual = datetime.now()
         registros_antes = 0
         try:
             cursor.execute("SELECT COUNT(*) FROM normativas")
@@ -138,11 +137,22 @@ class DiarioOficialScraper:
         except:
             pass
         
-        print(f"Iniciando extraccion para {DIAS_A_EXTRAER} dia(s)...")
+        if start_date and end_date:
+            try:
+                start_obj = datetime.strptime(start_date, '%Y-%m-%d')
+                end_obj = datetime.strptime(end_date, '%Y-%m-%d')
+                days_diff = (end_obj - start_obj).days
+                dates_to_extract = [end_obj - timedelta(days=i) for i in range(days_diff + 1)]
+            except Exception as e:
+                print(f"Error parseando fechas manuales: {e}")
+                dates_to_extract = []
+        else:
+            fecha_actual = datetime.now()
+            dates_to_extract = [fecha_actual - timedelta(days=i) for i in range(DIAS_A_EXTRAER)]
         
-        for i in range(DIAS_A_EXTRAER):
-            fecha_iter = fecha_actual - timedelta(days=i)
-            
+        print(f"Iniciando extraccion para {len(dates_to_extract)} dia(s)...")
+        
+        for fecha_iter in dates_to_extract:
             # Ignorar los domingos
             if fecha_iter.weekday() == 6:
                 print(f"Saltando domingo: {fecha_iter.strftime('%d-%m-%Y')}")

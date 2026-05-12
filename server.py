@@ -993,6 +993,28 @@ def scrape_normativas(background_tasks: BackgroundTasks, admin = Depends(get_cur
     background_tasks.add_task(_run_normativas_scrapers)
     return {"message": "Scraping de Normativas iniciado en background."}
 
+class NormativasManualRequest(BaseModel):
+    start_date: str
+    end_date: str
+
+async def _run_normativas_scrapers_manual(start_date: str, end_date: str):
+    from src.scrapers.diario_oficial import DiarioOficialScraper
+    try:
+        scraper_inst = DiarioOficialScraper()
+        nuevos = await asyncio.to_thread(scraper_inst.run, start_date, end_date)
+        db.log_scraper_run("Diario Oficial (Normativas) (Manual)", exito=True, nuevos=nuevos)
+        if nuevos > 0:
+            await notify_new_content("normativas")
+    except Exception as e:
+        db.log_scraper_run("Diario Oficial (Normativas) (Manual)", exito=False, error=str(e))
+
+@app.post("/api/scrape/normativas/manual")
+def scrape_normativas_manual(req: NormativasManualRequest, background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
+    if not req.start_date or not req.end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date are required")
+    background_tasks.add_task(_run_normativas_scrapers_manual, req.start_date, req.end_date)
+    return {"message": f"Scraping manual de Normativas iniciado en background para el rango {req.start_date} al {req.end_date}."}
+
 async def _run_consultas_scrapers():
     from src.scrapers.minsal import MINSALScraper
     from src.scrapers.mma_consultas import MMAConsultasScraper
