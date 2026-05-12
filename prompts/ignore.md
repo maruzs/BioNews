@@ -2,6 +2,6 @@
 
 ### MEJORAS Y CAMBIOS
 
-Lo mismo que hiciste para el SEA hazlo ahora para las normativas del diario oficial, pero la verdad me interesa solo el nuevo boton con filtro por fecha en el panel de administrador.
-
 Boton para cambiar vista entre tabla y tarjeta (Para todas las Categorias menos 'Noticias')
+
+Las barras del dashboard hay que corregirlas, deberia ser en base al total de registros pero se muestra una barra muy larga hasta el final, como si fuera un 100% o mas
