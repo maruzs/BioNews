@@ -29,7 +29,7 @@ const SEAEvaluadosPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SEAEvaluado | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  
+
   // Modal state
   const [showModal, setShowModal] = useState(false);
 
@@ -109,14 +109,14 @@ const SEAEvaluadosPage = () => {
       });
       if (!response.ok) throw new Error('Error al obtener los datos');
       const result = await response.json();
-      
+
       // Sort by date (descending)
       const sorted = (Array.isArray(result) ? result : []).sort((a, b) => {
         const dateA = a.fecha_presentacion.split('/').reverse().join('-');
         const dateB = b.fecha_presentacion.split('/').reverse().join('-');
         return dateB.localeCompare(dateA);
       });
-      
+
       setData(sorted);
 
       // Load favorites
@@ -125,7 +125,7 @@ const SEAEvaluadosPage = () => {
       });
       const favJson = await favRes.json();
       setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
-      
+
       refreshCategory('sea_proyectos_evaluados');
     } catch (err: any) {
       setError(err.message);
@@ -197,24 +197,24 @@ const SEAEvaluadosPage = () => {
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      const matchesSearch = !appliedFilters.search || 
-        item.nombre?.toLowerCase().includes(appliedFilters.search.toLowerCase()) || 
+      const matchesSearch = !appliedFilters.search ||
+        item.nombre?.toLowerCase().includes(appliedFilters.search.toLowerCase()) ||
         item.titular?.toLowerCase().includes(appliedFilters.search.toLowerCase());
-      
+
       const matchesTitular = appliedFilters.titular === 'all' || item.titular === appliedFilters.titular;
       const matchesVia = appliedFilters.via === 'all' || item.via_ingreso === appliedFilters.via;
       const matchesEstado = appliedFilters.estado === 'all' || item.estado_proyecto === appliedFilters.estado;
       const matchesRegion = appliedFilters.region === 'all' || item.region === appliedFilters.region;
       const matchesTipo = appliedFilters.tipo === 'all' || item.tipo_proyecto === appliedFilters.tipo;
       const matchesCategoria = appliedFilters.categoria === 'all' || item.categoria_economica === appliedFilters.categoria;
-      
+
       let matchesDate = true;
       if (appliedFilters.dateFrom || appliedFilters.dateTo) {
         const itemDate = item.fecha_presentacion.split('/').reverse().join('-');
         if (appliedFilters.dateFrom && itemDate < appliedFilters.dateFrom) matchesDate = false;
         if (appliedFilters.dateTo && itemDate > appliedFilters.dateTo) matchesDate = false;
       }
-      
+
       return matchesSearch && matchesTitular && matchesVia && matchesEstado && matchesRegion && matchesTipo && matchesCategoria && matchesDate;
     });
   }, [data, appliedFilters]);
@@ -252,26 +252,26 @@ const SEAEvaluadosPage = () => {
       </div>
 
       {/* Control Bar */}
-      <div style={{ 
-        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+      <div style={{
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px',
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
         <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nombre o titular..." 
+          <input
+            type="text"
+            placeholder="Buscar por nombre o titular..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
-            style={{ 
-              width: '100%', padding: '10px 40px 10px 40px', borderRadius: '8px', 
-              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            style={{
+              width: '100%', padding: '10px 40px 10px 40px', borderRadius: '8px',
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px'
             }}
           />
           {searchTerm && (
-            <button 
+            <button
               onClick={() => { setSearchTerm(''); handleApplyFilters(); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
@@ -279,10 +279,10 @@ const SEAEvaluadosPage = () => {
             </button>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setShowFilters(!showFilters)}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
             color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
@@ -296,9 +296,9 @@ const SEAEvaluadosPage = () => {
           {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <button 
+        <button
           onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
             color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
@@ -333,8 +333,8 @@ const SEAEvaluadosPage = () => {
 
       {/* Advanced Filters */}
       {showFilters && (
-        <div style={{ 
-          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+        <div style={{
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px',
           border: '1px solid var(--border)', marginBottom: '25px',
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
         }}>
@@ -389,20 +389,20 @@ const SEAEvaluadosPage = () => {
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} />
           </div>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
-            <button 
+            <button
               onClick={handleClearFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer'
               }}
             >
               LIMPIAR FILTROS
             </button>
-            <button 
+            <button
               onClick={handleApplyFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: 'none',
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer'
               }}
             >
               APLICAR FILTROS
@@ -412,7 +412,7 @@ const SEAEvaluadosPage = () => {
       )}
 
       {activeTab === 'dashboard' ? (
-        <DashboardManager 
+        <DashboardManager
           data={data}
           config={{
             title: 'Proyectos Evaluados SEA',
@@ -448,30 +448,30 @@ const SEAEvaluadosPage = () => {
             </div>
           ) : (
             <>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                 gap: '25px',
                 marginBottom: '40px',
                 width: '100%'
               }}>
                 {paginatedData.map(item => (
-                  <div key={item.id} style={{ 
+                  <div key={item.id} style={{
                     backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
                     overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
                     display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer', position: 'relative',
                     height: '100%'
                   }}
-                  onClick={() => handleOpenModal(item)}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-6px)';
-                    e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
-                  }}
+                    onClick={() => handleOpenModal(item)}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-6px)';
+                      e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
+                    }}
                   >
                     {/* Header with Status and Favorite */}
                     <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
@@ -483,7 +483,7 @@ const SEAEvaluadosPage = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         {item.is_new && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
-                        <button 
+                        <button
                           onClick={(e) => toggleFavorite(e, item)}
                           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
                         >
@@ -497,7 +497,7 @@ const SEAEvaluadosPage = () => {
                       <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase' }}>
                         {item.via_ingreso} • {item.region || 'Multiregional'}
                       </div>
-                      <h3 style={{ 
+                      <h3 style={{
                         fontSize: '17px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
                         marginBottom: '15px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
                       }}>
@@ -525,12 +525,12 @@ const SEAEvaluadosPage = () => {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center' }}>
-                  <button 
-                    onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0,0); }}
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
                     disabled={currentPage === 1}
-                    style={{ 
-                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                      background: currentPage === 1 ? '#f1f5f9' : 'white', 
+                    style={{
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: currentPage === 1 ? '#f1f5f9' : 'white',
                       cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                       fontWeight: 600, color: 'var(--text-dark)'
                     }}
@@ -541,12 +541,12 @@ const SEAEvaluadosPage = () => {
                     <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
                     <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
                   </div>
-                  <button 
-                    onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0,0); }}
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
                     disabled={currentPage === totalPages}
-                    style={{ 
-                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                      background: currentPage === totalPages ? '#f1f5f9' : 'white', 
+                    style={{
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: currentPage === totalPages ? '#f1f5f9' : 'white',
                       cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
                       fontWeight: 600, color: 'var(--text-dark)'
                     }}
@@ -562,26 +562,26 @@ const SEAEvaluadosPage = () => {
 
       {/* Detail Modal */}
       {showModal && selectedItem && (
-        <div style={{ 
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 2000,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '20px', backdropFilter: 'blur(4px)'
         }} onClick={() => setShowModal(false)}>
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '20px', padding: '40px', 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '20px', padding: '40px',
             maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative'
           }} onClick={e => e.stopPropagation()}>
-            <button 
-              onClick={() => setShowModal(false)} 
+            <button
+              onClick={() => setShowModal(false)}
               style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dark)' }}
             >
               <X size={20} />
             </button>
-            
+
             <div style={{ marginBottom: '25px' }}>
-              <div style={{ 
+              <div style={{
                 display: 'inline-block', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800,
                 backgroundColor: getStatusColor(selectedItem.estado_proyecto), color: 'white', marginBottom: '15px'
               }}>
@@ -589,7 +589,7 @@ const SEAEvaluadosPage = () => {
               </div>
               <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.3' }}>{selectedItem.nombre}</h2>
             </div>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
               <DetailField label="ID Expediente" value={selectedItem.id} />
               <DetailField label="Titular" value={selectedItem.titular} />
@@ -602,11 +602,11 @@ const SEAEvaluadosPage = () => {
             </div>
 
             <div style={{ paddingTop: '25px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
-              <a 
-                href={selectedItem.url} 
-                target="_blank" 
+              <a
+                href={selectedItem.url}
+                target="_blank"
                 rel="noopener noreferrer"
-                style={{ 
+                style={{
                   display: 'inline-flex', alignItems: 'center', gap: '10px',
                   padding: '12px 25px', backgroundColor: 'var(--primary)', color: 'white',
                   textDecoration: 'none', borderRadius: '10px', fontWeight: 700,
@@ -621,7 +621,8 @@ const SEAEvaluadosPage = () => {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .filter-select {
           appearance: none;
           background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");

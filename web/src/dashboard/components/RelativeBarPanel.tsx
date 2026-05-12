@@ -14,7 +14,7 @@ interface RelativeBarPanelProps {
 const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) => {
   const { filters, toggleFilter } = useDashboardStore();
   const { colors } = useDashboardTheme();
-  
+
   const activeValue = filters[filterKey as keyof typeof filters];
   const maxCount = Math.max(...data.map(d => d.count), 1);
 
@@ -28,10 +28,10 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
           const relativeWidth = (item.count / maxCount) * 100;
 
           return (
-            <Box 
+            <Box
               key={item.name}
               onClick={() => toggleFilter(filterKey as any, item.name)}
-              sx={{ 
+              sx={{
                 cursor: 'pointer',
                 opacity: isAnySelected && !isSelected ? 0.4 : 1,
                 transition: 'all 0.3s ease',
@@ -42,9 +42,9 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
+                <Typography
+                  variant="body2"
+                  sx={{
                     fontWeight: isSelected ? 700 : 500,
                     fontSize: '0.9rem',
                     color: isSelected ? 'primary.main' : 'text.primary',
@@ -60,15 +60,15 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
                   {item.count.toLocaleString()}
                 </Typography>
               </Box>
-              
-              <MuiTooltip 
-                title={`${item.name}: ${item.count} (${item.percentage ?? 0}%)`} 
-                arrow 
+
+              <MuiTooltip
+                title={`${item.name}: ${item.count} (${item.percentage ?? 0}%)`}
+                arrow
                 placement="top"
               >
-                <Box sx={{ 
-                  height: 20, 
-                  width: '100%', 
+                <Box sx={{
+                  height: 20,
+                  width: '100%',
                   bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
                   borderRadius: 6,
                   overflow: 'hidden',
