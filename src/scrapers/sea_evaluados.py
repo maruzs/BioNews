@@ -118,11 +118,19 @@ class SEAEvaluadosScraper:
         session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/javascript, */*; q=0.01",
-            "X-Requested-With": "XMLHttpRequest"
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": "https://seia.sea.gob.cl",
+            "Referer": "https://seia.sea.gob.cl/busqueda/buscarProyectoResumen.php"
         })
+        
+        # Inicializar cookies
+        try:
+            session.get(url_buscar, timeout=30)
+        except Exception as e:
+            print(f"Error en GET inicial: {e}")
 
         limit = 100
-        offset = 0
+        offset = 1
         
         payload_base = {
             "nombre": "",
@@ -215,8 +223,8 @@ class SEAEvaluadosScraper:
                 conn.commit()
                 
                 # Siguiente pagina
-                offset += limit
-                print(f"Offset {offset} procesado. Nuevos registros: {nuevos_registros}")
+                offset += 1
+                print(f"Página {offset} procesada. Nuevos registros: {nuevos_registros}")
                 
             except Exception as e:
                 print(f"Error en scraping SEA Proyectos Evaluados: {e}")

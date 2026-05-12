@@ -1,18 +1,3 @@
-## INSTRUCCIONES OBLIGATORIAS
-
-No tienes acceso a la carpeta notasDesarrollador/, no intentes acceder a ella.
-No toques cosas que no debas tocar.
-No leas analisisEjecucion.md, esa carpeta es solo para mi investigacion.
-Siempre revisa bien el codigo antes de confirmar, muchas veces hay problemas de identacion/sintaxis (corchetes, <div> no cerrado, puntoycoma, etc) Sobretodo en lo que son los archivos .tsx
-
-## INSTRUCCION
-
-## CORRECCION DE ERRORES:
-
-### SEA - PROYECTOS EVALUADOS
-
-esto se puede encontrar en prompts/analisis.md
-
 # Analisis correccion proyectos evaluados SEA
 
 - Link principal -> https://seia.sea.gob.cl/busqueda/buscarProyecto.php
