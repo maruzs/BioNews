@@ -16,7 +16,7 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
   const { colors } = useDashboardTheme();
 
   const activeValue = filters[filterKey as keyof typeof filters];
-  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const totalCount = data.reduce((sum, d) => sum + d.count, 0) || 1;
 
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -25,7 +25,7 @@ const RelativeBarPanel: React.FC<RelativeBarPanelProps> = ({ data, filterKey }) 
           const isSelected = activeValue === item.name;
           const isAnySelected = activeValue !== undefined && activeValue !== null;
           const color = getColorForValue(item.name, colors);
-          const relativeWidth = (item.count / maxCount) * 100;
+          const relativeWidth = (item.count / totalCount) * 100;
 
           return (
             <Box
