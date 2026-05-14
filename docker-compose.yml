@@ -68,7 +68,8 @@ services:
     ports:
       - "3080:80"
     networks:
-      - bionews-net
+      - proxy_network
+      #- bionews-net
     depends_on:
       api:
         condition: service_healthy
@@ -76,5 +77,7 @@ services:
 # Los datos se guardan directamente en ./data y ./logs del host
 
 networks:
-  bionews-net:
-    driver: bridge
+  proxy_network:
+    external: true
+  #bionews-net:
+  #  driver: bridge
