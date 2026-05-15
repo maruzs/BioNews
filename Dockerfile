@@ -51,8 +51,8 @@ COPY scheduler.py .
 COPY startScraping.py .
 COPY src/ ./src/
 
-# Crear directorio para datos
-RUN mkdir -p /app/data /app/logs
+# Crear directorios para datos, logs y uploads
+RUN mkdir -p /app/data /app/logs /app/uploads/bugs
 
 # Exponer puerto del backend
 EXPOSE 8000
