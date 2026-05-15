@@ -73,7 +73,10 @@ Para exponer tu servidor local a internet sin necesidad de un dominio propio, ut
 Ejecuta el siguiente comando para iniciar el túnel de forma persistente (incluso si cierras la sesión SSH):
 
 ```bash
-nohup cloudflared tunnel --url http://localhost:3080 > ~/BioNews/cloudflared.log 2>&1 &
+cloudflared tunnel --url http://localhost:80 > tunnel.log 2>&1 &
+sleep 5
+grep -o 'https://[a-zA-Z0-9-]\+\.trycloudflare\.com' tunnel.log | tail -n 1
+
 ```
 
 ### Obtener la URL Generada
