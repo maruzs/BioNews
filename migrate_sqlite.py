@@ -115,6 +115,8 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
     """
     Inserta filas en PostgreSQL ignorando conflictos (ON CONFLICT DO NOTHING).
     cols_to_skip: lista de columnas a omitir en el INSERT (ej. columnas SERIAL).
+    Usa SAVEPOINTs para evitar que fallas individuales aborten la transacción de Postgres.
+    Convierte cadenas vacías '' a None (NULL) para prevenir errores de tipos (como TIMESTAMP).
     """
     if not rows:
         return 0
@@ -127,17 +129,24 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
 
     inserted = 0
     for row in rows:
-        values = tuple(row.get(c) for c in all_cols)
+        # Convertir "" a None para evitar errores de casteo/tipo en Postgres (ej. TIMESTAMP)
+        values = tuple((None if v == "" else v) for v in (row.get(c) for c in all_cols))
         try:
+            pg_cur.execute("SAVEPOINT bulk_row_upsert")
             pg_cur.execute(
                 f'INSERT INTO "{table}" ({cols_quoted}) VALUES ({placeholders})'
                 f' ON CONFLICT ("{conflict_col}") DO NOTHING',
                 values
             )
+            pg_cur.execute("RELEASE SAVEPOINT bulk_row_upsert")
             if pg_cur.rowcount > 0:
                 inserted += 1
         except Exception as e:
-            print(f"  [ERROR] Fila en '{table}': {e} | values={values[:3]}...")
+            try:
+                pg_cur.execute("ROLLBACK TO SAVEPOINT bulk_row_upsert")
+            except Exception:
+                pass
+            print(f"  [WARN] Fila en '{table}' omitida debido a error: {e} | valores principales={values[:3]}...")
     return inserted
 
 
@@ -211,15 +220,21 @@ def migrate_scrapers(sl_conn, pg_conn):
     for row in rows:
         cols = [c for c in row.keys() if c != 'id']
         ph   = ', '.join(['%s'] * len(cols))
-        vals = tuple(row.get(c) for c in cols)
+        vals = tuple((None if v == "" else v) for v in (row.get(c) for c in cols))
         try:
+            cur.execute("SAVEPOINT doc_insert")
             cur.execute(
                 f'INSERT INTO "documentos" ({", ".join(cols)}) VALUES ({ph})',
                 vals
             )
+            cur.execute("RELEASE SAVEPOINT doc_insert")
             inserted += 1
         except Exception as e:
-            print(f"  [ERROR] documentos: {e}")
+            try:
+                cur.execute("ROLLBACK TO SAVEPOINT doc_insert")
+            except Exception:
+                pass
+            print(f"  [WARN] documentos: {e} | valores principales={vals[:2]}...")
     print(f"  documentos: {inserted}/{len(rows)} insertados")
 
     # scraper_logs
