@@ -1,5 +1,5 @@
 import os
-import sqlite3
+from src.database.manager import DatabaseManager
 from datetime import datetime
 from bs4 import BeautifulSoup
 from .engine import ScrapingEngine
@@ -99,11 +99,11 @@ class DGAConsultasScraper:
         # 2. Borrar los que ya no están en la página
         ids_to_delete = db_ids - current_ids
         for id_to_del in ids_to_delete:
-            cursor.execute("DELETE FROM dga_consultas WHERE id = ?", (id_to_del,))
+            cursor.execute("DELETE FROM dga_consultas WHERE id = %s", (id_to_del,))
         
         # 3. Insertar o actualizar los actuales
         for item in items:
-            cursor.execute("SELECT 1 FROM dga_consultas WHERE id = ?", (item['id'],))
+            cursor.execute("SELECT 1 FROM dga_consultas WHERE id = %s", (item['id'],))
             exists = cursor.fetchone()
             
             cursor.execute("""

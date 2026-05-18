@@ -5,7 +5,7 @@ Consulta la API publica del SEA y guarda en la tabla sea_proyectos_evaluados
 import requests
 import json
 import os
-import sqlite3
+from src.database.manager import DatabaseManager
 import re
 from datetime import datetime
 
@@ -82,7 +82,8 @@ class SEAEvaluadosScraper:
         else:
             # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
             try:
-                conn = sqlite3.connect(DB_PATH)
+                db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_news_db')
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
                 count = cursor.fetchone()[0]
@@ -155,7 +156,8 @@ class SEAEvaluadosScraper:
         nuevos_registros = 0
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        conn = sqlite3.connect(DB_PATH)
+        db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_news_db')
         cursor = conn.cursor()
 
         print(f"Iniciando scraping SEA Proyectos Evaluados. {'Modo completo' if is_empty else 'Modo diario'}.")
@@ -203,14 +205,14 @@ class SEAEvaluadosScraper:
                     region = item.get("REGION_NOMBRE", "")
                     url = item.get("EXPEDIENTE_URL_PPAL", "")
                     
-                    cursor.execute("SELECT 1 FROM sea_proyectos_evaluados WHERE id = ?", (exp_id,))
+                    cursor.execute("SELECT 1 FROM sea_proyectos_evaluados WHERE id = %s", (exp_id,))
                     exists = cursor.fetchone()
                     
                     if exists:
                         cursor.execute("""
                             UPDATE sea_proyectos_evaluados 
-                            SET nombre=?, titular=?, via_ingreso=?, estado_proyecto=?, razon_ingreso=?, fecha_presentacion=?, subestado_proyecto=?, categoria_economica=?, tipo_proyecto=?, region=?, url=?
-                            WHERE id=?
+                            SET nombre=%s, titular=%s, via_ingreso=%s, estado_proyecto=%s, razon_ingreso=%s, fecha_presentacion=%s, subestado_proyecto=%s, categoria_economica=%s, tipo_proyecto=%s, region=%s, url=%s
+                            WHERE id=%s
                         """, (nombre, titular, via_ingreso, estado, razon, fecha, subestado, categoria_economica, tipo, region, url, exp_id))
                     else:
                         cursor.execute("""

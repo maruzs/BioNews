@@ -2,7 +2,7 @@
 Scraper del Segundo Tribunal Ambiental
 Usa Playwright para interceptar JSON de la API del 2TA y guarda en la tabla Tribunales de data.db
 """
-import sqlite3
+from src.database.manager import DatabaseManager
 import os
 from datetime import datetime
 from playwright.sync_api import sync_playwright
@@ -178,7 +178,8 @@ class SegundoTribunalScraper:
         ano_actual = str(datetime.now().year)
             
         try:
-            conn = sqlite3.connect(DB_PATH)
+            db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
             ultima_fecha = obtener_ultima_fecha(conn)
             
             if ultima_fecha:

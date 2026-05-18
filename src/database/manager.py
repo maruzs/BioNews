@@ -1,4 +1,5 @@
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 
@@ -7,239 +8,39 @@ def _now_str():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 class DatabaseManager:
-    def __init__(self, db_path="data/data.db"):
-        self.db_path = db_path
-        # Asegurar que la carpeta data existe
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        self.init_db()
+    def __init__(self):
+        self.host = os.getenv("POSTGRES_HOST", "localhost")
+        self.user = os.getenv("POSTGRES_USER", "bionews_admin")
+        self.password = os.getenv("POSTGRES_PASSWORD", "secret_master_password")
+        self.port = os.getenv("POSTGRES_PORT", "5432")
 
-    def get_connection(self):
-        return sqlite3.connect(self.db_path)
-
-    def init_db(self):
-        """Crea las tablas noticias y favoritos si no existen.
-        Las demas tablas (fiscalizaciones, sancionatorios, etc.) ya existen en data.db
-        y son gestionadas por sus scrapers respectivos."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            # Tabla para noticias
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS noticias (
-                    link TEXT PRIMARY KEY,
-                    titulo TEXT,
-                    fecha TEXT,
-                    imagen TEXT,
-                    fuente TEXT,
-                    fecha_scraping TIMESTAMP
-                )
-            """)
-            # Tabla para favoritos
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS favoritos (
-                    user_id INTEGER,
-                    id_o_link TEXT,
-                    fuente TEXT,
-                    nombre TEXT,
-                    fecha_agregado TIMESTAMP,
-                    accion TEXT,
-                    PRIMARY KEY (user_id, id_o_link)
-                )
-            """)
-            
-            # Migración: Agregar user_id a favoritos si venimos de la versión antigua
-            cursor.execute("PRAGMA table_info(favoritos)")
-            columns = [col[1] for col in cursor.fetchall()]
-            if 'user_id' not in columns:
-                cursor.execute("ALTER TABLE favoritos RENAME TO favoritos_old")
-                cursor.execute("""
-                    CREATE TABLE favoritos (
-                        user_id INTEGER,
-                        id_o_link TEXT,
-                        fuente TEXT,
-                        nombre TEXT,
-                        fecha_agregado TIMESTAMP,
-                        accion TEXT,
-                        PRIMARY KEY (user_id, id_o_link)
-                    )
-                """)
-                cursor.execute("""
-                    INSERT INTO favoritos (user_id, id_o_link, fuente, nombre, fecha_agregado, accion)
-                    SELECT 1, id_o_link, fuente, nombre, fecha_agregado, accion FROM favoritos_old
-                """)
-                cursor.execute("DROP TABLE favoritos_old")
-
-            # Tabla para usuarios
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT,
-                    email TEXT UNIQUE,
-                    password_hash TEXT,
-                    role TEXT,
-                    blocked INTEGER DEFAULT 0,
-                    preferences TEXT,
-                    last_login TIMESTAMP
-                )
-            """)
-            
-            # Migración: Agregar last_login a users
-            cursor.execute("PRAGMA table_info(users)")
-            user_columns = [col[1] for col in cursor.fetchall()]
-            if 'last_login' not in user_columns:
-                cursor.execute("ALTER TABLE users ADD COLUMN last_login TIMESTAMP")
-            # Tabla para logs de scrapers
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS scraper_logs (
-                    fuente TEXT PRIMARY KEY,
-                    ultimo_intento TIMESTAMP,
-                    ultimo_exito TIMESTAMP,
-                    estado TEXT,
-                    error TEXT,
-                    nuevos_registros INTEGER
-                )
-            """)
-
-            # --- NUEVAS TABLAS PARA NOTIFICACIONES ---
-            
-            # Tabla para rastrear la última vez que el usuario salió de una categoría
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS user_category_views (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    category_slug TEXT,
-                    last_exit_at TIMESTAMP,
-                    UNIQUE(user_id, category_slug),
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """)
-
-            # Tabla para rastrear ítems individuales vistos por el usuario
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS user_item_views (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    item_id_or_link TEXT,
-                    category_slug TEXT,
-                    viewed_at TIMESTAMP,
-                    UNIQUE(user_id, item_id_or_link, category_slug),
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """)
-
-            # --- TABLAS PARA MMA ---
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS mma_abiertas (
-                    id TEXT PRIMARY KEY,
-                    nombre_instrumento TEXT,
-                    fecha_inicio TEXT,
-                    fecha_termino TEXT,
-                    tipo_instrumento TEXT,
-                    tipo_proceso TEXT,
-                    ambito_territorial TEXT,
-                    link_detalle TEXT,
-                    fecha_scraping TIMESTAMP
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sea_proyectos_evaluados (
-                    id TEXT PRIMARY KEY,
-                    nombre TEXT,
-                    titular TEXT,
-                    via_ingreso TEXT,
-                    estado_proyecto TEXT,
-                    razon_ingreso TEXT,
-                    fecha_presentacion TEXT,
-                    subestado_proyecto TEXT,
-                    tipo_proyecto TEXT,
-                    categoria_economica TEXT,
-                    region TEXT,
-                    url TEXT,
-                    fecha_scraping TIMESTAMP
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS mma_cerradas (
-                    id TEXT PRIMARY KEY,
-                    nombre_instrumento TEXT,
-                    fecha_inicio TEXT,
-                    fecha_termino TEXT,
-                    tipo_instrumento TEXT,
-                    ambito_territorial TEXT,
-                    link_detalle TEXT,
-                    fecha_scraping TIMESTAMP
-                )
-            """)
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS dga_consultas (
-                    id TEXT PRIMARY KEY,
-                    nombre TEXT,
-                    imagen TEXT,
-                    url TEXT,
-                    fecha_scraping TIMESTAMP
-                )
-            """)
-
-            # Tabla para reportes de bugs
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS bug_reports (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    titulo TEXT,
-                    descripcion TEXT,
-                    screenshot_path TEXT,
-                    fecha_reporte TIMESTAMP,
-                    status TEXT DEFAULT 'pendiente',
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """)
-            
-            # Migración: Agregar status a bug_reports si no existe
-            cursor.execute("PRAGMA table_info(bug_reports)")
-            bug_columns = [col[1] for col in cursor.fetchall()]
-            if 'status' not in bug_columns:
-                cursor.execute("ALTER TABLE bug_reports ADD COLUMN status TEXT DEFAULT 'pendiente'")
-            
-            # Migración: Agregar region a sea_proyectos_evaluados si no existe
-            cursor.execute("PRAGMA table_info(sea_proyectos_evaluados)")
-            sea_columns = [col[1] for col in cursor.fetchall()]
-            if 'region' not in sea_columns:
-                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN region TEXT")
-            if 'categoria_economica' not in sea_columns:
-                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN categoria_economica TEXT")
-            if 'tipo_proyecto' not in sea_columns:
-                cursor.execute("ALTER TABLE sea_proyectos_evaluados ADD COLUMN tipo_proyecto TEXT")
-            
-            # Migración para pertinencias
-            cursor.execute("PRAGMA table_info(pertinencias)")
-            pert_columns = [col[1] for col in cursor.fetchall()]
-            if 'categoria_economica' not in pert_columns:
-                cursor.execute("ALTER TABLE pertinencias ADD COLUMN categoria_economica TEXT")
-            if 'tipo_proyecto' not in pert_columns:
-                cursor.execute("ALTER TABLE pertinencias ADD COLUMN tipo_proyecto TEXT")
-                
-            conn.commit()
+    def get_connection(self, database_name):
+        return psycopg2.connect(
+            host=self.host,
+            user=self.user,
+            password=self.password,
+            port=self.port,
+            dbname=database_name
+        )
 
     # ─── NOTICIAS ────────────────────────────────────────────────────────────
 
     def save_news(self, news_list):
         """Guarda noticias nuevas. NO actualiza fecha_scraping de las ya existentes."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_news_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             inserted_count = 0
             for item in news_list:
                 try:
                     # Verificar si ya existe
-                    cursor.execute("SELECT 1 FROM noticias WHERE link = ?", (item['link'],))
+                    cursor.execute("SELECT 1 FROM noticias WHERE link = %s", (item['link'],))
                     if cursor.fetchone():
                         # Ya existe, no hacer nada (no actualizar fecha_scraping)
                         continue
                     cursor.execute("""
                         INSERT INTO noticias 
                         (link, titulo, fecha, imagen, fuente, fecha_scraping)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
                         item['link'], 
                         item['titulo'], 
@@ -255,22 +56,21 @@ class DatabaseManager:
             return inserted_count
 
     def get_latest_news(self, limit=100):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_news_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT * FROM noticias 
                 ORDER BY fecha DESC, fecha_scraping DESC 
-                LIMIT ?
+                LIMIT %s
             """, (limit,))
             return cursor.fetchall()
 
     def clean_old_data(self, days=10):
-        # Implementacion opcional para tu regla de borrar lo antiguo
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_news_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 DELETE FROM noticias 
-                WHERE julianday('now') - julianday(fecha_scraping) > ?
+                WHERE fecha_scraping < NOW() - (INTERVAL '1 day' * %s)
             """, (days,))
             conn.commit()
 
@@ -278,7 +78,6 @@ class DatabaseManager:
 
     def get_table_data(self, table_name, limit=1000):
         """Obtiene todos los registros de una tabla especifica."""
-        # Whitelist de tablas permitidas para evitar SQL injection
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
@@ -288,113 +87,44 @@ class DatabaseManager:
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
-        
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            # Obtener los nombres de columnas
-            cursor.execute(f'PRAGMA table_info("{table_name}")')
-            columns = [col[1] for col in cursor.fetchall()]
             
-            # Ordenar inteligentemente según la tabla
+        db = 'bionews_legal_db'
+        if table_name in ['minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas', 'dga_consultas']:
+            db = 'bionews_consultations_db'
+        
+        with self.get_connection(db) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+            """, (table_name.lower(),))
+            columns = [col['column_name'] for col in cursor.fetchall()]
+            
             order_by = ""
-            if table_name == 'normativas':
-                # Normativas: ordenar por fecha de publicación (más nueva primero)
-                order_by = ' ORDER BY fecha DESC'
-                if 'fecha_scraping' in columns:
-                    order_by += ', fecha_scraping DESC'
-            elif 'ficha_id' in columns:
-                order_by = ' ORDER BY ficha_id DESC'
-            elif "Fecha" in columns:
-                order_by = ' ORDER BY "Fecha" DESC'
-            elif "fecha" in columns:
-                order_by = ' ORDER BY "fecha" DESC'
-            
-            # Agregar fecha_scraping como orden secundario si existe (para tablas sin ficha_id)
-            if 'fecha_scraping' in columns and order_by and 'ficha_id' not in columns and table_name != 'normativas':
-                order_by += ', fecha_scraping DESC'
-            elif 'fecha_scraping' in columns and not order_by:
-                order_by = ' ORDER BY fecha_scraping DESC'
-
-            cursor.execute(f'SELECT * FROM "{table_name}"{order_by} LIMIT ?', (limit,))
-            rows = cursor.fetchall()
-            
-            # Devolver como lista de diccionarios
-            return [dict(zip(columns, row)) for row in rows]
-
-    def get_table_count(self, table_name):
-        """Obtiene la cantidad total de registros de una tabla."""
-        allowed = {
-            'fiscalizaciones', 'medidas_provisionales', 'normativas',
-            'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
-            'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos',
-            'minsal_vigentes', 'minsal_resultados',
-            'mma_abiertas', 'mma_cerradas', 'dga_consultas'
-        }
-        if table_name not in allowed:
-            raise ValueError(f"Tabla no permitida: {table_name}")
-        
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
-            return cursor.fetchone()[0]
-
-    # ─── FAVORITOS ────────────────────────────────────────────────────────────
-
-    def add_favorite(self, user_id, id_o_link, fuente, nombre, accion=""):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute("""
-                    INSERT INTO favoritos 
-                    (user_id, id_o_link, fuente, nombre, fecha_agregado, accion)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id, id_o_link) DO UPDATE SET
-                        fuente=excluded.fuente,
-                        nombre=excluded.nombre,
-                        accion=excluded.accion
-                """, (user_id, id_o_link, fuente, nombre, _now_str(), accion))
-                conn.commit()
-                return True
-            except Exception as e:
-                print(f"Error al guardar favorito: {e}")
-                return False
-
-    def remove_favorite(self, user_id, id_o_link):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute("DELETE FROM favoritos WHERE user_id = ? AND id_o_link = ?", (user_id, id_o_link))
-                conn.commit()
-                return True
-            except Exception as e:
-                print(f"Error al eliminar favorito: {e}")
-                return False
-
-    def get_favorites(self, user_id, fuente=None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if fuente:
-                if fuente == "Tribunales":
-                    cursor.execute("SELECT * FROM favoritos WHERE user_id = ? AND (fuente LIKE '%TA%' OR fuente LIKE '%Tribunal%' OR fuente LIKE '%Corte%') ORDER BY fecha_agregado DESC", (user_id,))
-                elif fuente == "SNIFA":
-                    cursor.execute("SELECT * FROM favoritos WHERE user_id = ? AND (fuente LIKE '%Fiscalizacion%' OR fuente LIKE '%Sancionatorio%' OR fuente LIKE '%Ingreso%' OR fuente LIKE '%SNIFA%') ORDER BY fecha_agregado DESC", (user_id,))
-                else:
-                    cursor.execute("SELECT * FROM favoritos WHERE user_id = ? AND fuente LIKE ? ORDER BY fecha_agregado DESC", (user_id, f"%{fuente}%"))
-            else:
-                cursor.execute("SELECT * FROM favoritos WHERE user_id = ? ORDER BY fecha_agregado DESC", (user_id,))
+            if 'fecha_scraping' in columns:
+                order_by = "ORDER BY fecha_scraping DESC"
+            elif 'fecha' in columns:
+                order_by = "ORDER BY fecha DESC"
+            elif 'id' in columns:
+                order_by = "ORDER BY id DESC"
+                
+            query = f"SELECT * FROM {table_name} {order_by} LIMIT %s"
+            cursor.execute(query, (limit,))
             return cursor.fetchall()
 
     def is_favorite(self, user_id, id_o_link):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM favoritos WHERE user_id = ? AND id_o_link = ?", (user_id, id_o_link))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT 1 FROM favoritos WHERE user_id = %s AND id_o_link = %s", (user_id, id_o_link))
             return cursor.fetchone() is not None
 
     # ─── USERS ────────────────────────────────────────────────────────────────
     def get_user_by_email(self, email):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             row = cursor.fetchone()
             if row:
                 columns = [col[0] for col in cursor.description]
@@ -402,61 +132,60 @@ class DatabaseManager:
             return None
 
     def create_user(self, name, email, password_hash, role="user"):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             try:
                 cursor.execute("""
                     INSERT INTO users (name, email, password_hash, role, blocked, preferences)
-                    VALUES (?, ?, ?, ?, 0, '{}')
-                """, (name, email, password_hash, role))
+                    VALUES (%s, %s, %s, %s, 0, '{}') RETURNING id""", (name, email, password_hash, role))
                 conn.commit()
-                return cursor.lastrowid
+                return cursor.fetchone()[0]
             except sqlite3.IntegrityError:
                 return None
 
     def get_all_users(self):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT id, name, email, role, blocked, preferences, last_login FROM users")
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     def update_user_last_login(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (_now_str(), user_id))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("UPDATE users SET last_login = %s WHERE id = %s", (_now_str(), user_id))
             conn.commit()
 
     def update_user_status(self, user_id, blocked):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET blocked = ? WHERE id = ?", (blocked, user_id))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("UPDATE users SET blocked = %s WHERE id = %s", (blocked, user_id))
             conn.commit()
             return cursor.rowcount > 0
 
     def delete_user(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
             conn.commit()
             return cursor.rowcount > 0
 
     def update_user_preferences(self, user_id, preferences_json):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET preferences = ? WHERE id = ?", (preferences_json, user_id))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("UPDATE users SET preferences = %s WHERE id = %s", (preferences_json, user_id))
             conn.commit()
             return cursor.rowcount > 0
 
     # ─── LOGS DE SCRAPERS ──────────────────────────────────────────────────────
 
     def log_scraper_run(self, fuente, exito, error="", nuevos=0):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             ahora = _now_str()
             
             # Obtener el log actual si existe
-            cursor.execute("SELECT ultimo_exito FROM scraper_logs WHERE fuente = ?", (fuente,))
+            cursor.execute("SELECT ultimo_exito FROM scraper_logs WHERE fuente = %s", (fuente,))
             row = cursor.fetchone()
             
             ultimo_exito = ahora if exito else (row[0] if row else None)
@@ -465,7 +194,7 @@ class DatabaseManager:
             cursor.execute("""
                 INSERT INTO scraper_logs 
                 (fuente, ultimo_intento, ultimo_exito, estado, error, nuevos_registros)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT(fuente) DO UPDATE SET 
                     ultimo_intento=excluded.ultimo_intento,
                     ultimo_exito=excluded.ultimo_exito,
@@ -476,19 +205,19 @@ class DatabaseManager:
             conn.commit()
 
     def get_scraper_logs(self):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT * FROM scraper_logs ORDER BY ultimo_intento DESC")
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     def get_stats(self, table_name):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_legal_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             stats = {}
             
             # Verificar si la tabla existe
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=%s", (table_name,))
             if not cursor.fetchone():
                 return None
 
@@ -590,11 +319,11 @@ class DatabaseManager:
 
     def update_category_exit(self, user_id, category_slug):
         """Actualiza el momento en que el usuario salió de una categoría."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 INSERT INTO user_category_views (user_id, category_slug, last_exit_at)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
                 ON CONFLICT(user_id, category_slug) DO UPDATE SET
                     last_exit_at = excluded.last_exit_at
             """, (user_id, category_slug, _now_str()))
@@ -602,27 +331,27 @@ class DatabaseManager:
 
     def mark_item_viewed(self, user_id, item_id_or_link, category_slug):
         """Marca un ítem específico como visto por el usuario."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                INSERT OR IGNORE INTO user_item_views (user_id, item_id_or_link, category_slug, viewed_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO user_item_views (user_id, item_id_or_link, category_slug, viewed_at)
+                VALUES (%s, %s, %s, %s)
             """, (user_id, item_id_or_link, category_slug, _now_str()))
             conn.commit()
 
     def get_user_category_last_exit(self, user_id, category_slug):
         """Obtiene el timestamp de la última salida de una categoría."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = ? AND category_slug = ?", (user_id, category_slug))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = %s AND category_slug = %s", (user_id, category_slug))
             row = cursor.fetchone()
             return row[0] if row else None
 
     def get_viewed_items_ids(self, user_id, category_slug):
         """Obtiene la lista de IDs de ítems vistos en una categoría."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT item_id_or_link FROM user_item_views WHERE user_id = ? AND category_slug = ?", (user_id, category_slug))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT item_id_or_link FROM user_item_views WHERE user_id = %s AND category_slug = %s", (user_id, category_slug))
             return [row[0] for row in cursor.fetchall()]
 
     def get_notification_status(self, user_id):
@@ -685,8 +414,8 @@ class DatabaseManager:
             id_col = "id"
         
         
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             tables = table if isinstance(table, list) else [table]
             
@@ -694,16 +423,16 @@ class DatabaseManager:
                 # Si last_exit es NULL, consideramos todo nuevo.
                 if last_exit is None:
                     if viewed_ids:
-                        placeholders = ', '.join(['?'] * len(viewed_ids))
+                        placeholders = ', '.join(['%s'] * len(viewed_ids))
                         cursor.execute(f'SELECT 1 FROM "{t}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
                     else:
                         cursor.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                 else:
                     if viewed_ids:
-                        placeholders = ', '.join(['?'] * len(viewed_ids))
-                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > ? AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
+                        placeholders = ', '.join(['%s'] * len(viewed_ids))
+                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
                     else:
-                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > ? LIMIT 1', (last_exit,))
+                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > %s LIMIT 1', (last_exit,))
                 
                 if cursor.fetchone():
                     return True
@@ -794,36 +523,35 @@ class DatabaseManager:
 
     def get_consultation_documents(self, consulta_id, tipo_consulta):
         """Obtiene los documentos asociados a una consulta."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_consultations_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT nombre_documento, link 
                 FROM documentos 
-                WHERE consulta_id = ? AND tipo_consulta = ?
+                WHERE consulta_id = %s AND tipo_consulta = %s
             """, (consulta_id, tipo_consulta))
             rows = cursor.fetchall()
             return [{"nombre": row[0], "link": row[1]} for row in rows]
 
     # ─── BUG REPORTS ──────────────────────────────────────────────────────────
     def save_bug_report(self, user_id, titulo, descripcion, screenshot_path=None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 INSERT INTO bug_reports (user_id, titulo, descripcion, screenshot_path, fecha_reporte, status)
-                VALUES (?, ?, ?, ?, ?, 'pendiente')
-            """, (user_id, titulo, descripcion, screenshot_path, _now_str()))
+                VALUES (%s, %s, %s, %s, %s, 'pendiente') RETURNING id""", (user_id, titulo, descripcion, screenshot_path, _now_str()))
             conn.commit()
-            return cursor.lastrowid
+            return cursor.fetchone()[0]
 
     def get_bug_reports(self, user_id=None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             if user_id:
                 cursor.execute("""
                     SELECT b.*, u.name as user_name 
                     FROM bug_reports b
                     JOIN users u ON b.user_id = u.id
-                    WHERE b.user_id = ?
+                    WHERE b.user_id = %s
                     ORDER BY b.fecha_reporte DESC
                 """, (user_id,))
             else:
@@ -837,16 +565,16 @@ class DatabaseManager:
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     def update_bug_status(self, bug_id, status):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE bug_reports SET status = ? WHERE id = ?", (status, bug_id))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("UPDATE bug_reports SET status = %s WHERE id = %s", (status, bug_id))
             conn.commit()
             return cursor.rowcount > 0
 
     def get_bug_report(self, bug_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM bug_reports WHERE id = ?", (bug_id,))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT * FROM bug_reports WHERE id = %s", (bug_id,))
             row = cursor.fetchone()
             if row:
                 columns = [col[0] for col in cursor.description]
@@ -854,8 +582,8 @@ class DatabaseManager:
             return None
 
     def delete_bug_report(self, bug_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM bug_reports WHERE id = ?", (bug_id,))
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("DELETE FROM bug_reports WHERE id = %s", (bug_id,))
             conn.commit()
-            return cursor.rowcount > 0
+            return cursor.rowcount > 0

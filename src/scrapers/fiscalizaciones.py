@@ -5,7 +5,7 @@ https://snifa.sma.gob.cl/Fiscalizacion
 Usa Playwright porque la pagina carga los datos via JavaScript/AJAX.
 Filtra por DFZ-{año_actual} y cambia la paginacion para obtener todos los registros.
 """
-import sqlite3
+from src.database.manager import DatabaseManager
 import os
 import traceback
 from datetime import datetime
@@ -17,7 +17,8 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
 def get_db_expedientes():
     """Obtiene todos los expedientes existentes en la BD."""
-    conn = sqlite3.connect(DB_PATH)
+    db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
     cursor = conn.cursor()
     cursor.execute("SELECT expediente FROM fiscalizaciones")
     expedientes = set(row[0] for row in cursor.fetchall())
@@ -205,7 +206,8 @@ class SnifaFiscalizacionScraper:
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
 
-        conn = sqlite3.connect(DB_PATH)
+        db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
         cursor = conn.cursor()
 
         for record in nuevos:

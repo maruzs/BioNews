@@ -1,5 +1,5 @@
 import os
-import sqlite3
+from src.database.manager import DatabaseManager
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -251,7 +251,7 @@ class MMAConsultasScraper:
         
         # Guardar Abiertas
         for item in abiertas:
-            cursor.execute("SELECT 1 FROM mma_abiertas WHERE id = ?", (item['id'],))
+            cursor.execute("SELECT 1 FROM mma_abiertas WHERE id = %s", (item['id'],))
             exists = cursor.fetchone()
             
             cursor.execute("""
@@ -272,7 +272,7 @@ class MMAConsultasScraper:
 
         # Guardar Cerradas
         for item in cerradas:
-            cursor.execute("SELECT 1 FROM mma_cerradas WHERE id = ?", (item['id'],))
+            cursor.execute("SELECT 1 FROM mma_cerradas WHERE id = %s", (item['id'],))
             exists = cursor.fetchone()
 
             cursor.execute("""
@@ -291,7 +291,7 @@ class MMAConsultasScraper:
             if not exists: nuevos += 1
             
             # Si ahora está cerrada, eliminar de abiertas si existía
-            cursor.execute("DELETE FROM mma_abiertas WHERE id = ?", (item['id'],))
+            cursor.execute("DELETE FROM mma_abiertas WHERE id = %s", (item['id'],))
 
         conn.commit()
         conn.close()

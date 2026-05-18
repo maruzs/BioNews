@@ -1,5 +1,5 @@
 import os
-import sqlite3
+from src.database.manager import DatabaseManager
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -23,7 +23,8 @@ class MINSALScraper:
 
         soup = BeautifulSoup(html, 'html.parser')
         
-        conn = sqlite3.connect(DB_PATH)
+        db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_consultations_db')
         cursor = conn.cursor()
         
         # Identificar la posición de la sección de resultados
@@ -56,7 +57,7 @@ class MINSALScraper:
             
             if is_resultado:
                 # Es un resultado de consulta
-                cursor.execute("SELECT 1 FROM minsal_resultados WHERE id = ?", (consulta_id,))
+                cursor.execute("SELECT 1 FROM minsal_resultados WHERE id = %s", (consulta_id,))
                 if not cursor.fetchone():
                     print(f"  Nuevo Resultado: {titulo}")
                     cursor.execute("""
@@ -80,7 +81,7 @@ class MINSALScraper:
                     total_nuevos += 1
             else:
                 # Es una consulta vigente
-                cursor.execute("SELECT 1 FROM minsal_vigentes WHERE id = ?", (consulta_id,))
+                cursor.execute("SELECT 1 FROM minsal_vigentes WHERE id = %s", (consulta_id,))
                 if not cursor.fetchone():
                     print(f"  Nueva Consulta Vigente: {titulo}")
                     data = {'fecha_inicio': None, 'periodo_consulta': None, 'indicaciones': None}

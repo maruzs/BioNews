@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 from datetime import datetime
-import sqlite3
+from src.database.manager import DatabaseManager
 import json
 import os
 import re
@@ -102,7 +102,8 @@ class PertinenciasScraper:
         else:
             # Opcion 2: Buscar ultima fecha de scraping
             try:
-                conn = sqlite3.connect(DB_PATH)
+                db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT DISTINCT DATE(fecha_scraping) 
@@ -212,7 +213,8 @@ class PertinenciasScraper:
             print(f"Se encontraron {len(datos)} registros en la API para hoy.")
 
             print("4. Guardando en base de datos...")
-            conn = sqlite3.connect(DB_PATH)
+            db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
             cursor = conn.cursor()
             
             nuevos_registros = 0
@@ -240,7 +242,7 @@ class PertinenciasScraper:
                 
                 try:
                     cursor.execute('''
-                        INSERT OR IGNORE INTO pertinencias 
+                        INSERT INTO pertinencias 
                         (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping, tipo_proyecto, categoria_economica)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tipo_proyecto, categoria_economica))

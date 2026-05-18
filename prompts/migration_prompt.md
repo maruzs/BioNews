@@ -6,8 +6,6 @@ Este documento contiene un conjunto de **Prompts de Ingeniería** listos para se
 
 # Prompt 1: Fase 1 — Infraestructura de Datos (PostgreSQL + Docker) y Script ETL de Migración
 
-<!-- slide -->
-
 ## Contexto de la Tarea:
 
 Estamos migrando la plataforma **BioNews** de una base de datos monolítica SQLite (`data/data.db`) a un clúster PostgreSQL en contenedores Docker. Siguiendo el plan de arquitectura, levantaremos un único contenedor PostgreSQL (`postgres:15-alpine`) que albergará 4 bases de datos lógicas independientes (`bionews_users_db`, `bionews_news_db`, `bionews_legal_db` y `bionews_consultations_db`).
@@ -55,8 +53,6 @@ El script debe:
 
 Por favor, genera el código del script de shell `init-multiple-databases.sh`, la modificación exacta de `docker-compose.yml` y el script de migración completo `migrate_data.py`. No realices cambios destructivos en el código del servidor web ni en los scrapers en esta fase.
 
-<!-- slide -->
-
 # Prompt 2: Fase 2 — Refactorización de la Capa de Guardado y Conexión de Scrapers
 
 ## Contexto de la Tarea:
@@ -94,8 +90,6 @@ Revisa secuencialmente cada uno de los scrapers y adapta sus métodos de persist
 
 Aplica estos cambios de forma incremental y segura, garantizando que el resto de los métodos (de extracción y parsing) no sean modificados.
 
-<!-- slide -->
-
 # Prompt 3: Fase 3 — Refactorización de DatabaseManager y Servidor Monolítico
 
 ## Contexto de la Tarea:
@@ -128,8 +122,6 @@ Revisa los endpoints del backend en `server.py` y asegúrate de que consuman las
 - Actualiza el endpoint global de búsqueda `/api/search`: Dado que en esta fase el servidor aún es monolítico pero tiene acceso a las 4 bases de datos, implementa la búsqueda ejecutando consultas concurrentes con hilos (`ThreadPoolExecutor` o `asyncio`) a cada una de las bases de datos lógicas usando el `DatabaseManager` y consolida el JSON de salida unificado.
 
 Por favor, genera la refactorización completa de `src/database/manager.py` y los fragmentos de actualización necesarios para `server.py` asegurando la estabilidad y compatibilidad de todos los endpoints.
-
-<!-- slide -->
 
 # Prompt 4: Fase 4 — Desacoplamiento en Microservicios y API Gateway
 
@@ -183,8 +175,6 @@ Crea una carpeta `gateway` en la raíz del proyecto y escribe el archivo `gatewa
 - **Flag "is_new"**: Modifica la firma de `/api/data/{table_name}` en el Legal/News Service para que el frontend envíe el timestamp `last_exit_at` y el array `viewed_ids` como query params o headers. Con esto, los servicios calcularán de forma estática e hiperveloz el flag `is_new` sin realizar consultas de red cruzadas.
 
 Genera la estructura de directorios y los archivos de inicialización y main de cada microservicio, junto con el archivo de configuración del API Gateway.
-
-<!-- slide -->
 
 # Prompt 5: Fase 5 — Integración SSE con Redis y Despliegue en Docker Compose
 

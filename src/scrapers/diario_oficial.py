@@ -3,7 +3,7 @@ Scraper del Diario Oficial - Normativas
 Extrae normativas del Diario Oficial y las guarda en la tabla normativas de data.db
 """
 import os
-import sqlite3
+from src.database.manager import DatabaseManager
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -109,7 +109,7 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
 
                     # Usar INSERT OR IGNORE para evitar duplicados por URL (accion)
                     cursor.execute('''
-                        INSERT OR IGNORE INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping, ficha_id)
+                        INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping, ficha_id)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fid))
                     
@@ -126,7 +126,8 @@ class DiarioOficialScraper:
             print("La base de datos no existe.")
             return 0
         
-        conn = sqlite3.connect(DB_PATH)
+        db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
         cursor = conn.cursor()
         crear_tabla_si_no_existe(conn)
         

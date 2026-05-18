@@ -4,7 +4,7 @@ https://snifa.sma.gob.cl/MedidaProvisional/Resultado
 
 Compara el total de registros y agrega los nuevos por diferencia de expedientes.
 """
-import sqlite3
+from src.database.manager import DatabaseManager
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -14,7 +14,8 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 
 def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
-    conn = sqlite3.connect(DB_PATH)
+    db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
     cursor = conn.cursor()
     cursor.execute("SELECT expediente FROM medidas_provisionales")
     expedientes = set(row[0] for row in cursor.fetchall())
@@ -138,7 +139,8 @@ class MedidasProvisionalesScraper:
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
 
-        conn = sqlite3.connect(DB_PATH)
+        db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
         cursor = conn.cursor()
 
         for record in nuevos:

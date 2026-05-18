@@ -1,6 +1,6 @@
 from .engine import ScrapingEngine
 from ..utils.date_parser import parse_fecha
-import sqlite3
+from src.database.manager import DatabaseManager
 import os
 
 class DGAScraper:
@@ -20,7 +20,8 @@ class DGAScraper:
                 if not os.path.exists(db_path):
                     return None
 
-            conn = sqlite3.connect(db_path)
+            db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_news_db')
             cursor = conn.cursor()
             # Buscamos la noticia más reciente de DGA
             cursor.execute("SELECT link FROM noticias WHERE fuente='DGA' ORDER BY fecha DESC, fecha_scraping DESC LIMIT 1")

@@ -3,7 +3,7 @@ Scraper del Tercer Tribunal Ambiental (Legal)
 Consulta la API REST del 3TA y guarda en la tabla Tribunales de data.db
 """
 import requests
-import sqlite3
+from src.database.manager import DatabaseManager
 import os
 from datetime import datetime
 
@@ -176,7 +176,8 @@ class TercerTribunalScraper:
             return 0
             
         try:
-            conn = sqlite3.connect(DB_PATH)
+            db_manager = DatabaseManager()
+        conn = db_manager.get_connection('bionews_legal_db')
             ultima_fecha = obtener_ultima_fecha(conn)
             
             if ultima_fecha:
