@@ -6,12 +6,10 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 from datetime import datetime
-import sqlite3
 import json
 import os
 import re
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn
 
 
 class PertinenciasScraper:
@@ -102,27 +100,24 @@ class PertinenciasScraper:
         else:
             # Opcion 2: Buscar ultima fecha de scraping
             try:
-                conn = sqlite3.connect(DB_PATH)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT DISTINCT DATE(fecha_scraping) 
-                    FROM pertinencias 
-                    WHERE fecha_scraping IS NOT NULL
-                    ORDER BY DATE(fecha_scraping) DESC 
-                    LIMIT 2
-                """)
-                scrape_dates = cursor.fetchall()
-                if len(scrape_dates) > 0:
-                    last_date_str = scrape_dates[0][0]
-                    if last_date_str == fecha_hoy and len(scrape_dates) > 1:
-                        fecha_desde = scrape_dates[1][0]
-                    else:
-                        fecha_desde = last_date_str
+                with scrapers_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT DISTINCT DATE(fecha_scraping)
+                            FROM pertinencias
+                            WHERE fecha_scraping IS NOT NULL
+                            ORDER BY DATE(fecha_scraping) DESC
+                            LIMIT 2
+                        """)
+                        scrape_dates = cur.fetchall()
+                        if len(scrape_dates) > 0:
+                            last_date_str = str(scrape_dates[0][0])
+                            if last_date_str == fecha_hoy and len(scrape_dates) > 1:
+                                fecha_desde = str(scrape_dates[1][0])
+                            else:
+                                fecha_desde = last_date_str
             except Exception as e:
                 print(f"Error verificando DB pertinencias: {e}")
-            finally:
-                if 'conn' in locals():
-                    conn.close()
         
         session = requests.Session()
         session.headers.update({
@@ -212,46 +207,42 @@ class PertinenciasScraper:
             print(f"Se encontraron {len(datos)} registros en la API para hoy.")
 
             print("4. Guardando en base de datos...")
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            
             nuevos_registros = 0
-            
-            for item in datos:
-                expediente = item.get("correlativeId", "")
-                nombre = item.get("name", "")
-                proponente = item.get("titularName", "")
-                fecha = item.get("presentationDate", "")
-                
-                estado_dict = item.get("state")
-                estado = estado_dict.get("valor", "") if isinstance(estado_dict, dict) else ""
-                
-                # Nuevos campos
-                tipo_proyecto_dict = item.get("projectType")
-                tipo_proyecto = tipo_proyecto_dict.get("valor") if isinstance(tipo_proyecto_dict, dict) else None
-                
-                typology_name = item.get("primaryTypologyName", "")
-                categoria_economica = self.get_categoria_economica(typology_name)
-                
-                accion = f"{url_base}/api/public/expediente/{expediente}"
-                
-                from ..utils.date_parser import parse_fecha
-                fecha_db = parse_fecha(fecha) if fecha else ""
-                
-                try:
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO pertinencias 
-                        (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping, tipo_proyecto, categoria_economica)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tipo_proyecto, categoria_economica))
-                    
-                    if cursor.rowcount > 0:
-                        nuevos_registros += 1
-                except Exception as e_db:
-                    print(f"Error procesando el expediente {expediente}: {e_db}")
 
-            conn.commit()
-            conn.close()
+            with scrapers_conn() as conn:
+                with conn.cursor() as cur:
+                    for item in datos:
+                        expediente = item.get("correlativeId", "")
+                        nombre = item.get("name", "")
+                        proponente = item.get("titularName", "")
+                        fecha = item.get("presentationDate", "")
+
+                        estado_dict = item.get("state")
+                        estado = estado_dict.get("valor", "") if isinstance(estado_dict, dict) else ""
+
+                        tipo_proyecto_dict = item.get("projectType")
+                        tipo_proyecto = tipo_proyecto_dict.get("valor") if isinstance(tipo_proyecto_dict, dict) else None
+
+                        typology_name = item.get("primaryTypologyName", "")
+                        categoria_economica = self.get_categoria_economica(typology_name)
+
+                        accion = f"{url_base}/api/public/expediente/{expediente}"
+
+                        from ..utils.date_parser import parse_fecha
+                        fecha_db = parse_fecha(fecha) if fecha else ""
+
+                        try:
+                            cur.execute('''
+                                INSERT INTO pertinencias
+                                ("Expediente", "Nombre_de_Proyecto", "Proponente", "Fecha", "Estado", "Accion", fecha_scraping, tipo_proyecto, categoria_economica)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT ("Expediente") DO NOTHING
+                            ''', (expediente, nombre, proponente, fecha_db, estado, accion,
+                                  datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tipo_proyecto, categoria_economica))
+                            if cur.rowcount > 0:
+                                nuevos_registros += 1
+                        except Exception as e_db:
+                            print(f"Error procesando el expediente {expediente}: {e_db}")
             
             print(f"Proceso finalizado con exito. Se agregaron {nuevos_registros} registros nuevos.")
             return nuevos_registros

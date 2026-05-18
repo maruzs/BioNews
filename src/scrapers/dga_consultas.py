@@ -1,18 +1,17 @@
 import os
-import sqlite3
 from datetime import datetime
 from bs4 import BeautifulSoup
 from .engine import ScrapingEngine
 from ..database.manager import DatabaseManager
+from src.database.connection import scrapers_conn
 
 class DGAConsultasScraper:
     def __init__(self):
         self.url = "https://dga.mop.gob.cl/consulta-publica/"
         self.engine = ScrapingEngine()
-        self.db = DatabaseManager()
 
     def _get_connection(self):
-        return self.db.get_connection()
+        return scrapers_conn().__enter__()
 
     def scrape(self):
         print(f"Scrapeando consultas DGA: {self.url}")
@@ -80,46 +79,35 @@ class DGAConsultasScraper:
         if not items:
             return 0
 
-        conn = self._get_connection()
-        cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
         nuevos = 0
-        
-        # Primero, vamos a manejar la actualización de la tabla.
-        # El usuario dice: "Si en un futuro desaparece uno de esos formularios y/o hay uno nuevo debera actualizarse borrando los formularios viejos y agregando el nuevo"
-        # Esto significa que la tabla debe reflejar EXACTAMENTE lo que está en la página ahora.
-        
-        # 1. Obtener IDs actuales en la base de datos
-        cursor.execute("SELECT id FROM dga_consultas")
-        db_ids = {row[0] for row in cursor.fetchall()}
-        
-        current_ids = {item['id'] for item in items}
-        
-        # 2. Borrar los que ya no están en la página
-        ids_to_delete = db_ids - current_ids
-        for id_to_del in ids_to_delete:
-            cursor.execute("DELETE FROM dga_consultas WHERE id = ?", (id_to_del,))
-        
-        # 3. Insertar o actualizar los actuales
-        for item in items:
-            cursor.execute("SELECT 1 FROM dga_consultas WHERE id = ?", (item['id'],))
-            exists = cursor.fetchone()
-            
-            cursor.execute("""
-                INSERT INTO dga_consultas (id, nombre, imagen, url, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    nombre=excluded.nombre,
-                    imagen=excluded.imagen,
-                    url=excluded.url
-            """, (item['id'], item['nombre'], item['imagen'], item['url'], now))
-            
-            if not exists:
-                nuevos += 1
 
-        conn.commit()
-        conn.close()
+        with scrapers_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT id FROM dga_consultas")
+                db_ids = {row[0] for row in cursor.fetchall()}
+                current_ids = {item['id'] for item in items}
+
+                ids_to_delete = db_ids - current_ids
+                for id_to_del in ids_to_delete:
+                    cursor.execute("DELETE FROM dga_consultas WHERE id = %s", (id_to_del,))
+
+                for item in items:
+                    cursor.execute("SELECT 1 FROM dga_consultas WHERE id = %s", (item['id'],))
+                    exists = cursor.fetchone()
+
+                    cursor.execute("""
+                        INSERT INTO dga_consultas (id, nombre, imagen, url, fecha_scraping)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            nombre=EXCLUDED.nombre,
+                            imagen=EXCLUDED.imagen,
+                            url=EXCLUDED.url
+                    """, (item['id'], item['nombre'], item['imagen'], item['url'], now))
+
+                    if not exists:
+                        nuevos += 1
+
         return nuevos
 
     def run(self):

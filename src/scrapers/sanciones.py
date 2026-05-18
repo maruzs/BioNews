@@ -4,21 +4,19 @@ https://snifa.sma.gob.cl/RegistroPublico/Resultado
 
 Compara total de registros y busca nuevos por diferencia de expedientes.
 """
-import sqlite3
 import os
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn
 
 
 def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM registroSanciones")
-    expedientes = set(row[0] for row in cursor.fetchall())
-    conn.close()
+    with scrapers_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT expediente FROM "registroSanciones"')
+            expedientes = set(row[0] for row in cur.fetchall())
     return expedientes, len(expedientes)
 
 
@@ -152,31 +150,27 @@ class RegistroSancionesScraper:
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
 
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        for record in nuevos:
-            cursor.execute('''
-                INSERT OR REPLACE INTO registroSanciones (
-                    expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, multa_uta, pago_multa, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                record['expediente'],
-                record['unidad_fiscalizable'],
-                record['nombre_razon_social'],
-                record['categoria'],
-                record['region'],
-                record['multa_uta'],
-                record['pago_multa'],
-                record['detalle_link'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                record.get('ficha_id')
-            ))
-            print(f"  + {record['expediente']}")
-
-        conn.commit()
-        conn.close()
+        with scrapers_conn() as conn:
+            with conn.cursor() as cur:
+                for record in nuevos:
+                    cur.execute('''
+                        INSERT INTO "registroSanciones" (
+                            expediente, unidad_fiscalizable, nombre_razon_social,
+                            categoria, region, multa_uta, pago_multa, detalle_link, fecha_scraping, ficha_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (expediente) DO UPDATE SET
+                            unidad_fiscalizable = EXCLUDED.unidad_fiscalizable,
+                            nombre_razon_social = EXCLUDED.nombre_razon_social,
+                            categoria = EXCLUDED.categoria, region = EXCLUDED.region,
+                            multa_uta = EXCLUDED.multa_uta, pago_multa = EXCLUDED.pago_multa,
+                            detalle_link = EXCLUDED.detalle_link, ficha_id = EXCLUDED.ficha_id
+                    ''', (
+                        record['expediente'], record['unidad_fiscalizable'],
+                        record['nombre_razon_social'], record['categoria'], record['region'],
+                        record['multa_uta'], record['pago_multa'], record['detalle_link'],
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'), record.get('ficha_id')
+                    ))
+                    print(f"  + {record['expediente']}")
         print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Registro Publico de Sanciones.")
         return len(nuevos)
 

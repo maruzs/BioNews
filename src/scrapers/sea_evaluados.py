@@ -5,11 +5,9 @@ Consulta la API publica del SEA y guarda en la tabla sea_proyectos_evaluados
 import requests
 import json
 import os
-import sqlite3
 import re
 from datetime import datetime
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn, get_scrapers_conn, release_scrapers_conn
 
 class SEAEvaluadosScraper:
     MAPPING_CATEGORIAS = {
@@ -82,37 +80,31 @@ class SEAEvaluadosScraper:
         else:
             # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
             try:
-                conn = sqlite3.connect(DB_PATH)
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
-                count = cursor.fetchone()[0]
-                if count > 0:
-                    is_empty = False
-                    
-                    # Fetch recent unique scrape dates to find gaps
-                    cursor.execute("""
-                        SELECT DISTINCT DATE(fecha_scraping) 
-                        FROM sea_proyectos_evaluados 
-                        WHERE fecha_scraping IS NOT NULL
-                        ORDER BY DATE(fecha_scraping) DESC 
-                        LIMIT 2
-                    """)
-                    scrape_dates = cursor.fetchall()
-                    
-                    if len(scrape_dates) > 0:
-                        last_date_str = scrape_dates[0][0]
-                        if last_date_str == fecha_hoy_iso and len(scrape_dates) > 1:
-                            prev_date_str = scrape_dates[1][0]
-                            prev_date_obj = datetime.strptime(prev_date_str, '%Y-%m-%d')
-                            fecha_desde = prev_date_obj.strftime('%d/%m/%Y')
-                        else:
-                            last_date_obj = datetime.strptime(last_date_str, '%Y-%m-%d')
-                            fecha_desde = last_date_obj.strftime('%d/%m/%Y')
+                with scrapers_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
+                        count = cur.fetchone()[0]
+                        if count > 0:
+                            is_empty = False
+                            cur.execute("""
+                                SELECT DISTINCT DATE(fecha_scraping)
+                                FROM sea_proyectos_evaluados
+                                WHERE fecha_scraping IS NOT NULL
+                                ORDER BY DATE(fecha_scraping) DESC
+                                LIMIT 2
+                            """)
+                            scrape_dates = cur.fetchall()
+                            if len(scrape_dates) > 0:
+                                last_date_str = scrape_dates[0][0]
+                                if str(last_date_str) == fecha_hoy_iso and len(scrape_dates) > 1:
+                                    prev_date_str = str(scrape_dates[1][0])
+                                    prev_date_obj = datetime.strptime(prev_date_str, '%Y-%m-%d')
+                                    fecha_desde = prev_date_obj.strftime('%d/%m/%Y')
+                                else:
+                                    last_date_obj = datetime.strptime(str(last_date_str), '%Y-%m-%d')
+                                    fecha_desde = last_date_obj.strftime('%d/%m/%Y')
             except Exception as e:
                 print(f"Error verificando DB: {e}")
-            finally:
-                if 'conn' in locals():
-                    conn.close()
 
         session = requests.Session()
         session.headers.update({
@@ -155,8 +147,8 @@ class SEAEvaluadosScraper:
         nuevos_registros = 0
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        conn = get_scrapers_conn()
+        cur = conn.cursor()
 
         print(f"Iniciando scraping SEA Proyectos Evaluados. {'Modo completo' if is_empty else 'Modo diario'}.")
 
@@ -203,24 +195,23 @@ class SEAEvaluadosScraper:
                     region = item.get("REGION_NOMBRE", "")
                     url = item.get("EXPEDIENTE_URL_PPAL", "")
                     
-                    cursor.execute("SELECT 1 FROM sea_proyectos_evaluados WHERE id = ?", (exp_id,))
-                    exists = cursor.fetchone()
-                    
+                    cur.execute("SELECT 1 FROM sea_proyectos_evaluados WHERE id = %s", (exp_id,))
+                    exists = cur.fetchone()
+
                     if exists:
-                        cursor.execute("""
-                            UPDATE sea_proyectos_evaluados 
-                            SET nombre=?, titular=?, via_ingreso=?, estado_proyecto=?, razon_ingreso=?, fecha_presentacion=?, subestado_proyecto=?, categoria_economica=?, tipo_proyecto=?, region=?, url=?
-                            WHERE id=?
+                        cur.execute("""
+                            UPDATE sea_proyectos_evaluados
+                            SET nombre=%s, titular=%s, via_ingreso=%s, estado_proyecto=%s, razon_ingreso=%s, fecha_presentacion=%s, subestado_proyecto=%s, categoria_economica=%s, tipo_proyecto=%s, region=%s, url=%s
+                            WHERE id=%s
                         """, (nombre, titular, via_ingreso, estado, razon, fecha, subestado, categoria_economica, tipo, region, url, exp_id))
                     else:
-                        cursor.execute("""
-                            INSERT INTO sea_proyectos_evaluados 
+                        cur.execute("""
+                            INSERT INTO sea_proyectos_evaluados
                             (id, nombre, titular, via_ingreso, estado_proyecto, razon_ingreso, fecha_presentacion, subestado_proyecto, categoria_economica, tipo_proyecto, region, url, fecha_scraping)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (exp_id, nombre, titular, via_ingreso, estado, razon, fecha, subestado, categoria_economica, tipo, region, url, now_str))
                         nuevos_registros += 1
-                        
-                conn.commit()
+                        conn.commit()
                 
                 print(f"Offset {offset} procesado. Registros nuevos hasta ahora: {nuevos_registros}")
                 # Siguiente pagina
@@ -230,7 +221,8 @@ class SEAEvaluadosScraper:
                 print(f"Error en scraping SEA Proyectos Evaluados: {e}")
                 break
                 
-        conn.close()
+        cur.close()
+        release_scrapers_conn(conn)
         print(f"Scraping SEA Proyectos finalizado. Nuevos: {nuevos_registros}")
         return nuevos_registros
 

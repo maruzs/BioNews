@@ -1,12 +1,10 @@
 import os
-import sqlite3
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
 from .engine import ScrapingEngine
 from playwright.sync_api import sync_playwright
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn
 
 class MMAConsultasScraper:
     def __init__(self):
@@ -16,7 +14,7 @@ class MMAConsultasScraper:
         self.engine = ScrapingEngine()
 
     def _get_connection(self):
-        return sqlite3.connect(DB_PATH)
+        return scrapers_conn()
 
     def _normalize_date_to_target(self, date_str):
         """Convierte cualquier fecha a mm/dd/yyyy como pide el prompt."""
@@ -243,58 +241,56 @@ class MMAConsultasScraper:
         return all_results
 
     def save_results(self, abiertas, cerradas):
-        conn = self._get_connection()
-        cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
         nuevos = 0
-        
-        # Guardar Abiertas
-        for item in abiertas:
-            cursor.execute("SELECT 1 FROM mma_abiertas WHERE id = ?", (item['id'],))
-            exists = cursor.fetchone()
-            
-            cursor.execute("""
-                INSERT INTO mma_abiertas 
-                (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, tipo_proceso, ambito_territorial, link_detalle, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    nombre_instrumento=excluded.nombre_instrumento,
-                    fecha_inicio=excluded.fecha_inicio,
-                    fecha_termino=excluded.fecha_termino,
-                    tipo_instrumento=excluded.tipo_instrumento,
-                    tipo_proceso=excluded.tipo_proceso,
-                    ambito_territorial=excluded.ambito_territorial,
-                    link_detalle=excluded.link_detalle
-            """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'], 
-                  item['tipo_instrumento'], item['tipo_proceso'], item['ambito_territorial'], item['link_detalle'], now))
-            if not exists: nuevos += 1
 
-        # Guardar Cerradas
-        for item in cerradas:
-            cursor.execute("SELECT 1 FROM mma_cerradas WHERE id = ?", (item['id'],))
-            exists = cursor.fetchone()
+        with scrapers_conn() as conn:
+            with conn.cursor() as cursor:
+                for item in abiertas:
+                    cursor.execute("SELECT 1 FROM mma_abiertas WHERE id = %s", (item['id'],))
+                    exists = cursor.fetchone()
 
-            cursor.execute("""
-                INSERT INTO mma_cerradas 
-                (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, ambito_territorial, link_detalle, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    nombre_instrumento=excluded.nombre_instrumento,
-                    fecha_inicio=excluded.fecha_inicio,
-                    fecha_termino=excluded.fecha_termino,
-                    tipo_instrumento=excluded.tipo_instrumento,
-                    ambito_territorial=excluded.ambito_territorial,
-                    link_detalle=excluded.link_detalle
-            """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'], 
-                  item['tipo_instrumento'], item['ambito_territorial'], item['link_detalle'], now))
-            if not exists: nuevos += 1
-            
-            # Si ahora está cerrada, eliminar de abiertas si existía
-            cursor.execute("DELETE FROM mma_abiertas WHERE id = ?", (item['id'],))
+                    cursor.execute("""
+                        INSERT INTO mma_abiertas
+                        (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, tipo_proceso, ambito_territorial, link_detalle, fecha_scraping)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            nombre_instrumento=EXCLUDED.nombre_instrumento,
+                            fecha_inicio=EXCLUDED.fecha_inicio,
+                            fecha_termino=EXCLUDED.fecha_termino,
+                            tipo_instrumento=EXCLUDED.tipo_instrumento,
+                            tipo_proceso=EXCLUDED.tipo_proceso,
+                            ambito_territorial=EXCLUDED.ambito_territorial,
+                            link_detalle=EXCLUDED.link_detalle
+                    """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'],
+                          item['tipo_instrumento'], item.get('tipo_proceso',''), item['ambito_territorial'],
+                          item['link_detalle'], now))
+                    if not exists:
+                        nuevos += 1
 
-        conn.commit()
-        conn.close()
+                for item in cerradas:
+                    cursor.execute("SELECT 1 FROM mma_cerradas WHERE id = %s", (item['id'],))
+                    exists = cursor.fetchone()
+
+                    cursor.execute("""
+                        INSERT INTO mma_cerradas
+                        (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, ambito_territorial, link_detalle, fecha_scraping)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            nombre_instrumento=EXCLUDED.nombre_instrumento,
+                            fecha_inicio=EXCLUDED.fecha_inicio,
+                            fecha_termino=EXCLUDED.fecha_termino,
+                            tipo_instrumento=EXCLUDED.tipo_instrumento,
+                            ambito_territorial=EXCLUDED.ambito_territorial,
+                            link_detalle=EXCLUDED.link_detalle
+                    """, (item['id'], item['nombre_instrumento'], item['fecha_inicio'], item['fecha_termino'],
+                          item['tipo_instrumento'], item['ambito_territorial'], item['link_detalle'], now))
+                    if not exists:
+                        nuevos += 1
+
+                    # Si ahora está cerrada, eliminar de abiertas si existía
+                    cursor.execute("DELETE FROM mma_abiertas WHERE id = %s", (item['id'],))
+
         return nuevos
 
     def run(self):

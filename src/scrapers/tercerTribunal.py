@@ -3,11 +3,9 @@ Scraper del Tercer Tribunal Ambiental (Legal)
 Consulta la API REST del 3TA y guarda en la tabla Tribunales de data.db
 """
 import requests
-import sqlite3
 import os
 from datetime import datetime
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import get_scrapers_conn, release_scrapers_conn
 
 # Mapeos predefinidos
 MAPEO_ROLES = {
@@ -28,23 +26,17 @@ MAPEO_CORTES = {
 
 
 def obtener_ultima_fecha(conn):
-    """
-    Busca la fecha mas reciente ingresada en la BD para el Tercer Tribunal.
-    """
-    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Tercer Tribunal'")
-        filas = cursor.fetchall()
-        
+        with conn.cursor() as cur:
+            cur.execute("SELECT \"Fecha\" FROM \"Tribunales\" WHERE \"Tribunal\" = 'Tercer Tribunal'")
+            filas = cur.fetchall()
         if not filas:
             return None
-            
         fechas_validas = []
         for fila in filas:
             fecha_str = fila[0]
             if fecha_str:
                 try:
-                    # Intentamos ISO primero
                     if '-' in fecha_str and len(fecha_str.split('-')[0]) == 4:
                         dt = datetime.strptime(fecha_str, "%Y-%m-%d")
                     else:
@@ -52,12 +44,10 @@ def obtener_ultima_fecha(conn):
                     fechas_validas.append(dt)
                 except ValueError:
                     continue
-                    
         if fechas_validas:
             return max(fechas_validas)
         return None
-        
-    except sqlite3.OperationalError:
+    except Exception:
         return None
 
 
@@ -114,46 +104,41 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
                 
         causas_procesadas.sort(key=lambda x: x[0], reverse=True)
         
-        cursor = conn.cursor()
-        nuevos_registros = 0
-        
-        for dt, fecha_str, causa in causas_procesadas:
-            if ultima_fecha_db and dt < ultima_fecha_db:
-                break
-                
-            role_number = causa.get('role_number')
-            cause_role_id = causa.get('cause_role_id')
-            court_id = causa.get('court_id')
-            id_causa = causa.get('id')
-            
-            if not role_number or not cause_role_id:
-                continue
-                
-            anio = dt.year
-            rol_info = MAPEO_ROLES.get(cause_role_id, ("Desconocido", "X"))
-            tipo_procedimiento = rol_info[0]
-            letra_rol = rol_info[1]
-            
-            tribunal = MAPEO_CORTES.get(court_id, "Tercer Tribunal")
-            rol = f"{letra_rol}-{role_number}-{anio}"
-            
-            caratula = causa.get('cover_title') or "sin caratula"
-            estado_procesal = determinar_estado(causa)
-            accion = f"https://causas.3ta.cl/causes/{id_causa}"
-            fecha_scraping = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            cursor.execute('''
-                INSERT OR REPLACE INTO Tribunales
-                (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, fecha_scraping))
-            
-            nuevos_registros += 1
-            
-            if nuevos_registros >= 10:
-                print("Se alcanzo el limite maximo de 10 nuevos registros.")
-                break
-                
+        with conn.cursor() as cur:
+            for dt, fecha_str, causa in causas_procesadas:
+                if ultima_fecha_db and dt < ultima_fecha_db:
+                    break
+                role_number = causa.get('role_number')
+                cause_role_id = causa.get('cause_role_id')
+                court_id = causa.get('court_id')
+                id_causa = causa.get('id')
+                if not role_number or not cause_role_id:
+                    continue
+                anio = dt.year
+                rol_info = MAPEO_ROLES.get(cause_role_id, ("Desconocido", "X"))
+                tipo_procedimiento = rol_info[0]
+                letra_rol = rol_info[1]
+                tribunal = MAPEO_CORTES.get(court_id, "Tercer Tribunal")
+                rol = f"{letra_rol}-{role_number}-{anio}"
+                caratula = causa.get('cover_title') or "sin caratula"
+                estado_procesal = determinar_estado(causa)
+                accion = f"https://causas.3ta.cl/causes/{id_causa}"
+                fecha_scraping = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                cur.execute('''
+                    INSERT INTO "Tribunales"
+                    ("Rol", "Fecha", "Caratula", "Tribunal", "Tipo_de_Procedimiento", "Estado_Procesal", "Accion", fecha_scraping)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT ("Rol") DO UPDATE SET
+                        "Fecha" = EXCLUDED."Fecha",
+                        "Caratula" = EXCLUDED."Caratula",
+                        "Estado_Procesal" = EXCLUDED."Estado_Procesal"
+                ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, fecha_scraping))
+                nuevos_registros += 1
+                if nuevos_registros >= 10:
+                    print("Se alcanzo el limite maximo de 10 nuevos registros.")
+                    break
+
         conn.commit()
         print(f"Actualizacion completada. Se guardaron o actualizaron {nuevos_registros} registros.")
         return nuevos_registros
@@ -168,28 +153,23 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
 
 class TercerTribunalScraper:
     """Wrapper para integracion con el sistema BioNews."""
-    
+
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        if not os.path.exists(DB_PATH):
-            print("La base de datos no existe.")
-            return 0
-            
+        conn = get_scrapers_conn()
         try:
-            conn = sqlite3.connect(DB_PATH)
             ultima_fecha = obtener_ultima_fecha(conn)
-            
             if ultima_fecha:
                 print(f"Ultima fecha registrada en BD: {ultima_fecha.strftime('%d-%m-%Y')}")
             else:
                 print("No se encontraron fechas previas. Se procesaran hasta 10 del ano actual.")
-                
             nuevos = actualizar_tercer_tribunal(conn, ultima_fecha)
-            conn.close()
             return nuevos
-        except sqlite3.Error as e:
+        except Exception as e:
             print(f"Error de base de datos: {e}")
             return 0
+        finally:
+            release_scrapers_conn(conn)
 
 
 if __name__ == "__main__":

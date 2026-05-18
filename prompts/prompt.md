@@ -7,19 +7,63 @@ Siempre revisa bien el codigo antes de confirmar, muchas veces hay problemas de 
 
 ## INSTRUCCION
 
-Errores en la interfaz:
+Quiero convertir este proyecto de monolito a microservicios, pero eso lo vere despues, de momento lo que me interesa primero que nada es migrar la base de datos y todo lo que eso conlleve.
 
-- Favoritos:
-  - En 'Agregar Favorito Manualmente' se perdio el estilo que tenia previamente
+Actualment estoy con SQLite en data/data.db pero quiero pasar a PostgreSQL en un servidor local usando docker.
 
-- Consultas publicas:
-  - El estilo de tarjetas se perdio, ya no tienen los bordes redondeados, separaciones, sombras, el highlighted que tenia 'Ver detalles y documentos' ya no se ve
-  - DGA - Consultas publicas -> Al clickear 'Ver detalles' el modal que se mostraba cambio
-- Reporte de bugs:
-  - El estilo del boton 'Enviar reporte' cambio, ya no es verde como antes
+Me gustaria dividir la actual en las siguientes db:
 
-- Panel de admin:
-  - Ninguna tabla se ve bien, ya no tienen el estilo.
-  - Tampoco tienen el estilo los inputs (dropdown, fechas, etc)
-  - Gestion de reportes de bugs ya no se ve como una tabla, se ve todo junto
-  - Depuracion todo bien, se sigue viendo igual que antes
+1. DB Usuarios:
+   - favoritos
+   - users
+   - user_item_views
+   - user_category_views
+   - bug_reports
+     basicamente todo lo relacionado a usuarios, sus perfiles, visitas, vistos (para las notificaciones), preferencias para el filtrado, etc.
+
+2. DB Scrapers:
+   - Noticias
+   - pertinencias
+   - sea_proyectos_evaluados
+   - normativas
+   - fiscalizaciones
+   - medidas_provisionales
+   - programasDeCumplimiento
+   - registroSanciones
+   - requerimientos
+   - sancionatorios
+   - Tribunales
+   - dga_consultas
+   - documentos
+   - minsal_resultados
+   - minsal_vigentes
+   - mma_abiertas
+   - mma_cerradas
+   - scraper_logs
+
+Hay varias de esas cosas que estan relacionadas entre si, ve como solucionarlo.
+Sobre el ORM usa el que prefieras, pero que funcione. Cuidado con muchas cosas ya que src/database/manager.py es medio extrano, sobretodo por los formatos de las cosas (fechas por ejemplo)
+
+Ademas debes decirme como implementar los cambios en mi servidor (Es una laptop con Ubuntu Server con docker y docker-compose)
+
+Actualmente uso un nginx proxy manager para la salida a la web, este es su docker compose:
+
+```yaml
+services:
+  app:
+    image: "jc21/nginx-proxy-manager:latest"
+    restart: unless-stopped
+    ports:
+      - "80:80" # Tráfico HTTP
+      - "81:81" # Panel de Administración Web
+      - "443:443" # Tráfico HTTPS
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    external: true
+```

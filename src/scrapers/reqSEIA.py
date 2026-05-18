@@ -4,22 +4,19 @@ https://snifa.sma.gob.cl/RequerimientoIngreso/Resultado
 
 Compara el total de registros y busca por diferencia de expedientes contra la BD.
 """
-import sqlite3
 import os
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn
 
 
 def get_db_info():
     """Obtiene los expedientes existentes y la cantidad total en la BD."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM requerimientos")
-    expedientes = set(row[0] for row in cursor.fetchall())
-    conn.close()
+    with scrapers_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT expediente FROM requerimientos")
+            expedientes = set(row[0] for row in cur.fetchall())
     return expedientes, len(expedientes)
 
 
@@ -136,29 +133,26 @@ class RequerimientosScraper:
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
 
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        for record in nuevos:
-            cursor.execute('''
-                INSERT OR REPLACE INTO requerimientos (
-                    expediente, unidad_fiscalizable, nombre_razon_social,
-                    categoria, region, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                record['expediente'],
-                record['unidad_fiscalizable'],
-                record['nombre_razon_social'],
-                record['categoria'],
-                record['region'],
-                record['detalle_link'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                record.get('ficha_id')
-            ))
-            print(f"  + {record['expediente']}")
-
-        conn.commit()
-        conn.close()
+        with scrapers_conn() as conn:
+            with conn.cursor() as cur:
+                for record in nuevos:
+                    cur.execute('''
+                        INSERT INTO requerimientos (
+                            expediente, unidad_fiscalizable, nombre_razon_social,
+                            categoria, region, detalle_link, fecha_scraping, ficha_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (expediente) DO UPDATE SET
+                            unidad_fiscalizable = EXCLUDED.unidad_fiscalizable,
+                            nombre_razon_social = EXCLUDED.nombre_razon_social,
+                            categoria = EXCLUDED.categoria, region = EXCLUDED.region,
+                            detalle_link = EXCLUDED.detalle_link, ficha_id = EXCLUDED.ficha_id
+                    ''', (
+                        record['expediente'], record['unidad_fiscalizable'],
+                        record['nombre_razon_social'], record['categoria'],
+                        record['region'], record['detalle_link'],
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'), record.get('ficha_id')
+                    ))
+                    print(f"  + {record['expediente']}")
         print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Requerimientos de Ingreso.")
         return len(nuevos)
 

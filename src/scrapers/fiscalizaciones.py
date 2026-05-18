@@ -5,25 +5,21 @@ https://snifa.sma.gob.cl/Fiscalizacion
 Usa Playwright porque la pagina carga los datos via JavaScript/AJAX.
 Filtra por DFZ-{año_actual} y cambia la paginacion para obtener todos los registros.
 """
-import sqlite3
 import os
 import traceback
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+from src.database.connection import scrapers_conn, get_scrapers_conn, release_scrapers_conn
 
 
 def get_db_expedientes():
     """Obtiene todos los expedientes existentes en la BD."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM fiscalizaciones")
-    expedientes = set(row[0] for row in cursor.fetchall())
-    db_count = len(expedientes)
-    conn.close()
-    return expedientes, db_count
+    with scrapers_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT expediente FROM fiscalizaciones")
+            expedientes = set(row[0] for row in cur.fetchall())
+    return expedientes, len(expedientes)
 
 
 def extract_ficha_id(url):
@@ -205,30 +201,27 @@ class SnifaFiscalizacionScraper:
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
 
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        for record in nuevos:
-            cursor.execute('''
-                INSERT OR REPLACE INTO fiscalizaciones (
-                    expediente, nombre_razon_social, unidad_fiscalizable,
-                    categoria, region, estado, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                record['expediente'],
-                record['nombre_razon_social'],
-                record['unidad_fiscalizable'],
-                record['categoria'],
-                record['region'],
-                record['estado'],
-                record['detalle_link'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                record.get('ficha_id')
-            ))
-            print(f"  + {record['expediente']}")
-
-        conn.commit()
-        conn.close()
+        with scrapers_conn() as conn:
+            with conn.cursor() as cur:
+                for record in nuevos:
+                    cur.execute('''
+                        INSERT INTO fiscalizaciones (
+                            expediente, nombre_razon_social, unidad_fiscalizable,
+                            categoria, region, estado, detalle_link, fecha_scraping, ficha_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (expediente) DO UPDATE SET
+                            nombre_razon_social = EXCLUDED.nombre_razon_social,
+                            unidad_fiscalizable = EXCLUDED.unidad_fiscalizable,
+                            categoria = EXCLUDED.categoria, region = EXCLUDED.region,
+                            estado = EXCLUDED.estado, detalle_link = EXCLUDED.detalle_link,
+                            ficha_id = EXCLUDED.ficha_id
+                    ''', (
+                        record['expediente'], record['nombre_razon_social'],
+                        record['unidad_fiscalizable'], record['categoria'],
+                        record['region'], record['estado'], record['detalle_link'],
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'), record.get('ficha_id')
+                    ))
+                    print(f"  + {record['expediente']}")
         print(f"Scraper finalizado. Se agregaron {len(nuevos)} registros a Fiscalizaciones.")
         return len(nuevos)
 
