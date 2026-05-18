@@ -582,16 +582,50 @@ MIGRATION_PLAN = [
 # MAIN
 # ─────────────────────────────────────────────────────────────
 
+def ensure_databases_exist():
+    # Conectarse a la base de datos principal (bionews_master)
+    master_cfg = {**PG_BASE, "dbname": "bionews_master"}
+    print("[INFO] Asegurando existencia de las bases de datos lógicas en PostgreSQL...")
+    try:
+        conn = psycopg2.connect(**master_cfg)
+        conn.autocommit = True
+        cur = conn.cursor()
+        
+        # Obtener bases de datos existentes
+        cur.execute("SELECT datname FROM pg_database;")
+        existing_dbs = [row[0] for row in cur.fetchall()]
+        
+        target_dbs = ["bionews_users_db", "bionews_news_db", "bionews_legal_db", "bionews_consultations_db"]
+        for db in target_dbs:
+            if db not in existing_dbs:
+                print(f"  -> Creando base de datos: {db}")
+                cur.execute(f'CREATE DATABASE "{db}"')
+                cur.execute(f'GRANT ALL PRIVILEGES ON DATABASE "{db}" TO {master_cfg["user"]}')
+            else:
+                print(f"  -> Base de datos {db} ya existe.")
+        
+        cur.close()
+        conn.close()
+        print("[OK] Bases de datos listas y configuradas.\n")
+    except Exception as e:
+        print(f"[ERROR] No se pudieron aprovisionar las bases de datos en PostgreSQL: {e}")
+        print("[INFO] Asegúrate de que el contenedor de Postgres esté en ejecución y los datos de acceso en PG_BASE sean correctos.")
+        sys.exit(1)
+
+
 def main():
     print("=" * 60)
     print("  BioNews - Migración ETL: SQLite → PostgreSQL")
     print("=" * 60)
 
+    # 1. Asegurar bases de datos en Postgres
+    ensure_databases_exist()
+
     # Verificar conexión SQLite
     try:
         sqlite_conn = sqlite3.connect(SQLITE_PATH)
         sqlite_conn.row_factory = sqlite3.Row
-        print(f"\n[OK] Conectado a SQLite: {SQLITE_PATH}\n")
+        print(f"[OK] Conectado a SQLite: {SQLITE_PATH}\n")
     except Exception as e:
         print(f"[ERROR] No se pudo abrir SQLite: {e}")
         sys.exit(1)
