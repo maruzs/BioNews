@@ -244,6 +244,21 @@ def main():
         sys.exit(1)
 
     print(f"=== Iniciando migración desde: {args.db} ===")
+    
+    print("\n[DEBUG] Configuración cargada:")
+    print("  DB Usuarios:")
+    print(f"    Host: {USERS_DSN['host']}")
+    print(f"    Port: {USERS_DSN['port']}")
+    print(f"    DBName: {USERS_DSN['dbname']}")
+    print(f"    User: {USERS_DSN['user']}")
+    print(f"    Password: {'***' if USERS_DSN['password'] else '(vacío)'}")
+    print("  DB Scrapers:")
+    print(f"    Host: {SCRAPERS_DSN['host']}")
+    print(f"    Port: {SCRAPERS_DSN['port']}")
+    print(f"    DBName: {SCRAPERS_DSN['dbname']}")
+    print(f"    User: {SCRAPERS_DSN['user']}")
+    print(f"    Password: {'***' if SCRAPERS_DSN['password'] else '(vacío)'}\n")
+
     sl_conn = sqlite3.connect(args.db)
     sl_conn.row_factory = sqlite3.Row  # Permite acceso por nombre de columna
 
