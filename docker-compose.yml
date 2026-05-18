@@ -3,9 +3,58 @@
 # ============================================================
 # Configurado para funcionar con Nginx Proxy Manager (NPM)
 # y compatible con Docker Swarm / Stack.
+#
+# FASE 1 MICROSERVICIOS: Se añaden PostgreSQL y Redis como
+# infraestructura de datos para la migración gradual desde SQLite.
 # ============================================================
 
 services:
+
+  # ── PostgreSQL (Base de Datos Centralizada) ─────────────────
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: bionews-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: bionews_admin
+      POSTGRES_PASSWORD: secret_master_password
+      POSTGRES_DB: bionews_master
+      POSTGRES_MULTIPLE_DATABASES: bionews_users_db,bionews_news_db,bionews_legal_db,bionews_consultations_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - bionews-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U bionews_admin -d bionews_master" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+
+  # ── Redis (Message Broker / Caché) ──────────────────────────
+  redis_broker:
+    image: redis:7-alpine
+    container_name: bionews-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - bionews-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
 
   # ── Backend FastAPI ──────────────────────────────────────────
   api:
@@ -23,6 +72,9 @@ services:
       - "8000"
     networks:
       - bionews-net
+    depends_on:
+      postgres_db:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" ]
       interval: 30s
@@ -31,6 +83,12 @@ services:
       start_period: 15s
     environment:
       - TZ=America/Santiago
+      # Conexiones a PostgreSQL (disponibles para futura integración)
+      - POSTGRES_HOST=postgres_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=bionews_admin
+      - POSTGRES_PASSWORD=secret_master_password
+      - REDIS_URL=redis://redis_broker:6379/0
     deploy:
       restart_policy:
         condition: on-failure
@@ -57,6 +115,11 @@ services:
         condition: service_healthy
     environment:
       - TZ=America/Santiago
+      - POSTGRES_HOST=postgres_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=bionews_admin
+      - POSTGRES_PASSWORD=secret_master_password
+      - REDIS_URL=redis://redis_broker:6379/0
     deploy:
       restart_policy:
         condition: on-failure
@@ -84,6 +147,11 @@ services:
       placement:
         constraints:
           - node.role == manager
+
+# Volúmenes
+volumes:
+  postgres_data:
+    driver: local
 
 # Redes
 networks:
