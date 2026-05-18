@@ -20,6 +20,7 @@ interface ColumnConfig {
   width?: number;
   flex?: number;
   minWidth?: number;
+  valueGetter?: (value: any, row: any) => any;
 }
 
 interface ReportLayoutProps {
