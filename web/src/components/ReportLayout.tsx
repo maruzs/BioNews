@@ -90,12 +90,12 @@ const TABLE_COLUMNS: Record<string, ColumnConfig[]> = {
     { field: 'region', headerName: 'Región', width: 140 },
   ],
   Tribunales: [
-    { field: 'rol', headerName: 'Rol', width: 140 },
+    { field: 'rol', headerName: 'Rol', width: 140, valueGetter: (v: any, row: any) => v || row.Rol },
     { field: 'fecha', headerName: 'Fecha', width: 120 },
-    { field: 'caratula', headerName: 'Carátula', flex: 1, minWidth: 250 },
-    { field: 'tribunal', headerName: 'Tribunal', width: 120 },
-    { field: 'tipo_de_procedimiento', headerName: 'Tipo', width: 160 },
-    { field: 'estado_procesal', headerName: 'Estado', width: 150 },
+    { field: 'caratula', headerName: 'Carátula', flex: 1, minWidth: 250, valueGetter: (v: any, row: any) => v || row.Caratula },
+    { field: 'tribunal', headerName: 'Tribunal', width: 120, valueGetter: (v: any, row: any) => v || row.Tribunal },
+    { field: 'tipo_de_procedimiento', headerName: 'Tipo', width: 160, valueGetter: (v: any, row: any) => v || row.Tipo_de_Procedimiento },
+    { field: 'estado_procesal', headerName: 'Estado', width: 150, valueGetter: (v: any, row: any) => v || row.Estado_Procesal },
   ],
   pertinencias: [
     { field: 'Expediente', headerName: 'Expediente', width: 140 },
@@ -366,7 +366,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       } else {
         const nombre = item['Caratula'] || item['caratula'] || item['Nombre_de_Proyecto'] || item['normativa'] || item['unidad_fiscalizable'] || item[effectiveIdField] || '';
         const fuente = tableName || item._table || 'unknown';
-        const actionF = item[effectiveActionField] || item._action || '';
+        const actionF = item[effectiveActionField] || item['Accion'] || item._action || '';
         await fetch('/api/favorites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

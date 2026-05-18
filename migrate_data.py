@@ -232,6 +232,23 @@ DDL = {
             ficha_id            INTEGER
         )
     """,
+    "sea_proyectos_evaluados": """
+        CREATE TABLE IF NOT EXISTS sea_proyectos_evaluados (
+            id                  TEXT PRIMARY KEY,
+            nombre              TEXT,
+            titular             TEXT,
+            via_ingreso         TEXT,
+            estado_proyecto     TEXT,
+            razon_ingreso       TEXT,
+            fecha_presentacion  TEXT,
+            subestado_proyecto  TEXT,
+            categoria_economica TEXT,
+            url                 TEXT,
+            fecha_scraping      TIMESTAMP,
+            region              TEXT,
+            tipo_proyecto       TEXT
+        )
+    """,
     "normativas": """
         CREATE TABLE IF NOT EXISTS normativas (
             fecha           TEXT,

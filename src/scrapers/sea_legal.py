@@ -97,8 +97,8 @@ class PertinenciasScraper:
         fecha_hasta = fecha_hoy
         
         if start_date and end_date:
-            fecha_desde = start_date
-            fecha_hasta = end_date
+            fecha_desde = start_date if isinstance(start_date, str) else start_date.strftime('%Y-%m-%d')
+            fecha_hasta = end_date if isinstance(end_date, str) else end_date.strftime('%Y-%m-%d')
         else:
             # Opcion 2: Buscar ultima fecha de scraping
             try:

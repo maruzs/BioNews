@@ -83,7 +83,7 @@ class SEAEvaluadosScraper:
             # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
             try:
                 db_manager = DatabaseManager()
-                conn = db_manager.get_connection('bionews_news_db')
+                conn = db_manager.get_connection('bionews_legal_db')
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
                 count = cursor.fetchone()[0]
@@ -101,9 +101,11 @@ class SEAEvaluadosScraper:
                     scrape_dates = cursor.fetchall()
                     
                     if len(scrape_dates) > 0:
-                        last_date_str = scrape_dates[0][0]
+                        last_date_val = scrape_dates[0][0]
+                        last_date_str = last_date_val.strftime('%Y-%m-%d') if not isinstance(last_date_val, str) else last_date_val
                         if last_date_str == fecha_hoy_iso and len(scrape_dates) > 1:
-                            prev_date_str = scrape_dates[1][0]
+                            prev_date_val = scrape_dates[1][0]
+                            prev_date_str = prev_date_val.strftime('%Y-%m-%d') if not isinstance(prev_date_val, str) else prev_date_val
                             prev_date_obj = datetime.strptime(prev_date_str, '%Y-%m-%d')
                             fecha_desde = prev_date_obj.strftime('%d/%m/%Y')
                         else:
@@ -157,7 +159,7 @@ class SEAEvaluadosScraper:
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_news_db')
+        conn = db_manager.get_connection('bionews_legal_db')
         cursor = conn.cursor()
 
         print(f"Iniciando scraping SEA Proyectos Evaluados. {'Modo completo' if is_empty else 'Modo diario'}.")

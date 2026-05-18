@@ -239,7 +239,7 @@ class DatabaseManager:
             cursor.execute("SELECT ultimo_exito FROM scraper_logs WHERE fuente = %s", (fuente,))
             row = cursor.fetchone()
             
-            ultimo_exito = ahora if exito else (row[0] if row else None)
+            ultimo_exito = ahora if exito else (row['ultimo_exito'] if row else None)
             estado = "OK" if exito else "ERROR"
             
             cursor.execute("""
@@ -565,7 +565,7 @@ class DatabaseManager:
         elif notif_category == "pertinencias":
             id_col = "Expediente"
         elif notif_category == "Tribunales":
-            id_col = "Accion"
+            id_col = "accion"
         elif notif_category == "normativas":
             id_col = "accion"
         else:
@@ -577,7 +577,7 @@ class DatabaseManager:
         # print(f"DEBUG: Category {category_slug}, User {user_id}, Last Exit: {norm_last_exit}")
 
         for item in items:
-            item_id = str(item.get(id_col) or item.get("id_o_link") or "")
+            item_id = str(item.get(id_col) or item.get(id_col.capitalize()) or item.get("id_o_link") or "")
             
             # Si el ítem ya fue visto individualmente, no es nuevo
             if item_id in viewed_ids:

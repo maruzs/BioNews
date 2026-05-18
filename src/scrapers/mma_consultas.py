@@ -7,6 +7,7 @@ from .engine import ScrapingEngine
 from playwright.sync_api import sync_playwright
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
+db_manager = DatabaseManager()
 
 class MMAConsultasScraper:
     def __init__(self):
@@ -16,7 +17,7 @@ class MMAConsultasScraper:
         self.engine = ScrapingEngine()
 
     def _get_connection(self):
-        return sqlite3.connect(DB_PATH)
+        return db_manager.get_connection('bionews_consultations_db')
 
     def _normalize_date_to_target(self, date_str):
         """Convierte cualquier fecha a mm/dd/yyyy como pide el prompt."""
