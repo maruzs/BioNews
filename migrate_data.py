@@ -240,7 +240,7 @@ DDL = {
             organismo       TEXT,
             suborganismo    TEXT,
             accion          TEXT PRIMARY KEY,
-            fecha_scraping  TEXT,
+            fecha_scraping  TIMESTAMP,
             ficha_id        INTEGER
         )
     """,
@@ -452,7 +452,7 @@ def tr_medidas_provisionales(r):
 
 def tr_normativas(r):
     return (r["fecha"], r["normativa"], r["tipo_normativa"], r["organismo"],
-            r["suborganismo"], r["accion"], r["fecha_scraping"], r["ficha_id"])
+            r["suborganismo"], r["accion"], parse_ts(r["fecha_scraping"]), r["ficha_id"])
 
 def tr_pertinencias(r):
     return (r["Expediente"], r["Nombre_de_Proyecto"], r["Proponente"],
@@ -563,7 +563,7 @@ MIGRATION_PLAN = [
      ["rol","fecha","caratula","tribunal","tipo_de_procedimiento","estado_procesal","accion","fecha_scraping"], tr_tribunales),
     ("sea_proyectos_evaluados", "sea_proyectos_evaluados", DB_LEGAL, "sea_proyectos_evaluados",
      ["id","nombre","titular","via_ingreso","estado_proyecto","razon_ingreso","fecha_presentacion","subestado_proyecto","categoria_economica","url","fecha_scraping","region","tipo_proyecto"], tr_sea),
-    ("scraper_logs", "scraper_logs", DB_LEGAL, "scraper_logs",
+    ("scraper_logs", "scraper_logs", DB_USERS, "scraper_logs",
      ["fuente","ultimo_intento","ultimo_exito","estado","error","nuevos_registros"], tr_scraper_logs),
 
     # ── bionews_consultations_db ─────────────────────────────

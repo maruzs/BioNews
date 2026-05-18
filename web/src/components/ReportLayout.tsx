@@ -90,12 +90,12 @@ const TABLE_COLUMNS: Record<string, ColumnConfig[]> = {
     { field: 'region', headerName: 'Región', width: 140 },
   ],
   Tribunales: [
-    { field: 'Rol', headerName: 'Rol', width: 140 },
-    { field: 'Fecha', headerName: 'Fecha', width: 120 },
-    { field: 'Caratula', headerName: 'Carátula', flex: 1, minWidth: 250 },
-    { field: 'Tribunal', headerName: 'Tribunal', width: 120 },
-    { field: 'Tipo_de_Procedimiento', headerName: 'Tipo', width: 160 },
-    { field: 'Estado_Procesal', headerName: 'Estado', width: 150 },
+    { field: 'rol', headerName: 'Rol', width: 140 },
+    { field: 'fecha', headerName: 'Fecha', width: 120 },
+    { field: 'caratula', headerName: 'Carátula', flex: 1, minWidth: 250 },
+    { field: 'tribunal', headerName: 'Tribunal', width: 120 },
+    { field: 'tipo_de_procedimiento', headerName: 'Tipo', width: 160 },
+    { field: 'estado_procesal', headerName: 'Estado', width: 150 },
   ],
   pertinencias: [
     { field: 'Expediente', headerName: 'Expediente', width: 140 },
@@ -123,7 +123,7 @@ const TABLE_ID_FIELDS: Record<string, string> = {
   medidas_provisionales: 'expediente',
   requerimientos: 'expediente',
   programasDeCumplimiento: 'expediente',
-  Tribunales: 'Accion',
+  Tribunales: 'accion',
   pertinencias: 'Expediente',
   normativas: 'accion',
 };
@@ -135,7 +135,7 @@ const TABLE_ACTION_FIELDS: Record<string, string> = {
   medidas_provisionales: 'detalle_link',
   requerimientos: 'detalle_link',
   programasDeCumplimiento: 'detalle_link',
-  Tribunales: 'Accion',
+  Tribunales: 'accion',
   pertinencias: 'Accion',
   normativas: 'accion',
 };
@@ -178,10 +178,10 @@ const getDashboardConfig = (tableName: string | undefined, title: string): Dashb
       break;
     case 'Tribunales':
       baseConfig.dimensions = [
-        { key: 'Tribunal', label: 'Causas por Tribunal', type: 'relative-bar' },
-        { key: 'Tipo_de_Procedimiento', label: 'Tipo de Procedimiento', type: 'bar-horizontal' },
-        { key: 'Estado_Procesal', label: 'Estado Procesal', type: 'pie' },
-        { key: 'Fecha', label: 'Ingreso Anual de Causas', type: 'grouped-vertical' } // Desacopladas
+        { key: 'tribunal', label: 'Causas por Tribunal', type: 'relative-bar' },
+        { key: 'tipo_de_procedimiento', label: 'Tipo de Procedimiento', type: 'bar-horizontal' },
+        { key: 'estado_procesal', label: 'Estado Procesal', type: 'pie' },
+        { key: 'fecha', label: 'Ingreso Anual de Causas', type: 'grouped-vertical' } // Desacopladas
       ];
       break;
     case 'fiscalizaciones':
@@ -364,7 +364,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           setData(prev => prev.filter(i => i._id !== itemId));
         }
       } else {
-        const nombre = item['Caratula'] || item['Nombre_de_Proyecto'] || item['normativa'] || item['unidad_fiscalizable'] || item[effectiveIdField] || '';
+        const nombre = item['Caratula'] || item['caratula'] || item['Nombre_de_Proyecto'] || item['normativa'] || item['unidad_fiscalizable'] || item[effectiveIdField] || '';
         const fuente = tableName || item._table || 'unknown';
         const actionF = item[effectiveActionField] || item._action || '';
         await fetch('/api/favorites', {

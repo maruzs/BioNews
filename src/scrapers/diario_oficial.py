@@ -46,19 +46,10 @@ def crear_tabla_si_no_existe(conn):
             organismo TEXT,
             suborganismo TEXT,
             accion TEXT PRIMARY KEY,
-            fecha_scraping TEXT,
+            fecha_scraping TIMESTAMP,
             ficha_id INTEGER
         )
     ''')
-    # Migración: agregar UNIQUE a accion si la tabla ya existe sin él
-    # y agregar columna fecha_scraping si no existe
-    try:
-        cursor.execute("PRAGMA table_info(normativas)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'fecha_scraping' not in columns:
-            cursor.execute("ALTER TABLE normativas ADD COLUMN fecha_scraping TEXT")
-    except:
-        pass
     conn.commit()
 
 
@@ -107,10 +98,11 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
 
                     fid = extract_ficha_id(accion_link)
 
-                    # Usar INSERT OR IGNORE para evitar duplicados por URL (accion)
+                    # Usar ON CONFLICT DO NOTHING para evitar duplicados por URL (accion)
                     cursor.execute('''
                         INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping, ficha_id)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (accion) DO NOTHING
                     ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fid))
                     
     except Exception as e:
