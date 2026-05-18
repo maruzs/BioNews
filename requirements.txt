@@ -67,3 +67,4 @@ tzdata==2026.1
 urllib3==2.6.3
 uvicorn==0.46.0
 watchdog==6.0.0
+redis==5.0.3
