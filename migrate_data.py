@@ -80,6 +80,11 @@ def migrate_table(sqlite_conn, pg_conn, table_name, create_sql, columns,
     src = src_table or table_name
     pg_cur = pg_conn.cursor()
 
+    if table_name == "tribunales":
+        pg_cur.execute('DROP TABLE IF EXISTS "Tribunales"')
+        pg_cur.execute('DROP TABLE IF EXISTS "tribunales"')
+        pg_conn.commit()
+
     # 1. Crear tabla destino
     pg_cur.execute(create_sql)
     pg_conn.commit()
@@ -304,15 +309,15 @@ DDL = {
         )
     """,
     "Tribunales": """
-        CREATE TABLE IF NOT EXISTS "Tribunales" (
-            id                  SERIAL PRIMARY KEY,
-            expediente          TEXT,
-            nombre_razon_social TEXT,
-            categoria           TEXT,
-            region              TEXT,
-            estado              TEXT,
-            fecha_scraping      TIMESTAMP,
-            ficha_id            INTEGER
+        CREATE TABLE IF NOT EXISTS tribunales (
+            rol                 TEXT PRIMARY KEY,
+            fecha               TEXT,
+            caratula            TEXT,
+            tribunal            TEXT,
+            tipo_de_procedimiento TEXT,
+            estado_procesal     TEXT,
+            accion              TEXT,
+            fecha_scraping      TIMESTAMP
         )
     """,
     "sea_proyectos_evaluados": """
@@ -475,10 +480,9 @@ def tr_sancionatorios(r):
             parse_ts(r["fecha_scraping"]), r["ficha_id"])
 
 def tr_tribunales(r):
-    # Sin PRIMARY KEY explícito en SQLite (rowid implícito), omitimos id
-    return (r.get("expediente"), r.get("nombre_razon_social"), r.get("categoria"),
-            r.get("region"), r.get("estado"),
-            parse_ts(r.get("fecha_scraping")), r.get("ficha_id"))
+    return (r.get("Rol"), r.get("Fecha"), r.get("Caratula"),
+            r.get("Tribunal"), r.get("Tipo_de_Procedimiento"), r.get("Estado_Procesal"),
+            r.get("Accion"), parse_ts(r.get("fecha_scraping")))
 
 def tr_sea(r):
     return (r["id"], r["nombre"], r["titular"], r["via_ingreso"],
@@ -555,8 +559,8 @@ MIGRATION_PLAN = [
      ["expediente","unidad_fiscalizable","nombre_razon_social","categoria","region","detalle_link","fecha_scraping","ficha_id"], tr_requerimientos),
     ("sancionatorios", "sancionatorios", DB_LEGAL, "sancionatorios",
      ["expediente","unidad_fiscalizable","nombre_razon_social","categoria","region","estado","detalle_link","fecha_scraping","ficha_id"], tr_sancionatorios),
-    ("Tribunales", "Tribunales", DB_LEGAL, "Tribunales",
-     ["expediente","nombre_razon_social","categoria","region","estado","fecha_scraping","ficha_id"], tr_tribunales),
+    ("Tribunales", "tribunales", DB_LEGAL, "Tribunales",
+     ["rol","fecha","caratula","tribunal","tipo_de_procedimiento","estado_procesal","accion","fecha_scraping"], tr_tribunales),
     ("sea_proyectos_evaluados", "sea_proyectos_evaluados", DB_LEGAL, "sea_proyectos_evaluados",
      ["id","nombre","titular","via_ingreso","estado_proyecto","razon_ingreso","fecha_presentacion","subestado_proyecto","categoria_economica","url","fecha_scraping","region","tipo_proyecto"], tr_sea),
     ("scraper_logs", "scraper_logs", DB_LEGAL, "scraper_logs",

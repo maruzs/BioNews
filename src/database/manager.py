@@ -127,8 +127,7 @@ class DatabaseManager:
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             row = cursor.fetchone()
             if row:
-                columns = [col[0] for col in cursor.description]
-                return dict(zip(columns, row))
+                return dict(row)
             return None
 
     def create_user(self, name, email, password_hash, role="user"):
@@ -138,17 +137,17 @@ class DatabaseManager:
                 cursor.execute("""
                     INSERT INTO users (name, email, password_hash, role, blocked, preferences)
                     VALUES (%s, %s, %s, %s, 0, '{}') RETURNING id""", (name, email, password_hash, role))
+                row = cursor.fetchone()
                 conn.commit()
-                return cursor.fetchone()[0]
-            except sqlite3.IntegrityError:
+                return row['id'] if row else None
+            except Exception:
                 return None
 
     def get_all_users(self):
         with self.get_connection('bionews_users_db') as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT id, name, email, role, blocked, preferences, last_login FROM users")
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return [dict(row) for row in cursor.fetchall()]
 
     def update_user_last_login(self, user_id):
         with self.get_connection('bionews_users_db') as conn:

@@ -16,7 +16,7 @@ def obtener_ultima_fecha(conn):
     """
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT Fecha FROM Tribunales WHERE Tribunal = 'Segundo Tribunal'")
+        cursor.execute("SELECT fecha FROM tribunales WHERE tribunal = 'Segundo Tribunal'")
         filas = cursor.fetchall()
         
         if not filas:
@@ -40,7 +40,7 @@ def obtener_ultima_fecha(conn):
             return max(fechas_validas)
         return None
         
-    except sqlite3.OperationalError:
+    except Exception:
         return None
 
 
@@ -150,10 +150,18 @@ def procesar_nuevos_registros(resultados_interceptados, conn, ultima_fecha_db):
         accion = f"https://2ta.lexsoft.cl/2ta/search?proc=3&idCausa={id_causa}"
         
         cursor.execute('''
-            INSERT OR REPLACE INTO Tribunales
-            (Rol, Fecha, Caratula, Tribunal, Tipo_de_Procedimiento, Estado_Procesal, Accion, fecha_scraping)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            INSERT INTO tribunales
+            (rol, fecha, caratula, tribunal, tipo_de_procedimiento, estado_procesal, accion, fecha_scraping)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (rol) DO UPDATE SET
+                fecha = EXCLUDED.fecha,
+                caratula = EXCLUDED.caratula,
+                tribunal = EXCLUDED.tribunal,
+                tipo_de_procedimiento = EXCLUDED.tipo_de_procedimiento,
+                estado_procesal = EXCLUDED.estado_procesal,
+                accion = EXCLUDED.accion,
+                fecha_scraping = EXCLUDED.fecha_scraping
+        ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, datetime.now()))
         
         nuevos_registros += 1
         
@@ -198,7 +206,7 @@ class SegundoTribunalScraper:
                 
             conn.close()
             return nuevos
-        except sqlite3.Error as e:
+        except Exception as e:
             print(f"Error de base de datos: {e}")
             return 0
 
