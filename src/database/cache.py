@@ -7,9 +7,9 @@ log = logging.getLogger("bionews.cache")
 
 class RedisCache:
     def __init__(self):
-        self.host = os.getenv("REDIS_HOST", "redis")
-        self.port = int(os.getenv("REDIS_PORT", "6379"))
-        self.enabled = os.getenv("REDIS_ENABLED", "true").lower() == "true"
+        self.host = os.getenv("REDIS_HOST", "redis").strip()
+        self.port = int(os.getenv("REDIS_PORT", "6379").strip())
+        self.enabled = os.getenv("REDIS_ENABLED", "true").strip().lower() == "true"
         self.client = None
         if self.enabled:
             try:

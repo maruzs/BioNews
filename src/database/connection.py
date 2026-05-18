@@ -20,11 +20,11 @@ log = logging.getLogger("bionews.db")
 # ── Configuración desde variables de entorno ─────────────────────────────────
 
 _DB_DSN = {
-    "host":     os.getenv("DB_HOST",  "postgres-db"),
-    "port":     int(os.getenv("DB_PORT", "5432")),
-    "dbname":   os.getenv("DB_NAME",  "bionews"),
-    "user":     os.getenv("DB_USER",  "bionews"),
-    "password": os.getenv("DB_PASS",  "changeme"),
+    "host":     os.getenv("DB_HOST",  "postgres-db").strip(),
+    "port":     int(os.getenv("DB_PORT", "5432").strip()),
+    "dbname":   os.getenv("DB_NAME",  "bionews").strip(),
+    "user":     os.getenv("DB_USER",  "bionews").strip(),
+    "password": os.getenv("DB_PASS",  "changeme").strip(),
     # Clave: buscar en esquemas 'users' y 'scrapers' por defecto
     "options":  "-c client_encoding=UTF8 -c search_path=users,scrapers,public",
 }
