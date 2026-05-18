@@ -15,6 +15,8 @@ import jwt
 import datetime
 import bcrypt
 import asyncio
+import redis.asyncio as redis
+import os
 from asyncio import Queue
 from typing import Optional, List
 # pyrefly: ignore [missing-import]
@@ -52,7 +54,43 @@ UPLOAD_DIR = "uploads/bugs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+
+# ─── REDIS PUB/SUB ───────────────────────────────────────────────────────────
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+
+async def redis_listener():
+    """Escucha eventos de ingestión en Redis."""
+    pubsub = redis_client.pubsub()
+    await pubsub.subscribe("bionews_events")
+    log.info("Suscrito a canal Redis: bionews_events")
+    try:
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                data = json.loads(message["data"])
+                if data.get("type") == "new_ingestion":
+                    category = data.get("category")
+                    timestamp = data.get("timestamp")
+                    log.info(f"Nuevo evento de ingestión: {category} a las {timestamp}")
+                    
+                    # 1. Actualizar tabla global
+                    db.update_category_last_update(category, timestamp)
+                    
+                    # 2. Transmitir vía SSE
+                    await sse_manager.broadcast({
+                        "type": "new_content",
+                        "category": category,
+                        "timestamp": timestamp
+                    })
+    except Exception as e:
+        log.error(f"Error en redis_listener: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(redis_listener())
+
 # ─── SSE NOTIFICATION MANAGER ───────────────────────────────────────────────
+
 class SSEManager:
     """Gestiona colas SSE por cliente. Cada cliente tiene su propia Queue."""
     def __init__(self):
@@ -595,8 +633,8 @@ def get_notification_status(user = Depends(get_current_user)):
 
 @app.get("/api/notifications/status/{category}")
 def get_notification_status_single(category: str, user = Depends(get_current_user)):
-    """Verifica si una categoría específica tiene ítems nuevos."""
-    has_new = db._check_if_category_has_new(user["sub"], category)
+    """Verifica si una categoría específica tiene ítems nuevos usando la lógica veloz."""
+    has_new = db.check_category_has_new(user["sub"], category)
     return {"has_new": has_new, "category": category}
 
 @app.post("/api/notifications/exit")
