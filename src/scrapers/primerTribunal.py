@@ -148,7 +148,7 @@ class PrimerTribunalScraper:
             
         try:
             db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_legal_db')
+            conn = db_manager.get_connection('bionews_legal_db')
             ultima_fecha = obtener_ultima_fecha(conn)
             
             if ultima_fecha:

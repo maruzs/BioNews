@@ -18,7 +18,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'data.db')
 def get_db_expedientes():
     """Obtiene todos los expedientes existentes en la BD."""
     db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_legal_db')
+    conn = db_manager.get_connection('bionews_legal_db')
     cursor = conn.cursor()
     cursor.execute("SELECT expediente FROM fiscalizaciones")
     expedientes = set(row[0] for row in cursor.fetchall())

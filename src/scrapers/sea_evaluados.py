@@ -83,7 +83,7 @@ class SEAEvaluadosScraper:
             # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
             try:
                 db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_news_db')
+                conn = db_manager.get_connection('bionews_news_db')
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM sea_proyectos_evaluados")
                 count = cursor.fetchone()[0]

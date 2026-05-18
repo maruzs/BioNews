@@ -21,7 +21,7 @@ class DGAScraper:
                     return None
 
             db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_news_db')
+            conn = db_manager.get_connection('bionews_news_db')
             cursor = conn.cursor()
             # Buscamos la noticia más reciente de DGA
             cursor.execute("SELECT link FROM noticias WHERE fuente='DGA' ORDER BY fecha DESC, fecha_scraping DESC LIMIT 1")
