@@ -127,6 +127,11 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
     placeholders = ', '.join(['%s'] * len(all_cols))
     cols_quoted  = ', '.join([f'"{c}"' for c in all_cols])
 
+    if isinstance(conflict_col, (list, tuple)):
+        conflict_str = ', '.join([f'"{c}"' for c in conflict_col])
+    else:
+        conflict_str = f'"{conflict_col}"'
+
     inserted = 0
     for row in rows:
         # Convertir "" a None para evitar errores de casteo/tipo en Postgres (ej. TIMESTAMP)
@@ -135,7 +140,7 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
             pg_cur.execute("SAVEPOINT bulk_row_upsert")
             pg_cur.execute(
                 f'INSERT INTO "{table}" ({cols_quoted}) VALUES ({placeholders})'
-                f' ON CONFLICT ("{conflict_col}") DO NOTHING',
+                f' ON CONFLICT ({conflict_str}) DO NOTHING',
                 values
             )
             pg_cur.execute("RELEASE SAVEPOINT bulk_row_upsert")
@@ -150,6 +155,14 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
     return inserted
 
 
+def sync_sequence(pg_cur, table, col="id"):
+    """Resetea el contador de la secuencia SERIAL en PostgreSQL para que coincida con el máximo id actual."""
+    try:
+        pg_cur.execute(f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'), COALESCE(max(\"{col}\"), 1)) FROM \"{table}\"")
+    except Exception as e:
+        print(f"  [WARN] No se pudo sincronizar la secuencia para '{table}': {e}")
+
+
 # ── Migración DB Usuarios ────────────────────────────────────────────────────
 
 def migrate_users(sl_conn, pg_conn):
@@ -157,28 +170,32 @@ def migrate_users(sl_conn, pg_conn):
 
     # users
     rows = sqlite_rows(sl_conn, "users")
-    n = bulk_upsert(cur, "users", rows, "email", cols_to_skip=["id"])
+    n = bulk_upsert(cur, "users", rows, "id")
     print(f"  users: {n}/{len(rows)} insertados")
+    sync_sequence(cur, "users")
 
     # favoritos
     rows = sqlite_rows(sl_conn, "favoritos")
-    n = bulk_upsert(cur, "favoritos", rows, "user_id")  # PK compuesta, DO NOTHING igual funciona
+    n = bulk_upsert(cur, "favoritos", rows, ["user_id", "id_o_link"])
     print(f"  favoritos: {n}/{len(rows)} insertados")
 
     # user_category_views
     rows = sqlite_rows(sl_conn, "user_category_views")
-    n = bulk_upsert(cur, "user_category_views", rows, "id", cols_to_skip=["id"])
+    n = bulk_upsert(cur, "user_category_views", rows, "id")
     print(f"  user_category_views: {n}/{len(rows)} insertados")
+    sync_sequence(cur, "user_category_views")
 
     # user_item_views
     rows = sqlite_rows(sl_conn, "user_item_views")
-    n = bulk_upsert(cur, "user_item_views", rows, "id", cols_to_skip=["id"])
+    n = bulk_upsert(cur, "user_item_views", rows, "id")
     print(f"  user_item_views: {n}/{len(rows)} insertados")
+    sync_sequence(cur, "user_item_views")
 
     # bug_reports
     rows = sqlite_rows(sl_conn, "bug_reports")
-    n = bulk_upsert(cur, "bug_reports", rows, "id", cols_to_skip=["id"])
+    n = bulk_upsert(cur, "bug_reports", rows, "id")
     print(f"  bug_reports: {n}/{len(rows)} insertados")
+    sync_sequence(cur, "bug_reports")
 
     pg_conn.commit()
     cur.close()

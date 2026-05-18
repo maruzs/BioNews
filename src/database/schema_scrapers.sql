@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS "registroSanciones" (
     unidad_fiscalizable TEXT,
     categoria           TEXT,
     region              TEXT,
+    multa_uta           TEXT,
+    pago_multa          TEXT,
     estado              TEXT,
     detalle_link        TEXT,
     fecha_scraping      TIMESTAMP,
