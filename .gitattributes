@@ -1,0 +1,2 @@
+# Asegurar que los scripts de shell siempre usen LF (Linux) al hacer checkout y commit
+*.sh text eol=lf
