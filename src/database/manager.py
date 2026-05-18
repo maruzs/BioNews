@@ -120,6 +120,58 @@ class DatabaseManager:
             cursor.execute("SELECT 1 FROM favoritos WHERE user_id = %s AND id_o_link = %s", (user_id, id_o_link))
             return cursor.fetchone() is not None
 
+    def get_favorites(self, user_id, fuente=None):
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor()  # Standard cursor yielding tuples as expected by services
+            if fuente:
+                cursor.execute("""
+                    SELECT user_id, id_o_link, fuente, nombre, fecha_agregado, accion 
+                    FROM favoritos 
+                    WHERE user_id = %s AND fuente = %s
+                    ORDER BY fecha_agregado DESC
+                """, (user_id, fuente))
+            else:
+                cursor.execute("""
+                    SELECT user_id, id_o_link, fuente, nombre, fecha_agregado, accion 
+                    FROM favoritos 
+                    WHERE user_id = %s
+                    ORDER BY fecha_agregado DESC
+                """, (user_id,))
+            return cursor.fetchall()
+
+    def add_favorite(self, user_id, id_o_link, fuente, nombre, accion=""):
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("""
+                    INSERT INTO favoritos (user_id, id_o_link, fuente, nombre, fecha_agregado, accion)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (user_id, id_o_link) DO UPDATE SET
+                        fuente = EXCLUDED.fuente,
+                        nombre = EXCLUDED.nombre,
+                        fecha_agregado = EXCLUDED.fecha_agregado,
+                        accion = EXCLUDED.accion
+                """, (user_id, id_o_link, fuente, nombre, _now_str(), accion))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error al agregar favorito: {e}")
+                return False
+
+    def remove_favorite(self, user_id, id_o_link):
+        with self.get_connection('bionews_users_db') as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("""
+                    DELETE FROM favoritos 
+                    WHERE user_id = %s AND id_o_link = %s
+                """, (user_id, id_o_link))
+                conn.commit()
+                return cursor.rowcount > 0
+            except Exception as e:
+                print(f"Error al eliminar favorito: {e}")
+                return False
+
     # ─── USERS ────────────────────────────────────────────────────────────────
     def get_user_by_email(self, email):
         with self.get_connection('bionews_users_db') as conn:
@@ -207,110 +259,133 @@ class DatabaseManager:
         with self.get_connection('bionews_users_db') as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT * FROM scraper_logs ORDER BY ultimo_intento DESC")
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return [dict(row) for row in cursor.fetchall()]
 
     def get_stats(self, table_name):
-        with self.get_connection('bionews_legal_db') as conn:
+        # Allowed tables
+        allowed = {
+            'fiscalizaciones', 'medidas_provisionales', 'normativas',
+            'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
+            'requerimientos', 'sancionatorios', 'Tribunales',
+            'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas',
+            'dga_consultas', 'sea_proyectos_evaluados'
+        }
+        if table_name not in allowed:
+            return None
+
+        db = 'bionews_legal_db'
+        if table_name in ['minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas', 'dga_consultas']:
+            db = 'bionews_consultations_db'
+
+        with self.get_connection(db) as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             stats = {}
             
-            # Verificar si la tabla existe
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=%s", (table_name,))
+            # Verificar si la tabla existe en PostgreSQL
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' AND LOWER(table_name) = LOWER(%s)
+            """, (table_name,))
             if not cursor.fetchone():
                 return None
 
             # Total count
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-            stats['total'] = cursor.fetchone()[0]
+            cursor.execute(f'SELECT COUNT(*) as count FROM "{table_name}"')
+            row = cursor.fetchone()
+            stats['total'] = row['count'] if row else 0
             
             if table_name == 'normativas':
                 # Normativas por organismo
-                cursor.execute("SELECT organismo, COUNT(*) as count FROM normativas WHERE organismo IS NOT NULL GROUP BY organismo ORDER BY count DESC LIMIT 15")
-                stats['by_organismo'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT organismo as name, COUNT(*) as count FROM normativas WHERE organismo IS NOT NULL GROUP BY organismo ORDER BY count DESC LIMIT 15')
+                stats['by_organismo'] = [dict(row) for row in cursor.fetchall()]
                 
                 # Normativas por año y tipo
                 cursor.execute("""
                     SELECT 
                         CASE 
-                            WHEN fecha LIKE '____-__-__' THEN substr(fecha, 1, 4)
-                            ELSE substr(fecha, -4)
+                            WHEN fecha ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN substring(fecha from 1 for 4)
+                            WHEN fecha ~ '[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN substring(fecha from '[0-9]{4}$')
+                            WHEN substring(fecha from '.{4}$') ~ '^[0-9]{4}$' THEN substring(fecha from '.{4}$')
+                            ELSE NULL
                         END as anio, 
-                        tipo_normativa, COUNT(*) as count 
+                        tipo_normativa as tipo, COUNT(*) as count 
                     FROM normativas 
-                    WHERE (fecha LIKE '%-%-%' OR fecha LIKE '%/%/%')
+                    WHERE fecha IS NOT NULL
                     GROUP BY anio, tipo_normativa
                     ORDER BY anio DESC
                 """)
                 rows = cursor.fetchall()
-                stats['by_year_type'] = [dict(zip(['anio', 'tipo', 'count'], row)) for row in rows if row[0] and len(str(row[0])) == 4]
+                stats['by_year_type'] = [dict(row) for row in rows if row['anio'] and len(str(row['anio'])) == 4]
 
             elif table_name == 'fiscalizaciones':
                 # Fiscalizaciones por region
-                cursor.execute("SELECT region, COUNT(*) as count FROM fiscalizaciones WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC")
-                stats['by_region'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT region as name, COUNT(*) as count FROM fiscalizaciones WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC')
+                stats['by_region'] = [dict(row) for row in cursor.fetchall()]
                 
                 # Fiscalizaciones por tipo (categoria)
-                cursor.execute("SELECT categoria, COUNT(*) as count FROM fiscalizaciones WHERE categoria IS NOT NULL GROUP BY categoria ORDER BY count DESC")
-                stats['by_tipo'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT categoria as name, COUNT(*) as count FROM fiscalizaciones WHERE categoria IS NOT NULL GROUP BY categoria ORDER BY count DESC')
+                stats['by_tipo'] = [dict(row) for row in cursor.fetchall()]
 
                 # Fiscalizaciones por año
                 cursor.execute("""
                     SELECT 
-                        substr(expediente, instr(expediente, '-20') + 1, 4) as anio,
+                        substring(expediente from '-([0-9]{4})-') as anio,
                         COUNT(*) as count
                     FROM fiscalizaciones
-                    WHERE expediente LIKE '%-20__-%'
+                    WHERE expediente ~ '-[0-9]{4}-'
                     GROUP BY anio
                     ORDER BY anio DESC
                 """)
-                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in cursor.fetchall()]
+                stats['by_year'] = [dict(row) for row in cursor.fetchall()]
 
             elif table_name == 'medidas_provisionales':
                 # Medidas por region
-                cursor.execute("SELECT region, COUNT(*) as count FROM medidas_provisionales WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC")
-                stats['by_region'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT region as name, COUNT(*) as count FROM medidas_provisionales WHERE region IS NOT NULL GROUP BY region ORDER BY count DESC')
+                stats['by_region'] = [dict(row) for row in cursor.fetchall()]
                 
                 # Medidas por estado
-                cursor.execute("SELECT estado, COUNT(*) as count FROM medidas_provisionales WHERE estado IS NOT NULL GROUP BY estado ORDER BY count DESC")
-                stats['by_estado'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT estado as name, COUNT(*) as count FROM medidas_provisionales WHERE estado IS NOT NULL GROUP BY estado ORDER BY count DESC')
+                stats['by_estado'] = [dict(row) for row in cursor.fetchall()]
 
                 # Medidas por año
                 cursor.execute("""
                     SELECT 
-                        substr(expediente, instr(expediente, '-20') + 1, 4) as anio,
+                        substring(expediente from '-([0-9]{4})-') as anio,
                         COUNT(*) as count
                     FROM medidas_provisionales
-                    WHERE expediente LIKE '%-20__-%'
+                    WHERE expediente ~ '-[0-9]{4}-'
                     GROUP BY anio
                     ORDER BY anio DESC
                 """)
-                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in cursor.fetchall()]
+                stats['by_year'] = [dict(row) for row in cursor.fetchall()]
 
-            elif table_name == 'Tribunales':
+            elif table_name.lower() == 'tribunales':
                 # Causas por tribunal
-                cursor.execute("SELECT Tribunal, COUNT(*) as count FROM Tribunales WHERE Tribunal IS NOT NULL GROUP BY Tribunal ORDER BY count DESC")
-                stats['by_tribunal'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT tribunal as name, COUNT(*) as count FROM tribunales WHERE tribunal IS NOT NULL GROUP BY tribunal ORDER BY count DESC')
+                stats['by_tribunal'] = [dict(row) for row in cursor.fetchall()]
                 
                 # Causas por año
                 cursor.execute("""
                     SELECT 
                         CASE 
-                            WHEN Fecha LIKE '____-__-__' THEN substr(Fecha, 1, 4)
-                            ELSE substr(Fecha, -4)
+                            WHEN fecha ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN substring(fecha from 1 for 4)
+                            WHEN fecha ~ '[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN substring(fecha from '[0-9]{4}$')
+                            WHEN substring(fecha from '.{4}$') ~ '^[0-9]{4}$' THEN substring(fecha from '.{4}$')
+                            ELSE NULL
                         END as anio, 
                         COUNT(*) as count 
-                    FROM Tribunales 
-                    WHERE Fecha IS NOT NULL
+                    FROM tribunales 
+                    WHERE fecha IS NOT NULL
                     GROUP BY anio
                     ORDER BY anio DESC
                 """)
                 rows = cursor.fetchall()
-                stats['by_year'] = [dict(zip(['anio', 'count'], row)) for row in rows if row[0] and len(str(row[0])) == 4]
+                stats['by_year'] = [dict(row) for row in rows if row['anio'] and len(str(row['anio'])) == 4]
                 
                 # Causas por tipo de procedimiento
-                cursor.execute("SELECT Tipo_de_Procedimiento, COUNT(*) as count FROM Tribunales WHERE Tipo_de_Procedimiento IS NOT NULL GROUP BY Tipo_de_Procedimiento ORDER BY count DESC")
-                stats['by_procedimiento'] = [dict(zip(['name', 'count'], row)) for row in cursor.fetchall()]
+                cursor.execute('SELECT tipo_de_procedimiento as name, COUNT(*) as count FROM tribunales WHERE tipo_de_procedimiento IS NOT NULL GROUP BY tipo_de_procedimiento ORDER BY count DESC')
+                stats['by_procedimiento'] = [dict(row) for row in cursor.fetchall()]
 
             return stats
 
@@ -341,7 +416,7 @@ class DatabaseManager:
     def get_user_category_last_exit(self, user_id, category_slug):
         """Obtiene el timestamp de la última salida de una categoría."""
         with self.get_connection('bionews_users_db') as conn:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor = conn.cursor()  # Standard cursor yielding tuples
             cursor.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = %s AND category_slug = %s", (user_id, category_slug))
             row = cursor.fetchone()
             return row[0] if row else None
@@ -349,7 +424,7 @@ class DatabaseManager:
     def get_viewed_items_ids(self, user_id, category_slug):
         """Obtiene la lista de IDs de ítems vistos en una categoría."""
         with self.get_connection('bionews_users_db') as conn:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor = conn.cursor()  # Standard cursor yielding tuples
             cursor.execute("SELECT item_id_or_link FROM user_item_views WHERE user_id = %s AND category_slug = %s", (user_id, category_slug))
             return [row[0] for row in cursor.fetchall()]
 
@@ -523,7 +598,7 @@ class DatabaseManager:
     def get_consultation_documents(self, consulta_id, tipo_consulta):
         """Obtiene los documentos asociados a una consulta."""
         with self.get_connection('bionews_consultations_db') as conn:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor = conn.cursor()  # Standard cursor yielding tuples
             cursor.execute("""
                 SELECT nombre_documento, link 
                 FROM documentos 
@@ -535,12 +610,13 @@ class DatabaseManager:
     # ─── BUG REPORTS ──────────────────────────────────────────────────────────
     def save_bug_report(self, user_id, titulo, descripcion, screenshot_path=None):
         with self.get_connection('bionews_users_db') as conn:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor = conn.cursor()  # Standard cursor to fetch id
             cursor.execute("""
                 INSERT INTO bug_reports (user_id, titulo, descripcion, screenshot_path, fecha_reporte, status)
                 VALUES (%s, %s, %s, %s, %s, 'pendiente') RETURNING id""", (user_id, titulo, descripcion, screenshot_path, _now_str()))
+            row = cursor.fetchone()
             conn.commit()
-            return cursor.fetchone()[0]
+            return row[0] if row else None
 
     def get_bug_reports(self, user_id=None):
         with self.get_connection('bionews_users_db') as conn:
@@ -560,8 +636,7 @@ class DatabaseManager:
                     JOIN users u ON b.user_id = u.id
                     ORDER BY b.fecha_reporte DESC
                 """)
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return [dict(row) for row in cursor.fetchall()]
 
     def update_bug_status(self, bug_id, status):
         with self.get_connection('bionews_users_db') as conn:
@@ -576,8 +651,7 @@ class DatabaseManager:
             cursor.execute("SELECT * FROM bug_reports WHERE id = %s", (bug_id,))
             row = cursor.fetchone()
             if row:
-                columns = [col[0] for col in cursor.description]
-                return dict(zip(columns, row))
+                return dict(row)
             return None
 
     def delete_bug_report(self, bug_id):

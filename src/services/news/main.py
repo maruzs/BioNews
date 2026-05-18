@@ -342,7 +342,7 @@ def delete_bug_user(bug_id: int, user = Depends(get_current_user)):
 def get_news(user = Depends(get_current_user)):
     news_rows = db.get_latest_news(limit=100)
     # Convertir a dicts
-    news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
+    news_dicts = [dict(n) for n in news_rows]
     # Agregar flag is_new
     return db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
 
