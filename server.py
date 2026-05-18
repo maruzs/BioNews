@@ -406,69 +406,75 @@ def delete_latest_record(category: str, admin = Depends(get_current_admin)):
                 trib_id = category.split("_")[1]
                 trib_names = {"1": "Primer Tribunal", "2": "Segundo Tribunal", "3": "Tercer Tribunal"}
                 trib_name = trib_names.get(trib_id)
-                cursor.execute("DELETE FROM Tribunales WHERE rowid = (SELECT MAX(rowid) FROM Tribunales WHERE Tribunal = ?)", (trib_name,))
+                # En Postgres la tabla es "Tribunales" y la PK es "Rol". Usamos %s en psycopg2.
+                cursor.execute('DELETE FROM "Tribunales" WHERE "Rol" = (SELECT "Rol" FROM "Tribunales" WHERE "Tribunal" = %s ORDER BY fecha_scraping DESC, "Fecha" DESC, "Rol" DESC LIMIT 1)', (trib_name,))
                 deleted = cursor.rowcount
             
             elif category in ["mma_abiertas", "mma_cerradas"]:
-                # MMA format: dd-mm-yyyy
+                # MMA format: dd-mm-yyyy. La PK es id.
                 cursor.execute(f"""
-                    DELETE FROM {table} 
-                    WHERE rowid = (
-                        SELECT rowid FROM {table} 
-                        ORDER BY substr(fecha_inicio, 7, 4) || '-' || substr(fecha_inicio, 4, 2) || '-' || substr(fecha_inicio, 1, 2) DESC, rowid DESC 
+                    DELETE FROM "{table}" 
+                    WHERE id = (
+                        SELECT id FROM "{table}" 
+                        ORDER BY substr(fecha_inicio, 7, 4) || '-' || substr(fecha_inicio, 4, 2) || '-' || substr(fecha_inicio, 1, 2) DESC, id DESC 
                         LIMIT 1
                     )
                 """)
                 deleted = cursor.rowcount
                 
             elif category == "minsal_vigentes":
-                # MINSAL format: yyyy-mm-dd
+                # MINSAL format: yyyy-mm-dd. La PK es id.
                 cursor.execute(f"""
-                    DELETE FROM {table} 
-                    WHERE rowid = (
-                        SELECT rowid FROM {table} 
-                        ORDER BY fecha_inicio DESC, rowid DESC 
+                    DELETE FROM "{table}" 
+                    WHERE id = (
+                        SELECT id FROM "{table}" 
+                        ORDER BY fecha_inicio DESC, id DESC 
                         LIMIT 1
                     )
                 """)
                 deleted = cursor.rowcount
                 
             elif category == "sea_evaluados":
-                # SEA format: dd/mm/yyyy
+                # SEA format: dd/mm/yyyy. La PK es id.
                 cursor.execute(f"""
-                    DELETE FROM {table} 
-                    WHERE rowid = (
-                        SELECT rowid FROM {table} 
-                        ORDER BY substr(fecha_presentacion, 7, 4) || '-' || substr(fecha_presentacion, 4, 2) || '-' || substr(fecha_presentacion, 1, 2) DESC, rowid DESC 
+                    DELETE FROM "{table}" 
+                    WHERE id = (
+                        SELECT id FROM "{table}" 
+                        ORDER BY substr(fecha_presentacion, 7, 4) || '-' || substr(fecha_presentacion, 4, 2) || '-' || substr(fecha_presentacion, 1, 2) DESC, id DESC 
                         LIMIT 1
                     )
                 """)
                 deleted = cursor.rowcount
                 
             elif category == "pertinencias":
-                # Pertinencias format: yyyy-mm-dd (based on manual check)
-                # Wait, I should double check if it's yyyy-mm-dd. Yes, '2026-05-04'.
+                # Pertinencias format: yyyy-mm-dd. La PK es "Expediente".
                 cursor.execute(f"""
-                    DELETE FROM {table} 
-                    WHERE rowid = (
-                        SELECT rowid FROM {table} 
-                        ORDER BY Fecha DESC, rowid DESC 
+                    DELETE FROM "{table}" 
+                    WHERE "Expediente" = (
+                        SELECT "Expediente" FROM "{table}" 
+                        ORDER BY "Fecha" DESC, "Expediente" DESC 
                         LIMIT 1
                     )
                 """)
                 deleted = cursor.rowcount
 
             elif category in ["fiscalizaciones", "sancionatorios", "sanciones", "programas", "medidas", "requerimientos"]:
-                # SMA tables use ficha_id as requested before
-                cursor.execute(f"DELETE FROM {table} WHERE ficha_id = (SELECT MAX(ficha_id) FROM {table})")
+                # Las tablas de la SMA usan ficha_id.
+                cursor.execute(f'DELETE FROM "{table}" WHERE ficha_id = (SELECT MAX(ficha_id) FROM "{table}")')
                 deleted = cursor.rowcount
             else:
-                cursor.execute(f"DELETE FROM {table} WHERE rowid = (SELECT MAX(rowid) FROM {table})")
-                deleted = cursor.rowcount
+                # Fallback genérico para Postgres
+                try:
+                    cursor.execute(f'DELETE FROM "{table}" WHERE id = (SELECT id FROM "{table}" ORDER BY id DESC LIMIT 1)')
+                    deleted = cursor.rowcount
+                except Exception:
+                    cursor.execute(f'DELETE FROM "{table}" WHERE "Expediente" = (SELECT "Expediente" FROM "{table}" ORDER BY "Expediente" DESC LIMIT 1)')
+                    deleted = cursor.rowcount
             
             conn.commit()
             return {"status": "ok", "deleted": deleted, "table": table or "Tribunales"}
         except Exception as e:
+            conn.rollback()
             raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/options")
