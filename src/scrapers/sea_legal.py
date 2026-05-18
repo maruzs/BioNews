@@ -103,7 +103,7 @@ class PertinenciasScraper:
             # Opcion 2: Buscar ultima fecha de scraping
             try:
                 db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_legal_db')
+                conn = db_manager.get_connection('bionews_legal_db')
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT DISTINCT DATE(fecha_scraping) 
@@ -214,7 +214,7 @@ class PertinenciasScraper:
 
             print("4. Guardando en base de datos...")
             db_manager = DatabaseManager()
-        conn = db_manager.get_connection('bionews_legal_db')
+            conn = db_manager.get_connection('bionews_legal_db')
             cursor = conn.cursor()
             
             nuevos_registros = 0
