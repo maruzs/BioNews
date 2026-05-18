@@ -460,10 +460,10 @@ class DatabaseManager:
                     else:
                         if viewed_ids:
                             placeholders = ','.join(['%s'] * len(viewed_ids))
-                            cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1',
+                            cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1',
                                         [last_exit] + viewed_ids)
                         else:
-                            cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s LIMIT 1', (last_exit,))
+                            cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s LIMIT 1', (last_exit,))
                     if cur.fetchone():
                         return True
         return False

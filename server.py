@@ -613,10 +613,11 @@ def post_notification_exit(req: dict, user = Depends(get_current_user)):
 @app.delete("/api/notifications/reset")
 def reset_notification_history(user = Depends(get_current_user)):
     """Borra el historial de last_exit_at del usuario → todo vuelve a aparecer como 'nuevo'."""
-    with db.get_connection() as conn:
-        conn.execute("DELETE FROM user_category_views WHERE user_id = ?", (user["sub"],))
-        conn.execute("DELETE FROM user_item_views WHERE user_id = ?", (user["sub"],))
-        conn.commit()
+    with db.get_users_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM user_category_views WHERE user_id = %s", (user["sub"],))
+            cur.execute("DELETE FROM user_item_views WHERE user_id = %s", (user["sub"],))
+            conn.commit()
     return {"success": True, "message": "Historial de notificaciones reseteado"}
 
 @app.post("/api/notifications/view-item")
