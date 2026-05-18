@@ -116,7 +116,8 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
     Inserta filas en PostgreSQL ignorando conflictos (ON CONFLICT DO NOTHING).
     cols_to_skip: lista de columnas a omitir en el INSERT (ej. columnas SERIAL).
     Usa SAVEPOINTs para evitar que fallas individuales aborten la transacción de Postgres.
-    Convierte cadenas vacías '' a None (NULL) para prevenir errores de tipos (como TIMESTAMP).
+    Convierte cadenas vacías '' a None (NULL) para prevenir errores de tipos (como TIMESTAMP)
+    pero las conserva en columnas que forman parte de la clave primaria (conflict_col).
     """
     if not rows:
         return 0
@@ -127,6 +128,12 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
     placeholders = ', '.join(['%s'] * len(all_cols))
     cols_quoted  = ', '.join([f'"{c}"' for c in all_cols])
 
+    conflict_cols_set = set()
+    if isinstance(conflict_col, (list, tuple)):
+        conflict_cols_set.update(conflict_col)
+    elif conflict_col:
+        conflict_cols_set.add(conflict_col)
+
     if isinstance(conflict_col, (list, tuple)):
         conflict_str = ', '.join([f'"{c}"' for c in conflict_col])
     else:
@@ -134,8 +141,8 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
 
     inserted = 0
     for row in rows:
-        # Convertir "" a None para evitar errores de casteo/tipo en Postgres (ej. TIMESTAMP)
-        values = tuple((None if v == "" else v) for v in (row.get(c) for c in all_cols))
+        # Convertir "" a None para evitar errores de casteo en Postgres, excepto si es PK
+        values = tuple((None if (v == "" and c not in conflict_cols_set) else v) for c, v in ((col, row.get(col)) for col in all_cols))
         try:
             pg_cur.execute("SAVEPOINT bulk_row_upsert")
             pg_cur.execute(
@@ -143,8 +150,10 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
                 f' ON CONFLICT ({conflict_str}) DO NOTHING',
                 values
             )
+            # Capturar el rowcount antes de ejecutar RELEASE SAVEPOINT ya que este último lo resetea
+            row_added = pg_cur.rowcount > 0
             pg_cur.execute("RELEASE SAVEPOINT bulk_row_upsert")
-            if pg_cur.rowcount > 0:
+            if row_added:
                 inserted += 1
         except Exception as e:
             try:
@@ -244,8 +253,10 @@ def migrate_scrapers(sl_conn, pg_conn):
                 f'INSERT INTO "documentos" ({", ".join(cols)}) VALUES ({ph})',
                 vals
             )
+            doc_added = cur.rowcount > 0
             cur.execute("RELEASE SAVEPOINT doc_insert")
-            inserted += 1
+            if doc_added:
+                inserted += 1
         except Exception as e:
             try:
                 cur.execute("ROLLBACK TO SAVEPOINT doc_insert")
