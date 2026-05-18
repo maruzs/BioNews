@@ -31,6 +31,21 @@ services:
       retries: 5
       start_period: 10s
 
+  # ── Redis (Caché de consultas y optimización) ───────────────
+  redis:
+    image: redis:7-alpine
+    container_name: bionews-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - bionews-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Backend FastAPI ──────────────────────────────────────────
   api:
     build:
@@ -49,6 +64,8 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" ]
       interval: 30s
@@ -62,6 +79,9 @@ services:
       - DB_NAME=${DB_NAME:-bionews}
       - DB_USER=${DB_USER:-bionews}
       - DB_PASS=${DB_PASS:-changeme}
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     deploy:
       restart_policy:
         condition: on-failure
@@ -92,6 +112,9 @@ services:
       - DB_NAME=${DB_NAME:-bionews}
       - DB_USER=${DB_USER:-bionews}
       - DB_PASS=${DB_PASS:-changeme}
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     deploy:
       restart_policy:
         condition: on-failure

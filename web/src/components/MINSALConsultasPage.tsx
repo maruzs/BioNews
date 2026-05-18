@@ -52,7 +52,7 @@ const MINSALConsultasPage = () => {
     setLoading(true);
     const tableName = filter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
     try {
-      const res = await fetch(`/api/data/${tableName}?limit=5000`, {
+      const res = await fetch(`/api/data/${tableName}?limit=-1`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

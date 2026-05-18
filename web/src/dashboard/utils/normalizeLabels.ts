@@ -43,11 +43,6 @@ export const normalizeLabel = (label: any, key?: string): string => {
 
   if (stateMappings[lower]) return stateMappings[lower];
 
-  // 2. Categorías con "/" (Agroindustrias / Forestal -> Agroindustrias)
-  if (cleaned.includes('/')) {
-    cleaned = cleaned.split('/')[0].trim();
-  }
-
   // 3. Extracción de año si es una fecha
   const dateFields = ['fecha', 'Fecha', 'fecha_inicio', 'fecha_termino', 'fecha_presentacion', 'fecha_agregado'];
   if (key && (dateFields.includes(key) || key.toLowerCase().includes('fecha'))) {
@@ -64,6 +59,12 @@ export const normalizeLabel = (label: any, key?: string): string => {
       if (parts[0].length === 4) return parts[0];
     }
   }
+
+  // 2. Categorías con "/" (Agroindustrias / Forestal -> Agroindustrias)
+  if (cleaned.includes('/')) {
+    cleaned = cleaned.split('/')[0].trim();
+  }
+
 
   // Handle SMA expediente years
   if (key && (key === 'expediente' || key === 'Expediente')) {

@@ -77,14 +77,25 @@ def ejecutar_scrapers(scrapers_list, msg_inicio):
     log.info("=" * 40)
     log.info(msg_inicio + "SCHEDULED")
     log.info("=" * 40)
+    any_success = False
     for nombre, ScraperClass in scrapers_list:
         log.info(f"  ▶ Procesando: {nombre}...")
         try:
             scraper = ScraperClass()
             nuevos = scraper.run()
             log.info(f"  ✓ {nombre}: {nuevos} nuevos registros guardados.")
+            any_success = True
         except Exception:
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
+            
+    if any_success:
+        try:
+            from src.database.cache import cache
+            cache.invalidate_pattern("table_data:*")
+            cache.invalidate_pattern("news:*")
+            log.info("  ✓ Caché de Redis invalidada.")
+        except Exception as e:
+            log.warning(f"  ✗ No se pudo invalidar la caché de Redis: {e}")
             
 def ejecutar_noticias(scrapers_list, msg_inicio):
     log.info("=" * 40)
@@ -92,6 +103,7 @@ def ejecutar_noticias(scrapers_list, msg_inicio):
     log.info("=" * 40)
     db = get_db()
     if not db: return
+    any_success = False
     for nombre, ScraperClass in scrapers_list:
         log.info(f"  ▶ Procesando: {nombre}...")
         try:
@@ -100,10 +112,21 @@ def ejecutar_noticias(scrapers_list, msg_inicio):
             if items:
                 nuevas = db.save_news(items)
                 log.info(f"  ✓ {nombre}: {nuevas} nuevas noticias guardadas.")
+                if nuevas > 0:
+                    any_success = True
             else:
                 log.info(f"  – {nombre}: sin noticias nuevas.")
         except Exception:
             log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
+
+    if any_success:
+        try:
+            from src.database.cache import cache
+            cache.invalidate_pattern("table_data:*")
+            cache.invalidate_pattern("news:*")
+            log.info("  ✓ Caché de Redis invalidada.")
+        except Exception as e:
+            log.warning(f"  ✗ No se pudo invalidar la caché de Redis: {e}")
 
 def check_diario_oficial():
     # Only run between 7 and 19
@@ -117,7 +140,7 @@ def check_diario_oficial():
         with db.get_connection() as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute("SELECT 1 FROM normativas WHERE fecha = ? LIMIT 1", (today_str,))
+                cursor.execute("SELECT 1 FROM normativas WHERE fecha = %s LIMIT 1", (today_str,))
                 if cursor.fetchone():
                     log.info("Diario Oficial ya tiene registros para hoy. Saltando...")
                     return

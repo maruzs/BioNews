@@ -104,7 +104,7 @@ const SEAEvaluadosPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/data/sea_proyectos_evaluados?limit=5000', {
+      const response = await fetch('/api/data/sea_proyectos_evaluados?limit=-1', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener los datos');

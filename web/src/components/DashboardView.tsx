@@ -18,7 +18,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tableName, title }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/data/${tableName}?limit=5000`, {
+        const res = await fetch(`/api/data/${tableName}?limit=-1`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();

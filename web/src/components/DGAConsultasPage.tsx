@@ -40,7 +40,7 @@ const DGAConsultasPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/data/dga_consultas?limit=5000`, {
+      const res = await fetch(`/api/data/dga_consultas?limit=-1`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

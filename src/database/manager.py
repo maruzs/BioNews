@@ -119,7 +119,10 @@ class DatabaseManager:
                 elif 'fecha_scraping' in columns and not order_by:
                     order_by = 'ORDER BY fecha_scraping DESC'
 
-                cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s', (limit,))
+                if limit and limit > 0:
+                    cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s', (limit,))
+                else:
+                    cur.execute(f'SELECT * FROM "{table_name}" {order_by}')
                 rows = cur.fetchall()
                 return [dict(r) for r in rows]
 

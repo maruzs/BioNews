@@ -52,7 +52,7 @@ const MMAConsultasPage = () => {
     setLoading(true);
     const tableName = filter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
     try {
-      const res = await fetch(`/api/data/${tableName}?limit=5000`, {
+      const res = await fetch(`/api/data/${tableName}?limit=-1`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

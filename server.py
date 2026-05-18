@@ -29,6 +29,7 @@ from pydantic import BaseModel
 import shutil
 import os
 from src.database.manager import DatabaseManager
+from src.database.cache import cache
 from src.scrapers.sea_legal import PertinenciasScraper
 from src.scrapers.sea_evaluados import SEAEvaluadosScraper
 
@@ -340,9 +341,15 @@ def delete_bug_user(bug_id: int, user = Depends(get_current_user)):
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
 def get_news(user = Depends(get_current_user)):
-    news_rows = db.get_latest_news(limit=100)
-    # Convertir a dicts
-    news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
+    cache_key = "news:latest:100"
+    cached_dicts = cache.get(cache_key)
+    if cached_dicts is not None:
+        news_dicts = cached_dicts
+    else:
+        news_rows = db.get_latest_news(limit=100)
+        # Convertir a dicts
+        news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
+        cache.set(cache_key, news_dicts, expire_seconds=300)
     # Agregar flag is_new
     return db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
 
@@ -351,8 +358,14 @@ def get_news(user = Depends(get_current_user)):
 def get_table_data(table_name: str, limit: int = 1000, user = Depends(get_current_user)):
     """Endpoint genérico para obtener datos de cualquier tabla permitida."""
     try:
-        data = db.get_table_data(table_name, limit=limit)
-        # category_slug suele ser igual al table_name, excepto casos especiales
+        cache_key = f"table_data:{table_name}:{limit}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            data = cached_data
+        else:
+            data = db.get_table_data(table_name, limit=limit)
+            cache.set(cache_key, data, expire_seconds=300)
+            
         category_slug = table_name
         return db.get_items_with_new_flag(user["sub"], category_slug, data)
     except ValueError as e:
@@ -472,6 +485,13 @@ def delete_latest_record(category: str, admin = Depends(get_current_admin)):
                     deleted = cursor.rowcount
             
             conn.commit()
+            
+            try:
+                cache.invalidate_pattern("table_data:*")
+                cache.invalidate_pattern("news:*")
+            except Exception:
+                pass
+                
             return {"status": "ok", "deleted": deleted, "table": table or "Tribunales"}
         except Exception as e:
             conn.rollback()
@@ -525,7 +545,7 @@ def global_search(q: str = "", user = Depends(get_current_user)):
         cursor = conn.cursor()
         for table, fields, title_field, id_field, action_field in search_config:
             try:
-                where_clauses = " OR ".join([f'LOWER("{f}") LIKE ?' for f in fields])
+                where_clauses = " OR ".join([f'LOWER("{f}") LIKE %s' for f in fields])
                 params = [f'%{q.lower()}%'] * len(fields)
                 cursor.execute(
                     f'SELECT * FROM "{table}" WHERE {where_clauses} LIMIT {LIMIT_PER_TABLE}',
