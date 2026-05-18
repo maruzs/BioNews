@@ -23,7 +23,33 @@ import sqlite3
 import argparse
 from datetime import datetime
 
-# Cargar .env si existe y python-dotenv está disponible
+# ── Cargador de .env robusto (sin depender de python-dotenv) ──────────────────
+def load_env_fallback():
+    # Buscar .env en el directorio actual o el directorio del script
+    paths = [
+        os.path.join(os.getcwd(), '.env'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    ]
+    for path in paths:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' in line:
+                        parts = line.split('=', 1)
+                        k = parts[0].strip()
+                        v = parts[1].strip()
+                        # Quitar comillas si tiene
+                        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                            v = v[1:-1]
+                        if k not in os.environ:
+                            os.environ[k] = v
+            break
+
+load_env_fallback()
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -37,20 +63,38 @@ import psycopg2
 DEFAULT_SQLITE = os.path.join(os.path.dirname(__file__), 'data', 'data.db')
 
 USERS_DSN = {
-    "host":     os.getenv("DB_USERS_HOST",  "localhost"),
-    "port":     int(os.getenv("DB_USERS_PORT", "5432")),
+    "host":     os.getenv("DB_USERS_HOST",  "127.0.0.1"),
+    "port":     int(os.getenv("DB_USERS_PORT", "5433")),
     "dbname":   os.getenv("DB_USERS_NAME",  "bionews_users"),
     "user":     os.getenv("DB_USERS_USER",  "bionews"),
     "password": os.getenv("DB_USERS_PASS",  "changeme"),
 }
 
 SCRAPERS_DSN = {
-    "host":     os.getenv("DB_SCRAPERS_HOST", "localhost"),
-    "port":     int(os.getenv("DB_SCRAPERS_PORT", "5432")),
+    "host":     os.getenv("DB_SCRAPERS_HOST", "127.0.0.1"),
+    "port":     int(os.getenv("DB_SCRAPERS_PORT", "5434")),
     "dbname":   os.getenv("DB_SCRAPERS_NAME",  "bionews_scrapers"),
     "user":     os.getenv("DB_SCRAPERS_USER",  "bionews"),
     "password": os.getenv("DB_SCRAPERS_PASS",  "changeme"),
 }
+
+def try_connect(dsn, fallback_port):
+    """Intenta conectar usando el DSN provisto. Si falla y el host no es 127.0.0.1, hace fallback local."""
+    try:
+        return psycopg2.connect(**dsn)
+    except Exception as primary_err:
+        host = dsn.get("host")
+        if host and host != "127.0.0.1" and host != "localhost":
+            print(f"  [INFO] No se pudo conectar a {host}:{dsn.get('port')}. Intentando fallback a 127.0.0.1:{fallback_port}...")
+            fallback_dsn = dsn.copy()
+            fallback_dsn["host"] = "127.0.0.1"
+            fallback_dsn["port"] = fallback_port
+            try:
+                return psycopg2.connect(**fallback_dsn)
+            except Exception:
+                pass
+        raise primary_err
+
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -206,7 +250,7 @@ def main():
     if args.only != "scrapers":
         print("\n--- Migrando DB Usuarios ---")
         try:
-            pg_users = psycopg2.connect(**USERS_DSN)
+            pg_users = try_connect(USERS_DSN, 5433)
             migrate_users(sl_conn, pg_users)
             pg_users.close()
             print("✓ DB Usuarios migrada correctamente")
@@ -216,7 +260,7 @@ def main():
     if args.only != "users":
         print("\n--- Migrando DB Scrapers ---")
         try:
-            pg_scrapers = psycopg2.connect(**SCRAPERS_DSN)
+            pg_scrapers = try_connect(SCRAPERS_DSN, 5434)
             migrate_scrapers(sl_conn, pg_scrapers)
             pg_scrapers.close()
             print("✓ DB Scrapers migrada correctamente")
