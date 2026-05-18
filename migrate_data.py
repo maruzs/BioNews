@@ -90,8 +90,7 @@ def migrate_table(sqlite_conn, pg_conn, table_name, create_sql, columns,
     col_names = [d[0] for d in sq_cur.description]
 
     placeholders = ",".join(["%s"] * len(columns))
-    insert_sql = f'INSERT INTO "{table_name}" ({",".join(f\'"{c}"\' for c in columns)}) VALUES %s ON CONFLICT DO NOTHING'
-
+    insert_sql = f"INSERT INTO \"{table_name}\" ({','.join(f'\"{c}\"' for c in columns)}) VALUES %s ON CONFLICT DO NOTHING"
     total_src = 0
     total_inserted = 0
 
