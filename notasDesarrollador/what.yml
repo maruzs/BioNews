@@ -1,0 +1,67 @@
+  # ── API Gateway Interno ──────────────────────────────────────────
+  api-gateway:
+    image: nginx:alpine
+    container_name: bionews-gateway
+    restart: unless-stopped
+    volumes:
+      - ./gateway/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - bionews-net
+      - proxy_network  # <- Conectado a la red de tu Nginx Proxy Manager
+    expose:
+      - "8000"
+
+  # ── Microservicios FastAPI ───────────────────────────────────────
+  auth-service:
+    build: .
+    container_name: bionews-auth-service
+    command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port 8001
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+    networks:
+      - bionews-net
+    environment:
+      - POSTGRES_HOST=postgres_db
+
+  news-service:
+    build: .
+    container_name: bionews-news-service
+    command: uvicorn src.services.news.main:app --host 0.0.0.0 --port 8002
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+    networks:
+      - bionews-net
+    environment:
+      - POSTGRES_HOST=postgres_db
+
+  legal-service:
+    build: .
+    container_name: bionews-legal-service
+    command: uvicorn src.services.legal.main:app --host 0.0.0.0 --port 8003
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+    networks:
+      - bionews-net
+    environment:
+      - POSTGRES_HOST=postgres_db
+
+  consultations-service:
+    build: .
+    container_name: bionews-consultations-service
+    command: uvicorn src.services.consultations.main:app --host 0.0.0.0 --port 8004
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+    networks:
+      - bionews-net
+    environment:
+      - POSTGRES_HOST=postgres_db
+
+networks:
+  bionews-net:
+    driver: bridge
+  proxy_network:
+    external: true
