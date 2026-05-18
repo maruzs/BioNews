@@ -258,7 +258,7 @@ DDL = {
         )
     """,
     "programasDeCumplimiento": """
-        CREATE TABLE IF NOT EXISTS "programasDeCumplimiento" (
+        CREATE TABLE IF NOT EXISTS programasdecumplimiento (
             expediente          TEXT PRIMARY KEY,
             unidad_fiscalizable TEXT,
             nombre_razon_social TEXT,
@@ -270,7 +270,7 @@ DDL = {
         )
     """,
     "registroSanciones": """
-        CREATE TABLE IF NOT EXISTS "registroSanciones" (
+        CREATE TABLE IF NOT EXISTS registrosanciones (
             expediente          TEXT PRIMARY KEY,
             unidad_fiscalizable TEXT,
             nombre_razon_social TEXT,
@@ -551,9 +551,9 @@ MIGRATION_PLAN = [
      ["fecha","normativa","tipo_normativa","organismo","suborganismo","accion","fecha_scraping","ficha_id"], tr_normativas),
     ("pertinencias", "pertinencias", DB_LEGAL, "pertinencias",
      ["Expediente","Nombre_de_Proyecto","Proponente","Fecha","Estado","Accion","fecha_scraping","tipo_proyecto","categoria_economica"], tr_pertinencias),
-    ("programasDeCumplimiento", "programasDeCumplimiento", DB_LEGAL, "programasDeCumplimiento",
+    ("programasDeCumplimiento", "programasdecumplimiento", DB_LEGAL, "programasDeCumplimiento",
      ["expediente","unidad_fiscalizable","nombre_razon_social","categoria","region","detalle_link","fecha_scraping","ficha_id"], tr_programas),
-    ("registroSanciones", "registroSanciones", DB_LEGAL, "registroSanciones",
+    ("registroSanciones", "registrosanciones", DB_LEGAL, "registroSanciones",
      ["expediente","unidad_fiscalizable","nombre_razon_social","categoria","region","multa_uta","pago_multa","detalle_link","fecha_scraping","ficha_id"], tr_registro_sanciones),
     ("requerimientos", "requerimientos", DB_LEGAL, "requerimientos",
      ["expediente","unidad_fiscalizable","nombre_razon_social","categoria","region","detalle_link","fecha_scraping","ficha_id"], tr_requerimientos),

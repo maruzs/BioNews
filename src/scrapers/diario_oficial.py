@@ -110,7 +110,7 @@ def extraer_datos_seccion(url, tipo_normativa, fecha_str, cursor):
                     # Usar INSERT OR IGNORE para evitar duplicados por URL (accion)
                     cursor.execute('''
                         INSERT INTO normativas (fecha, normativa, tipo_normativa, organismo, suborganismo, accion, fecha_scraping, ficha_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (fecha_db, normativa_texto, tipo_normativa, organismo_actual, suborganismo_actual, accion_link, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fid))
                     
     except Exception as e:

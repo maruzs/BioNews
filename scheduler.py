@@ -158,10 +158,10 @@ def check_diario_oficial():
     today_str = datetime.now().strftime("%d-%m-%Y")
     db = get_db()
     if db:
-        with db.get_connection() as conn:
+        with db.get_connection('bionews_legal_db') as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute("SELECT 1 FROM normativas WHERE fecha = ? LIMIT 1", (today_str,))
+                cursor.execute("SELECT 1 FROM normativas WHERE fecha = %s LIMIT 1", (today_str,))
                 if cursor.fetchone():
                     log.info("Diario Oficial ya tiene registros para hoy. Saltando...")
                     return

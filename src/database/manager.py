@@ -110,7 +110,7 @@ class DatabaseManager:
             elif 'id' in columns:
                 order_by = "ORDER BY id DESC"
                 
-            query = f"SELECT * FROM {table_name} {order_by} LIMIT %s"
+            query = f'SELECT * FROM "{table_name.lower()}" {order_by} LIMIT %s'
             cursor.execute(query, (limit,))
             return cursor.fetchall()
 
@@ -487,26 +487,32 @@ class DatabaseManager:
         else:
             id_col = "id"
         
-        
-        with self.get_connection('bionews_users_db') as conn:
+        db_name = 'bionews_legal_db'
+        if category_slug == "noticias":
+            db_name = "bionews_news_db"
+        elif category_slug in ["minsal_vigentes", "minsal_resultados", "mma", "dga"]:
+            db_name = "bionews_consultations_db"
+
+        with self.get_connection(db_name) as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             tables = table if isinstance(table, list) else [table]
             
             for t in tables:
+                t_lower = t.lower()
                 # Si last_exit es NULL, consideramos todo nuevo.
                 if last_exit is None:
                     if viewed_ids:
                         placeholders = ', '.join(['%s'] * len(viewed_ids))
-                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
+                        cursor.execute(f'SELECT 1 FROM "{t_lower}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
                     else:
-                        cursor.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
+                        cursor.execute(f'SELECT 1 FROM "{t_lower}" LIMIT 1')
                 else:
                     if viewed_ids:
                         placeholders = ', '.join(['%s'] * len(viewed_ids))
-                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
+                        cursor.execute(f'SELECT 1 FROM "{t_lower}" WHERE {date_col} > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1', (last_exit, *viewed_ids))
                     else:
-                        cursor.execute(f'SELECT 1 FROM "{t}" WHERE {date_col} > %s LIMIT 1', (last_exit,))
+                        cursor.execute(f'SELECT 1 FROM "{t_lower}" WHERE {date_col} > %s LIMIT 1', (last_exit,))
                 
                 if cursor.fetchone():
                     return True

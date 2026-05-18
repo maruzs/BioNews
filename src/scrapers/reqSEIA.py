@@ -143,11 +143,11 @@ class RequerimientosScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO requerimientos (
+                INSERT INTO "requerimientos" (
                     expediente, unidad_fiscalizable, nombre_razon_social,
                     categoria, region, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+              ON CONFLICT ("expediente") DO UPDATE SET "unidad_fiscalizable" = EXCLUDED."unidad_fiscalizable", "nombre_razon_social" = EXCLUDED."nombre_razon_social", "categoria" = EXCLUDED."categoria", "region" = EXCLUDED."region", "detalle_link" = EXCLUDED."detalle_link", "fecha_scraping" = EXCLUDED."fecha_scraping", "ficha_id" = EXCLUDED."ficha_id"''', (
                 record['expediente'],
                 record['unidad_fiscalizable'],
                 record['nombre_razon_social'],

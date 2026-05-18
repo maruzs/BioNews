@@ -212,11 +212,11 @@ class SnifaFiscalizacionScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO fiscalizaciones (
+                INSERT INTO "fiscalizaciones" (
                     expediente, nombre_razon_social, unidad_fiscalizable,
                     categoria, region, estado, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+              ON CONFLICT ("expediente") DO UPDATE SET "nombre_razon_social" = EXCLUDED."nombre_razon_social", "unidad_fiscalizable" = EXCLUDED."unidad_fiscalizable", "categoria" = EXCLUDED."categoria", "region" = EXCLUDED."region", "estado" = EXCLUDED."estado", "detalle_link" = EXCLUDED."detalle_link", "fecha_scraping" = EXCLUDED."fecha_scraping", "ficha_id" = EXCLUDED."ficha_id"''', (
                 record['expediente'],
                 record['nombre_razon_social'],
                 record['unidad_fiscalizable'],

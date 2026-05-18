@@ -1,6 +1,6 @@
 """
 Scraper del Primer Tribunal Ambiental
-Consulta la API REST del portal judicial 1TA y guarda en la tabla Tribunales de data.db
+Consulta la API REST del portal judicial 1TA y guarda en la tabla tribunales de data.db
 """
 import requests
 import json

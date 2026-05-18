@@ -1,6 +1,6 @@
 """
 Scraper del Tercer Tribunal Ambiental (Legal)
-Consulta la API REST del 3TA y guarda en la tabla Tribunales de data.db
+Consulta la API REST del 3TA y guarda en la tabla tribunales de data.db
 """
 import requests
 from src.database.manager import DatabaseManager

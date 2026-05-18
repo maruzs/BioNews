@@ -108,7 +108,7 @@ class DGAConsultasScraper:
             
             cursor.execute("""
                 INSERT INTO dga_consultas (id, nombre, imagen, url, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT(id) DO UPDATE SET
                     nombre=excluded.nombre,
                     imagen=excluded.imagen,

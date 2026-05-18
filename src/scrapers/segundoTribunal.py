@@ -1,6 +1,6 @@
 """
 Scraper del Segundo Tribunal Ambiental
-Usa Playwright para interceptar JSON de la API del 2TA y guarda en la tabla Tribunales de data.db
+Usa Playwright para interceptar JSON de la API del 2TA y guarda en la tabla tribunales de data.db
 """
 from src.database.manager import DatabaseManager
 import os

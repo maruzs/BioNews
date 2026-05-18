@@ -1,3 +1,4 @@
+from src.database.manager import DatabaseManager
 from .engine import ScrapingEngine
 from datetime import datetime
 from ..utils.date_parser import parse_fecha

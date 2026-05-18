@@ -1,3 +1,4 @@
+from src.database.manager import DatabaseManager
 import re
 from .engine import ScrapingEngine
 from urllib.parse import urljoin

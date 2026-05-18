@@ -244,7 +244,7 @@ class PertinenciasScraper:
                     cursor.execute('''
                         INSERT INTO pertinencias 
                         (Expediente, "Nombre_de_Proyecto", Proponente, Fecha, Estado, Accion, fecha_scraping, tipo_proyecto, categoria_economica)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (expediente, nombre, proponente, fecha_db, estado, accion, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tipo_proyecto, categoria_economica))
                     
                     if cursor.rowcount > 0:

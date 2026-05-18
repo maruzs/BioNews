@@ -17,7 +17,7 @@ def get_db_info():
     db_manager = DatabaseManager()
     conn = db_manager.get_connection('bionews_legal_db')
     cursor = conn.cursor()
-    cursor.execute("SELECT expediente FROM programasDeCumplimiento")
+    cursor.execute("SELECT expediente FROM programasdecumplimiento")
     expedientes = set(row[0] for row in cursor.fetchall())
     conn.close()
     return expedientes, len(expedientes)
@@ -142,11 +142,11 @@ class ProgramasCumplimientoScraper:
 
         for record in nuevos:
             cursor.execute('''
-                INSERT OR REPLACE INTO programasDeCumplimiento (
+                INSERT INTO "programasdecumplimiento" (
                     expediente, nombre_razon_social, unidad_fiscalizable,
                     categoria, region, detalle_link, fecha_scraping, ficha_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+              ON CONFLICT ("expediente") DO UPDATE SET "nombre_razon_social" = EXCLUDED."nombre_razon_social", "unidad_fiscalizable" = EXCLUDED."unidad_fiscalizable", "categoria" = EXCLUDED."categoria", "region" = EXCLUDED."region", "detalle_link" = EXCLUDED."detalle_link", "fecha_scraping" = EXCLUDED."fecha_scraping", "ficha_id" = EXCLUDED."ficha_id"''', (
                 record['expediente'],
                 record['nombre_razon_social'],
                 record['unidad_fiscalizable'],

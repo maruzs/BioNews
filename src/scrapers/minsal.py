@@ -62,7 +62,7 @@ class MINSALScraper:
                     print(f"  Nuevo Resultado: {titulo}")
                     cursor.execute("""
                         INSERT INTO minsal_resultados (id, titulo, fecha_scraping)
-                        VALUES (?, ?, ?)
+                        VALUES (%s, %s, %s)
                     """, (consulta_id, titulo, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     
                     # Documentos de resultados
@@ -76,7 +76,7 @@ class MINSALScraper:
                                 href = link_tag.get('href')
                                 cursor.execute("""
                                     INSERT INTO documentos (consulta_id, tipo_consulta, nombre_documento, link)
-                                    VALUES (?, ?, ?, ?)
+                                    VALUES (%s, %s, %s, %s)
                                 """, (consulta_id, 'minsal_resultado', doc_name, href))
                     total_nuevos += 1
             else:
@@ -111,13 +111,13 @@ class MINSALScraper:
 
                     cursor.execute("""
                         INSERT INTO minsal_vigentes (id, titulo, fecha_inicio, periodo_consulta, indicaciones, fecha_scraping)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                     """, (consulta_id, titulo, data['fecha_inicio'], data['periodo_consulta'], data['indicaciones'], datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     
                     for doc in docs:
                         cursor.execute("""
                             INSERT INTO documentos (consulta_id, tipo_consulta, nombre_documento, link)
-                            VALUES (?, ?, ?, ?)
+                            VALUES (%s, %s, %s, %s)
                         """, (consulta_id, 'minsal_vigente', doc['nombre'], doc['link']))
                     
                     total_nuevos += 1

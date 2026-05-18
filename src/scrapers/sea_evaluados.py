@@ -218,7 +218,7 @@ class SEAEvaluadosScraper:
                         cursor.execute("""
                             INSERT INTO sea_proyectos_evaluados 
                             (id, nombre, titular, via_ingreso, estado_proyecto, razon_ingreso, fecha_presentacion, subestado_proyecto, categoria_economica, tipo_proyecto, region, url, fecha_scraping)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (exp_id, nombre, titular, via_ingreso, estado, razon, fecha, subestado, categoria_economica, tipo, region, url, now_str))
                         nuevos_registros += 1
                         

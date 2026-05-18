@@ -257,7 +257,7 @@ class MMAConsultasScraper:
             cursor.execute("""
                 INSERT INTO mma_abiertas 
                 (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, tipo_proceso, ambito_territorial, link_detalle, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT(id) DO UPDATE SET
                     nombre_instrumento=excluded.nombre_instrumento,
                     fecha_inicio=excluded.fecha_inicio,
@@ -278,7 +278,7 @@ class MMAConsultasScraper:
             cursor.execute("""
                 INSERT INTO mma_cerradas 
                 (id, nombre_instrumento, fecha_inicio, fecha_termino, tipo_instrumento, ambito_territorial, link_detalle, fecha_scraping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT(id) DO UPDATE SET
                     nombre_instrumento=excluded.nombre_instrumento,
                     fecha_inicio=excluded.fecha_inicio,
