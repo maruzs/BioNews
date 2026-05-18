@@ -3,7 +3,7 @@
 migrate_sqlite.py
 =================
 Script ONE-SHOT para migrar datos históricos desde data/data.db (SQLite)
-hacia las dos bases de datos PostgreSQL (bionews_users y bionews_scrapers).
+hacia la base de datos PostgreSQL única (bionews) con dos esquemas.
 
 Uso:
     # Desde el directorio raíz del proyecto:
@@ -13,7 +13,7 @@ Uso:
     python migrate_sqlite.py --db /ruta/a/data.db
 
 Requisitos previos:
-    - Los contenedores postgres-users y postgres-scrapers deben estar corriendo
+    - El contenedor postgres-db debe estar corriendo
     - Las variables de entorno deben estar definidas (o cargar el .env)
     - El archivo data/data.db debe existir
 """
@@ -62,20 +62,13 @@ import psycopg2
 
 DEFAULT_SQLITE = os.path.join(os.path.dirname(__file__), 'data', 'data.db')
 
-USERS_DSN = {
-    "host":     os.getenv("DB_USERS_HOST",  "127.0.0.1"),
-    "port":     int(os.getenv("DB_USERS_PORT", "5433")),
-    "dbname":   os.getenv("DB_USERS_NAME",  "bionews_users"),
-    "user":     os.getenv("DB_USERS_USER",  "bionews"),
-    "password": os.getenv("DB_USERS_PASS",  "changeme"),
-}
-
-SCRAPERS_DSN = {
-    "host":     os.getenv("DB_SCRAPERS_HOST", "127.0.0.1"),
-    "port":     int(os.getenv("DB_SCRAPERS_PORT", "5434")),
-    "dbname":   os.getenv("DB_SCRAPERS_NAME",  "bionews_scrapers"),
-    "user":     os.getenv("DB_SCRAPERS_USER",  "bionews"),
-    "password": os.getenv("DB_SCRAPERS_PASS",  "changeme"),
+DB_DSN = {
+    "host":     os.getenv("DB_HOST",  "127.0.0.1"),
+    "port":     int(os.getenv("DB_PORT", "5432")),
+    "dbname":   os.getenv("DB_NAME",  "bionews"),
+    "user":     os.getenv("DB_USER",  "bionews"),
+    "password": os.getenv("DB_PASS",  "changeme"),
+    "options":  "-c client_encoding=UTF8 -c search_path=users,scrapers,public",
 }
 
 def try_connect(dsn, fallback_port):
@@ -167,12 +160,14 @@ def bulk_upsert(pg_cur, table, rows, conflict_col, cols_to_skip=None):
 def sync_sequence(pg_cur, table, col="id"):
     """Resetea el contador de la secuencia SERIAL en PostgreSQL para que coincida con el máximo id actual."""
     try:
+        # Nota: pg_get_serial_sequence no usa esquemas directamente tan facil si no pasas el nombre completo, 
+        # pero podemos forzar el search_path.
         pg_cur.execute(f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'), COALESCE(max(\"{col}\"), 1)) FROM \"{table}\"")
     except Exception as e:
         print(f"  [WARN] No se pudo sincronizar la secuencia para '{table}': {e}")
 
 
-# ── Migración DB Usuarios ────────────────────────────────────────────────────
+# ── Migración ────────────────────────────────────────────────────────────────
 
 def migrate_users(sl_conn, pg_conn):
     cur = pg_conn.cursor()
@@ -209,8 +204,6 @@ def migrate_users(sl_conn, pg_conn):
     pg_conn.commit()
     cur.close()
 
-
-# ── Migración DB Scrapers ────────────────────────────────────────────────────
 
 def migrate_scrapers(sl_conn, pg_conn):
     cur = pg_conn.cursor()
@@ -277,9 +270,8 @@ def migrate_scrapers(sl_conn, pg_conn):
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Migra data.db de SQLite a PostgreSQL")
+    parser = argparse.ArgumentParser(description="Migra data.db de SQLite a PostgreSQL Única")
     parser.add_argument("--db", default=DEFAULT_SQLITE, help="Ruta al archivo SQLite")
-    parser.add_argument("--only", choices=["users", "scrapers"], help="Migrar solo una BD")
     args = parser.parse_args()
 
     if not os.path.exists(args.db):
@@ -288,46 +280,33 @@ def main():
 
     print(f"=== Iniciando migración desde: {args.db} ===")
     
-    print("\n[DEBUG] Configuración cargada:")
-    print("  DB Usuarios:")
-    print(f"    Host: {USERS_DSN['host']}")
-    print(f"    Port: {USERS_DSN['port']}")
-    print(f"    DBName: {USERS_DSN['dbname']}")
-    print(f"    User: {USERS_DSN['user']}")
-    print(f"    Password: {'***' if USERS_DSN['password'] else '(vacío)'}")
-    print("  DB Scrapers:")
-    print(f"    Host: {SCRAPERS_DSN['host']}")
-    print(f"    Port: {SCRAPERS_DSN['port']}")
-    print(f"    DBName: {SCRAPERS_DSN['dbname']}")
-    print(f"    User: {SCRAPERS_DSN['user']}")
-    print(f"    Password: {'***' if SCRAPERS_DSN['password'] else '(vacío)'}\n")
+    print("\n[DEBUG] Configuración cargada DB_DSN:")
+    print(f"    Host: {DB_DSN['host']}")
+    print(f"    Port: {DB_DSN['port']}")
+    print(f"    DBName: {DB_DSN['dbname']}")
+    print(f"    User: {DB_DSN['user']}")
+    print(f"    Password: {'***' if DB_DSN['password'] else '(vacío)'}\n")
 
     sl_conn = sqlite3.connect(args.db)
-    sl_conn.row_factory = sqlite3.Row  # Permite acceso por nombre de columna
+    sl_conn.row_factory = sqlite3.Row
 
-    if args.only != "scrapers":
-        print("\n--- Migrando DB Usuarios ---")
-        try:
-            pg_users = try_connect(USERS_DSN, 5433)
-            migrate_users(sl_conn, pg_users)
-            pg_users.close()
-            print("✓ DB Usuarios migrada correctamente")
-        except Exception as e:
-            print(f"[ERROR] DB Usuarios: {e}")
-
-    if args.only != "users":
-        print("\n--- Migrando DB Scrapers ---")
-        try:
-            pg_scrapers = try_connect(SCRAPERS_DSN, 5434)
-            migrate_scrapers(sl_conn, pg_scrapers)
-            pg_scrapers.close()
-            print("✓ DB Scrapers migrada correctamente")
-        except Exception as e:
-            print(f"[ERROR] DB Scrapers: {e}")
+    try:
+        pg_conn = try_connect(DB_DSN, 5432)
+        
+        print("\n--- Migrando esquema Users ---")
+        migrate_users(sl_conn, pg_conn)
+        print("✓ Esquema Users migrado correctamente")
+        
+        print("\n--- Migrando esquema Scrapers ---")
+        migrate_scrapers(sl_conn, pg_conn)
+        print("✓ Esquema Scrapers migrado correctamente")
+        
+        pg_conn.close()
+    except Exception as e:
+        print(f"[ERROR] Migración: {e}")
 
     sl_conn.close()
     print("\n=== Migración finalizada ===")
-
 
 if __name__ == "__main__":
     main()

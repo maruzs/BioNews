@@ -4,6 +4,8 @@
 -- ============================================================
 
 -- ── NOTICIAS ─────────────────────────────────────────────────────────────────
+CREATE SCHEMA IF NOT EXISTS scrapers;
+SET search_path TO scrapers;
 CREATE TABLE IF NOT EXISTS noticias (
     link           TEXT PRIMARY KEY,
     titulo         TEXT,

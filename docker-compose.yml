@@ -7,47 +7,25 @@
 
 services:
 
-  # ── PostgreSQL Usuarios ──────────────────────────────────────
-  postgres-users:
+  # ── PostgreSQL Única (Esquemas Users y Scrapers) ─────────────
+  postgres-db:
     image: postgres:16-alpine
-    container_name: bionews-db-users
+    container_name: bionews-db
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "5432:5432"
     environment:
-      POSTGRES_DB:       ${DB_USERS_NAME:-bionews_users}
-      POSTGRES_USER:     ${DB_USERS_USER:-bionews}
-      POSTGRES_PASSWORD: ${DB_USERS_PASS}
+      POSTGRES_DB:       ${DB_NAME:-bionews}
+      POSTGRES_USER:     ${DB_USER:-bionews}
+      POSTGRES_PASSWORD: ${DB_PASS:-changeme}
     volumes:
-      - pgdata_users:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
       - ./src/database/schema_users.sql:/docker-entrypoint-initdb.d/01_schema_users.sql:ro
+      - ./src/database/schema_scrapers.sql:/docker-entrypoint-initdb.d/02_schema_scrapers.sql:ro
     networks:
       - bionews-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERS_USER:-bionews} -d ${DB_USERS_NAME:-bionews_users}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  # ── PostgreSQL Scrapers ──────────────────────────────────────
-  postgres-scrapers:
-    image: postgres:16-alpine
-    container_name: bionews-db-scrapers
-    restart: unless-stopped
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_DB:       ${DB_SCRAPERS_NAME:-bionews_scrapers}
-      POSTGRES_USER:     ${DB_SCRAPERS_USER:-bionews}
-      POSTGRES_PASSWORD: ${DB_SCRAPERS_PASS}
-    volumes:
-      - pgdata_scrapers:/var/lib/postgresql/data
-      - ./src/database/schema_scrapers.sql:/docker-entrypoint-initdb.d/01_schema_scrapers.sql:ro
-    networks:
-      - bionews-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_SCRAPERS_USER:-bionews} -d ${DB_SCRAPERS_NAME:-bionews_scrapers}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-bionews} -d ${DB_NAME:-bionews}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,9 +47,7 @@ services:
     networks:
       - bionews-net
     depends_on:
-      postgres-users:
-        condition: service_healthy
-      postgres-scrapers:
+      postgres-db:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" ]
@@ -81,16 +57,11 @@ services:
       start_period: 20s
     environment:
       - TZ=America/Santiago
-      - DB_USERS_HOST=postgres-users
-      - DB_USERS_PORT=5432
-      - DB_USERS_NAME=${DB_USERS_NAME:-bionews_users}
-      - DB_USERS_USER=${DB_USERS_USER:-bionews}
-      - DB_USERS_PASS=${DB_USERS_PASS}
-      - DB_SCRAPERS_HOST=postgres-scrapers
-      - DB_SCRAPERS_PORT=5432
-      - DB_SCRAPERS_NAME=${DB_SCRAPERS_NAME:-bionews_scrapers}
-      - DB_SCRAPERS_USER=${DB_SCRAPERS_USER:-bionews}
-      - DB_SCRAPERS_PASS=${DB_SCRAPERS_PASS}
+      - DB_HOST=postgres-db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-bionews}
+      - DB_USER=${DB_USER:-bionews}
+      - DB_PASS=${DB_PASS:-changeme}
     deploy:
       restart_policy:
         condition: on-failure
@@ -116,16 +87,11 @@ services:
         condition: service_healthy
     environment:
       - TZ=America/Santiago
-      - DB_USERS_HOST=postgres-users
-      - DB_USERS_PORT=5432
-      - DB_USERS_NAME=${DB_USERS_NAME:-bionews_users}
-      - DB_USERS_USER=${DB_USERS_USER:-bionews}
-      - DB_USERS_PASS=${DB_USERS_PASS}
-      - DB_SCRAPERS_HOST=postgres-scrapers
-      - DB_SCRAPERS_PORT=5432
-      - DB_SCRAPERS_NAME=${DB_SCRAPERS_NAME:-bionews_scrapers}
-      - DB_SCRAPERS_USER=${DB_SCRAPERS_USER:-bionews}
-      - DB_SCRAPERS_PASS=${DB_SCRAPERS_PASS}
+      - DB_HOST=postgres-db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-bionews}
+      - DB_USER=${DB_USER:-bionews}
+      - DB_PASS=${DB_PASS:-changeme}
     deploy:
       restart_policy:
         condition: on-failure
@@ -155,8 +121,7 @@ services:
 
 # Volúmenes persistentes para PostgreSQL
 volumes:
-  pgdata_users:
-  pgdata_scrapers:
+  pgdata:
 
 # Redes
 networks:

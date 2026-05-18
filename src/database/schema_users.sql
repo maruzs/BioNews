@@ -10,6 +10,9 @@
 -- Extensiones útiles
 CREATE EXTENSION IF NOT EXISTS pgcrypto;  -- para gen_random_uuid() si se necesita en el futuro
 
+CREATE SCHEMA IF NOT EXISTS users;
+SET search_path TO users;
+
 -- ── USERS ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
     id           SERIAL PRIMARY KEY,
