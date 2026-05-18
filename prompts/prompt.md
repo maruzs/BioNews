@@ -6,3 +6,8 @@ No leas analisisEjecucion.md, esa carpeta es solo para mi investigacion.
 Siempre revisa bien el codigo antes de confirmar, muchas veces hay problemas de identacion/sintaxis (corchetes, <div> no cerrado, puntoycoma, etc) Sobretodo en lo que son los archivos .tsx
 
 ## INSTRUCCION
+
+Errores en la interfaz:
+
+- Favoritos:
+  - Los filtros de favoritos perdieron el estilo que tenian previamente (Es el estilo de filtros que comparten todos)

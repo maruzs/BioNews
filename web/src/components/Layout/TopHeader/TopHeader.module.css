@@ -1,0 +1,147 @@
+/* =====================================================
+   TopHeader.module.css
+   ===================================================== */
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: var(--white);
+  padding: 20px 20px 60px;
+  position: relative;
+}
+
+.mainContent::-webkit-scrollbar {
+  width: 10px;
+}
+
+.mainContent::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 5px;
+}
+
+.mainContent::-webkit-scrollbar-track {
+  background-color: #f8fafc;
+}
+
+.topHeader {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 20px;
+}
+
+.topHeaderSpacer {
+  flex: 1;
+}
+
+.topHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+}
+
+/* ----- User button pill ----- */
+.userPill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: white;
+  padding: 5px 15px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+}
+
+.userPill:hover {
+  background-color: var(--hover);
+}
+
+.userAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+/* ----- Dropdown de usuario ----- */
+.userDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  z-index: 100;
+}
+
+.dropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dark);
+  font-size: 14px;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background-color: var(--hover);
+}
+
+.dropdownItemDanger {
+  padding: 10px 15px;
+  cursor: pointer;
+  color: #ef4444;
+  font-size: 14px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.dropdownItemDanger:hover {
+  background-color: #fee2e2;
+}
+
+/* ----- Content wrapper ----- */
+.contentWrapper {
+  padding: 10px 100px 60px;
+  width: 100%;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 75px 15px 60px;
+  }
+
+  .contentWrapper {
+    padding: 10px 0 60px;
+  }
+
+  .topHeader {
+    display: none;
+  }
+}

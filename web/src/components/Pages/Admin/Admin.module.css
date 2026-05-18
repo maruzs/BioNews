@@ -1,0 +1,635 @@
+/* =====================================================
+   Admin.module.css  (AdminPanel + AdminBugsPage)
+   ===================================================== */
+
+/* ----- Contenedor general ----- */
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  padding-right: 20px;
+  gap: 20px;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.pageDescription {
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+/* ----- No access ----- */
+.noAccess {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-light);
+}
+
+/* ----- Tabs del admin panel ----- */
+.tabsRow {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  width: 100%;
+  padding: 4px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.tab {
+  flex: 1;
+  justify-content: center;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-radius: 30px;
+  transition: all 0.2s;
+  border: none;
+  background: transparent;
+}
+
+.tabActive {
+  background: var(--primary);
+  color: white;
+}
+
+.tabInactive {
+  background-color: transparent;
+  color: var(--text-light);
+}
+
+.tabInactive:hover {
+  color: var(--text-dark);
+}
+
+/* ----- Cards del panel general ----- */
+.cardsGrid {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.panelCard {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.panelCardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.panelCardDesc {
+  font-size: 14px;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.panelCardBtn {
+  margin-top: auto;
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.panelCardBtn:hover {
+  opacity: 0.9;
+}
+
+/* ----- Sección de usuarios ----- */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 50px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  color: var(--text-dark);
+}
+
+/* ----- Scheduler ----- */
+.schedulerCard {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-top: 15px;
+}
+
+.schedulerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.schedulerField label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text-dark);
+}
+
+/* ----- Scraper buttons row ----- */
+.scraperButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnSecondary {
+  background-color: white;
+  color: var(--text-light);
+  border: 1px solid var(--border);
+  padding: 6px 15px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnSecondary:hover {
+  background-color: var(--hover);
+  color: var(--text-dark);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 6px 15px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPrimary:hover {
+  opacity: 0.9;
+}
+
+/* ----- Scraper range form ----- */
+.scraperRangeForm {
+  margin-top: 20px;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.scraperRangeField label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text-dark);
+}
+
+.scraperRangeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scraperRangeBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ----- Status badges en tablas ----- */
+.statusOk {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.statusError {
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.statusBlocked {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.statusActive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.badgeNew {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.tdActions {
+  display: flex;
+  gap: 10px;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.iconBtnWarn {
+  color: #f59e0b;
+}
+
+.iconBtnDanger {
+  color: #ef4444;
+}
+
+.iconBtnSuccess {
+  color: #10b981;
+}
+
+.tdFontBold {
+  font-weight: 600;
+}
+
+/* ----- Error row highlight ----- */
+.trError {
+  background: #fef2f2;
+}
+
+/* ----- Debug panel ----- */
+.debugLayout {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 20px;
+}
+
+.debugSections {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.debugSection {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.debugSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  color: var(--text-dark);
+}
+
+.debugSectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.debugButtonsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.debugButton {
+  padding: 8px 15px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.debugButton:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+/* ----- Debug console ----- */
+.debugConsole {
+  background: #0f172a;
+  border-radius: 12px;
+  padding: 20px;
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.debugConsoleHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 10px;
+  color: #94a3b8;
+}
+
+.debugConsoleTitle {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.debugConsoleLogs {
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debugConsoleEmpty {
+  color: #475569;
+  font-style: italic;
+}
+
+.debugLogEntry {
+  border-left: 2px solid #0ea5e9;
+  padding-left: 10px;
+}
+
+/* =====================================================
+   AdminBugsPage styles
+   ===================================================== */
+
+/* Back header */
+.backHeader {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+}
+
+.backPageTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+
+/* Table wrapper */
+.tableWrapper {
+  margin-top: 30px;
+}
+
+/* Status badge in bugs table */
+.bugStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bugStatusResuelto {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.bugStatusPendiente {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.tdSmallText {
+  font-size: 0.85rem;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background-color: white;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  position: relative;
+}
+
+.modalCloseBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modalCloseBtn:hover {
+  color: var(--text-dark);
+}
+
+.modalHeader {
+  margin-bottom: 20px;
+}
+
+.modalBugId {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.modalTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+.modalMeta {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.modalDescriptionBox {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.modalDescriptionTitle {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.modalDescriptionText {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.modalActions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.modalActionsRight {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.screenshotLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  background-color: white;
+  color: var(--text-light);
+  border: 1px solid var(--border);
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.screenshotLink:hover {
+  background-color: var(--hover);
+}
+
+.noScreenshot {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btnResolve {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnResolve:hover {
+  opacity: 0.9;
+}
+
+.btnDeleteRed {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnDeleteRed:hover {
+  opacity: 0.9;
+}

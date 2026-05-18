@@ -1,0 +1,213 @@
+/* =====================================================
+   Auth.module.css  (compartido por Login, Register y Landing)
+   ===================================================== */
+
+/* ----- Página de Login / Register ----- */
+.authPage {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+}
+
+.authCard {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 400px;
+}
+
+.authCardHeader {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.authTitle {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.authSubtitle {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.errorBanner {
+  color: #ef4444;
+  background-color: #fee2e2;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.formField label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.formField input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  outline: none;
+  font-size: 14px;
+}
+
+.formField input:focus {
+  border-color: var(--primary);
+}
+
+.submitBtn {
+  background-color: var(--primary);
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  font-size: 15px;
+  transition: opacity 0.2s;
+}
+
+.submitBtn:hover {
+  opacity: 0.9;
+}
+
+.authFooter {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+.authLink {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.authLink:hover {
+  text-decoration: underline;
+}
+
+/* ----- Landing page ----- */
+.landingPage {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.landingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background-color: white;
+  border-bottom: 1px solid var(--border);
+}
+
+.logoText {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.logoBio {
+  color: var(--primary);
+}
+
+.logoNews {
+  color: var(--text-dark);
+}
+
+.landingHeaderNav {
+  display: flex;
+  gap: 15px;
+}
+
+.navLink {
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 500;
+  padding: 8px 16px;
+}
+
+.navLinkPrimary {
+  text-decoration: none;
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: opacity 0.2s;
+}
+
+.navLinkPrimary:hover {
+  opacity: 0.9;
+}
+
+.landingMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.landingTitle {
+  font-size: 48px;
+  color: var(--text-dark);
+  margin-bottom: 20px;
+}
+
+.landingSubtitle {
+  font-size: 18px;
+  color: var(--text-light);
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+.landingFeatures {
+  margin-top: 40px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.featureCard {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  width: 250px;
+  text-align: left;
+}
+
+.featureCard h3 {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.featureCard p {
+  font-size: 14px;
+  color: var(--text-light);
+}

@@ -44,6 +44,7 @@ Desde **tu computadora con Windows** (donde tienes el archivo `data.db`), abre u
 ```powershell
 # Comando para enviar la base de datos al servidor desde Windows
 scp  "C:/Users/maria/Desktop/BioNews/data/data.db" maru@192.168.1.34:~/BioNews/data/
+scp  maru@192.168.1.34:~/BioNews/data/ "C:/Users/maria/Desktop/BioNews/data/data.db"
 scp sender-path receiver-path
 
 ```

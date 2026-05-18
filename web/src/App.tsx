@@ -1,73 +1,40 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
-import Sidebar from './components/Sidebar';
-import NewsPage from './components/NewsPage';
-import ReportLayout from './components/ReportLayout';
-import Home from './components/Home';
-import Landing from './components/Landing';
-import Login from './components/Login';
-import Register from './components/Register';
-import AdminPanel from './components/AdminPanel';
-import Profile from './components/Profile';
-import MINSALConsultasPage from './components/MINSALConsultasPage';
-import MMAConsultasPage from './components/MMAConsultasPage';
-import DGAConsultasPage from './components/DGAConsultasPage';
-import SEAEvaluadosPage from './components/SEAEvaluadosPage';
-import BugReportPage from './components/BugReportPage';
-import AdminBugsPage from './components/AdminBugsPage';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Sidebar from './components/Layout/Sidebar/Sidebar';
+import TopHeader from './components/Layout/TopHeader/TopHeader';
+import layoutStyles from './components/Layout/TopHeader/TopHeader.module.css';
+import NewsPage from './components/Pages/News/NewsPage';
+import ReportLayout from './components/Shared/ReportLayout/ReportLayout';
+import Home from './components/Pages/Home/Home';
+import Landing from './components/Pages/Auth/Landing';
+import Login from './components/Pages/Auth/Login';
+import Register from './components/Pages/Auth/Register';
+import AdminPanel from './components/Pages/Admin/AdminPanel';
+import Profile from './components/Pages/Profile/Profile';
+import MINSALConsultasPage from './components/ConsultasPage/MINSALConsultasPage';
+import MMAConsultasPage from './components/ConsultasPage/MMAConsultasPage';
+import DGAConsultasPage from './components/ConsultasPage/DGAConsultasPage';
+import SEAEvaluadosPage from './components/SEAEvaluadosPage/SEAEvaluadosPage';
+import BugReportPage from './components/BugReportPage/BugReportPage';
+import AdminBugsPage from './components/Pages/Admin/AdminBugsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 
 function ProtectedLayout() {
-  const { user, logout } = useAuth();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const navigate = useNavigate();
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Cargando...
+    </div>
+  );
 
   if (!user) return <Navigate to="/" />;
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   return (
     <div className="app-container">
       <Sidebar />
-      <main className="main-content">
-        <div className="top-header">
-          <div className="top-header-spacer"></div>
-          <div className="top-header-actions" style={{ position: 'relative' }} ref={dropdownRef}>
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'white', padding: '5px 15px', borderRadius: '30px', border: '1px solid var(--border)' }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                {user.name.charAt(0)?.toUpperCase()}
-              </div>
-              <span style={{ fontWeight: 500, color: 'var(--text-dark)' }}>{user.name}</span>
-            </div>
-            {dropdownOpen && (
-              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '10px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', zIndex: 100 }}>
-                {user.role === 'admin' && (
-                  <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); navigate('/admin'); }}>Panel de Admin</div>
-                )}
-                <div style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text-dark)' }} onClick={() => { setDropdownOpen(false); navigate('/perfil'); }}>Perfil y Preferencias</div>
-                <div style={{ padding: '10px 15px', cursor: 'pointer', color: '#ef4444' }} onClick={handleLogout}>Cerrar Sesión</div>
-              </div>
-            )}
-          </div>
-        </div>
+      <main className={layoutStyles.mainContent}>
+        <TopHeader />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/noticias" element={<NewsPage />} />
@@ -96,12 +63,13 @@ function ProtectedLayout() {
           <Route path="/consultas/dga" element={<DGAConsultasPage />} />
           <Route path="/consultas/mma" element={<MMAConsultasPage />} />
 
-          {/* Admin Panel */}
+          {/* Admin */}
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/reportes" element={<AdminBugsPage />} />
 
           {/* Profile */}
           <Route path="/perfil" element={<Profile />} />
+
           {/* Bug Reports */}
           <Route path="/bugs" element={<BugReportPage />} />
         </Routes>
@@ -113,7 +81,11 @@ function ProtectedLayout() {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Cargando...</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Cargando...
+    </div>
+  );
 
   return (
     <Routes>

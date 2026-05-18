@@ -1,0 +1,278 @@
+/* =====================================================
+   Sidebar.module.css
+   ===================================================== */
+
+/* ----- Contenedor principal ----- */
+.sidebar {
+  width: 240px;
+  background-color: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  height: 100vh;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+/* ----- Scrollbar del sidebar ----- */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* ----- Header ----- */
+.sidebarHeader {
+  padding: 20px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.burgerMenuBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  order: -1;
+}
+
+.collapsed .burgerMenuBtn {
+  margin: 0;
+}
+
+/* ----- Logo ----- */
+.sidebarLogoText {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+  display: flex;
+}
+
+.logoBio {
+  color: var(--primary);
+}
+
+.logoNews {
+  color: var(--text-dark);
+}
+
+/* ----- Menú de sesión mobile ----- */
+.sessionAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mobileMenuDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 180px;
+  z-index: 100;
+}
+
+.mobileMenuDropdownHeader {
+  padding: 10px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.mobileMenuDropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dark);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+}
+
+.mobileMenuDropdownItem:hover {
+  background-color: var(--hover);
+}
+
+.mobileMenuDropdownItemDanger {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ef4444;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.mobileMenuDropdownItemDanger:hover {
+  background-color: #fee2e2;
+}
+
+/* ----- Menú principal ----- */
+.sidebarMenu {
+  flex: 1;
+  padding: 10px 0;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  color: var(--text-light);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 15px;
+  gap: 12px;
+  margin: 2px 8px;
+  border-radius: 8px;
+}
+
+.menuItem:hover {
+  background-color: var(--hover);
+  color: var(--text-dark);
+}
+
+.menuItem.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.menuItem .icon {
+  color: var(--text-light);
+}
+
+.menuItem.active .icon {
+  color: var(--primary);
+}
+
+/* ----- Categorías colapsables ----- */
+.menuCategory {
+  padding: 18px 16px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.collapsed .menuCategory {
+  justify-content: center;
+  padding: 18px 0 6px;
+}
+
+/* ----- Submenú ----- */
+.submenu {
+  list-style: none;
+}
+
+.submenuItem {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 10px 40px;
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+  cursor: pointer;
+  gap: 10px;
+  margin: 2px 8px;
+  border-radius: 6px;
+}
+
+.submenuItem:hover {
+  color: var(--text-dark);
+  background-color: var(--hover);
+}
+
+.submenuItem.active {
+  color: var(--primary);
+  font-weight: 600;
+  background-color: #f1f5f9;
+}
+
+/* ----- Indicador de notificación ----- */
+.notifDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ----- Responsive: mobile como topbar ----- */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar.collapsed {
+    width: 100%;
+    height: 60px;
+    max-height: 60px;
+    overflow: visible;
+  }
+
+  .sidebar.collapsed .sidebarMenu {
+    display: none;
+  }
+}
