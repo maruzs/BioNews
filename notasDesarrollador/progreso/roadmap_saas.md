@@ -36,7 +36,6 @@ Aprovechar tu cluster de laptops y automatizar el trabajo aburrido.
 
 - [ ] **Microservicios**: Separar el motor de Scraping del servidor de la API.
 - [ ] **CI/CD Pipeline**: Configurar GitHub Actions para que al hacer `git push`, tu cluster descargue la nueva versión automáticamente.
-- [ ] **Docker Swarm**: Activar el cluster para que BioNews corra en ambas laptops simultáneamente (Alta disponibilidad).
 
 ## Fase 5: Expansión Multiplataforma
 
