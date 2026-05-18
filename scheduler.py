@@ -126,8 +126,7 @@ def ejecutar_scrapers(scrapers_list, msg_inicio):
                 if cat:
                     publish_event(cat)
         except Exception:
-            log.error(f"  ✗ Error en {nombre}:
-{traceback.format_exc()}")
+            log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
             
 def ejecutar_noticias(scrapers_list, msg_inicio):
     log.info("=" * 40)
@@ -148,8 +147,7 @@ def ejecutar_noticias(scrapers_list, msg_inicio):
             else:
                 log.info(f"  – {nombre}: sin noticias nuevas.")
         except Exception:
-            log.error(f"  ✗ Error en {nombre}:
-{traceback.format_exc()}")
+            log.error(f"  ✗ Error en {nombre}:\n{traceback.format_exc()}")
 
 def check_diario_oficial():
     # Only run between 7 and 19
