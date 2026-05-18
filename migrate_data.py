@@ -655,6 +655,13 @@ def main():
             print(f"\n── {dbname} {'─'*(45-len(dbname))}")
             db_headers_printed.add(dbname)
 
+        # Verificar si la tabla existe en el origen SQLite
+        sq_cur = sqlite_conn.cursor()
+        sq_cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (src_tbl,))
+        if not sq_cur.fetchone():
+            print(f"  ⚠  {src_tbl}: No existe en SQLite (se omite de forma segura)")
+            continue
+
         try:
             migrate_table(
                 sqlite_conn=sqlite_conn,
