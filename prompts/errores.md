@@ -6,7 +6,3 @@ Lo importante realmente es que en el dashboard se muestren las barras basadas en
 Tribunales ambientales sigue marcando como nuevos los que se descargaron la ultima vez, aun no se arregla eso
 
 En Proyectos evaluados sigue usando dias en vez de anios para el dashboard de presentaciones por anio.
-
-# NUEVOS ERRORES
-
-AAAAAAAAAAAAAAAAAA
