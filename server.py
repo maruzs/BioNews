@@ -341,16 +341,9 @@ def delete_bug_user(bug_id: int, user = Depends(get_current_user)):
 # ─── NEWS ─────────────────────────────────────────────────────────────────────
 @app.get("/api/news")
 def get_news(user = Depends(get_current_user)):
-    cache_key = "news:latest:100"
-    cached_dicts = cache.get(cache_key)
-    if cached_dicts is not None:
-        # Hacer una copia para evitar mutar el cache compartido
-        news_dicts = [dict(n) for n in cached_dicts]
-    else:
-        news_rows = db.get_latest_news(limit=100)
-        # Convertir a dicts
-        news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
-        cache.set(cache_key, news_dicts, expire_seconds=300)
+    news_rows = db.get_latest_news(limit=100)
+    # Convertir a dicts
+    news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
     
     # 1. Obtener con flag is_new usando last_exit anterior
     res_items = db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
@@ -363,14 +356,7 @@ def get_news(user = Depends(get_current_user)):
 def get_table_data(table_name: str, limit: int = 1000, offset: int = 0, user = Depends(get_current_user)):
     """Endpoint genérico para obtener datos de cualquier tabla permitida."""
     try:
-        cache_key = f"table_data:{table_name}:{limit}:{offset}"
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            # Hacer una copia para evitar mutar el cache compartido
-            data = [dict(n) for n in cached_data]
-        else:
-            data = db.get_table_data(table_name, limit=limit, offset=offset)
-            cache.set(cache_key, data, expire_seconds=300)
+        data = db.get_table_data(table_name, limit=limit, offset=offset)
             
         category_slug = table_name
         # Mapear table_name a la categoría de notificaciones

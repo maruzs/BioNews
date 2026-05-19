@@ -391,11 +391,14 @@ class DatabaseManager:
     def update_category_exit(self, user_id, category_slug):
         with users_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO user_category_views (user_id, category_slug, last_exit_at)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (user_id, category_slug) DO UPDATE SET last_exit_at = EXCLUDED.last_exit_at
-                """, (user_id, category_slug, _now_str()))
+                try:
+                    cur.execute("""
+                        INSERT INTO user_category_views (user_id, category_slug, last_exit_at)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id, category_slug) DO UPDATE SET last_exit_at = EXCLUDED.last_exit_at
+                    """, (int(user_id), category_slug, _now_str()))
+                except Exception as e:
+                    print(f"Error updating category exit: {e}")
 
     def mark_item_viewed(self, user_id, item_id_or_link, category_slug):
         with users_conn() as conn:
@@ -409,10 +412,14 @@ class DatabaseManager:
     def get_user_category_last_exit(self, user_id, category_slug):
         with users_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = %s AND category_slug = %s",
-                            (user_id, category_slug))
-                row = cur.fetchone()
-                return row[0] if row else None
+                try:
+                    cur.execute("SELECT last_exit_at FROM user_category_views WHERE user_id = %s AND category_slug = %s",
+                                (int(user_id), category_slug))
+                    row = cur.fetchone()
+                    return row[0] if row else None
+                except Exception as e:
+                    print(f"Error getting last exit: {e}")
+                    return None
 
     def get_viewed_items_ids(self, user_id, category_slug):
         with users_conn() as conn:
@@ -489,7 +496,7 @@ class DatabaseManager:
         
         # Format the last exit appropriately for comparison
         if last_exit:
-            last_exit_str = str(last_exit)
+            last_exit_str = str(last_exit)[:19] # Keep only YYYY-MM-DD HH:MM:SS
         else:
             last_exit_str = None
 
@@ -503,8 +510,9 @@ class DatabaseManager:
             if not item_date:
                 item['is_new'] = False
             else:
+                item_date_str = str(item_date)[:19] # Normalize to YYYY-MM-DD HH:MM:SS
                 # Compare as strings since both are ISO-like 'YYYY-MM-DD HH:MM:SS'
-                item['is_new'] = str(item_date) > last_exit_str
+                item['is_new'] = item_date_str > last_exit_str
         return items
 
     # ── DOCUMENTOS ────────────────────────────────────────────────────────────
