@@ -7,68 +7,32 @@ Siempre revisa bien el codigo antes de confirmar, muchas veces hay problemas de 
 
 ## INSTRUCCION
 
-Estaba probando si funcionaba todo y decidi borrar el ultimo registro que habia en Fiscalizaciones (DFZ-2026-1585-X-NE) y si se borro, todo bien ahi. Pero luego le di al scraper manual de SNIFA y obtuve lo siguiente
+Ok, tenemos 1 problema nuevo y otros 2 antiguos:
+
+1. El problema nuevo es que cuando hay un registro nuevo (borre la ultima pertinencia y luego la scrapee y todo bien) y entro a la categoria me aparece como nueva, pero solo durante unos segundos, esos segundos son durante el rato que se muestran 100 registros y no los 25k (Esto ocurre para todas las categorias pero en pertinencias logre notarlo mejor ya que el lapso fue mayor), una vez que cargan los 25k registros desaparece la etiqueta de 'Nueva'. Deberia seguir ahi hasta que yo cierre la categoria.
+
+2. Uno de los problemas antiguos tiene que ver con SNIFA/SMA, como puedes ver en los logs :
 
 ```bash
+INFO:     172.18.0.6:60970 - "POST /api/scrape/snifa HTTP/1.1" 200 OK
+bionews-api        | 2026-05-19 13:20:02,278 [INFO] MANUAL
+bionews-api        | Iniciando scraper de Procedimientos Sancionatorios...
+bionews-web        | 172.20.0.4 - - [19/May/2026:17:20:02 +0000] "POST /api/scrape/snifa HTTP/1.1" 200 55 "https://moscow-office-browsers-close.trycloudflare.com/admin" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0" "2803:c600:7115:a6b9:a17b:95f3:4ef4:7b0, 172.20.0.1"
 bionews-api        | Registros actuales en BD: 3354
 bionews-api        | Registros en la web: 0
 bionews-api        | No hay registros nuevos. La BD esta actualizada.
-bionews-api        | Iniciando scraper de Fiscalizaciones (via Playwright)...
-bionews-api        | Registros actuales en BD: 5181
-bionews-api        | Navegando a https://snifa.sma.gob.cl/Fiscalizacion...
-bionews-api        | Ingresando filtro: DFZ-2026
-bionews-api        | Esperando resultados iniciales...
-bionews-api        | Cambiando a mostrar todos los registros...
-bionews-api        | Esperando que se carguen todos los registros...
-bionews-db         | 2026-05-19 16:52:23.650 UTC [27] LOG:  checkpoint starting: time
-bionews-db         | 2026-05-19 16:52:24.766 UTC [27] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.017 s, sync=0.007 s, total=1.116 s; sync files=9, longest=0.005 s, average=0.001 s; distance=43 kB, estimate=180 kB; lsn=0/32FFA38, redo lsn=0/32FFA00
-bionews-api        | Total registros en la web (año 2026): 10
-bionews-api        | Encontrados 1 registros nuevos.
-bionews-api        |   + DFZ-2026-1585-X-NE
-bionews-api        | Scraper finalizado. Se agregaron 1 registros a Fiscalizaciones.
-bionews-api        | Iniciando scraper de Requerimientos de Ingreso...
-bionews-api        | Registros actuales en BD: 236
-bionews-api        | Registros en la web: 236
-bionews-api        | No hay registros nuevos. La BD esta actualizada.
-bionews-api        | Iniciando scraper de Medidas Provisionales...
-bionews-api        | Registros actuales en BD: 492
-bionews-api        | Registros en la web: 492
-bionews-api        | No hay registros nuevos. La BD esta actualizada.
-bionews-api        | Iniciando scraper de Programas de Cumplimiento...
-bionews-api        | Registros actuales en BD: 1410
-bionews-api        | INFO:     127.0.0.1:40076 - "GET /api/health HTTP/1.1" 200 OK
-bionews-api        | Registros en la web: 1410
-bionews-api        | No hay registros nuevos. La BD esta actualizada.
-bionews-api        | Iniciando scraper de Registro Publico de Sanciones...
-bionews-api        | Registros actuales en BD: 1022
-bionews-api        | Registros en la web: 1114 (1021 unicos)
-bionews-api        | No hay registros nuevos. La BD esta actualizada.
 ```
 
-Se supone que si se agrego, verdad? Pero cuando voy a la pagina de fiscalizaciones no aparece el registro, solo tengo hasta 1584 y se supone que deberia tener hasta el 1585.
-Tampoco aparece cuando le doy a buscar por palabra clave (DFZ-2026-1585-X-NE)
-Pero si cambio de cuenta a la de algun usuario (estaba en administrador antes) si me aparece la notificacion de que hubo una nueva y me aparece en la tabla. Luego cuando volvi a iniciar sesion en la cuenta de administrador si me aparecio el registro DFZ-2026-1585-X-NE.
+Me sale que hay 0 registros en la web cuando en realidad hay 3,358 registros en https://snifa.sma.gob.cl/Sancionatorio/Resultado. El funcionamiento de este scraper es igual al de todos los demas de SMA/SNIFA con la excepcion de fiscalizaciones que requeria pasar por el filtro primero y no directamente a 'Resultados'
 
-Ademas me di cuenta que si salgo de la categoria Fiscalizaciones (ahora que si me marco que hay una nueva) y vuelvo a entrar me sigue apareciendo la etiqueta 'Nueva' que ya no deberia aparecer. Lo mismo con SEA ahora que hice una nueva busqueda manual, me aparecieron los mismos que ya tenia antes (sin haber borrado nada) como nuevos y al salir no se quita la etiqueta de nueva.
-
-Y por ejemplo habia 5 registros en las pertinencias hoy pero en la tabla se mostraban 3, por lo que hice un scrapeo manual y se mostraba que solo habia 3 nuevas, luego fui a borrar una en el panel de debug y fui a ver al panel y me aparecian 4 registros siendo que antes tenia 3 y en la web habia 5 y que aparentemente al descargar no habian aparecido las 2 nuevas, pero que al borrar la ultima si estaban las 2 mas nuevas y se borro una, dejandome con 4. Pero mas encima ahora me sale una de las de ayer con la etiqueta de 'Nueva', dejandome con 5 supuestamente nuevas cuando en realidad son 4.
-Siento que estoy puede tener que ver con redis pero no estoy del todo seguro.
-Ahora para probar lo que hice fue ejecutar nuevamente de forma manual el scraper del SEA:
+3. El otro problema antiguo que estuve viendo es que en las consultas publicas del minsal no se estan extrayendo las nuevas consultas publicas vigentes. Por ejemplo el 18 de mayo hubo una pero la ultima que se ve es del 5 de mayo, y al ejecutar el scraper me sale lo siguiente:
 
 ```bash
-bionews-api        | 1. Accediendo a la pagina de login (SSO CAS)...
-bionews-api        | Token CAS encontrado. Iniciando sesion...
-bionews-api        | 2. Accediendo a la app principal para obtener tokens de Laravel...
-bionews-api        | 3. Consultando API para el rango: 2026-05-18 a 2026-05-19
-bionews-api        | Se encontraron 15 registros en la API para hoy.
-bionews-api        | 4. Guardando en base de datos...
-bionews-api        | Proceso finalizado con exito. Se agregaron 1 registros nuevos.
-bionews-api        | 5. Cerrando sesion...
-bionews-api        | Iniciando scraping SEA Proyectos Evaluados. Modo diario.
-bionews-api        | Offset 1 procesado. Registros nuevos hasta ahora: 0
-bionews-api        | API retorno status False o sin datos en offset 101
-bionews-api        | Scraping SEA Proyectos finalizado. Nuevos:
+bionews-api        | INFO:     172.18.0.6:57334 - "POST /api/scrape/consultas HTTP/1.1" 200 OK
+bionews-api        | 2026-05-19 13:33:35,863 [INFO] Procesando MINSAL Consultas...
+bionews-web        | 172.20.0.4 - - [19/May/2026:17:33:35 +0000] "POST /api/scrape/consultas HTTP/1.1" 200 69 "https://moscow-office-browsers-close.trycloudflare.com/admin" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0" "2803:c600:7115:a6b9:a17b:95f3:4ef4:7b0, 172.20.0.1"
+bionews-api        |   MINSAL: 37 consultas analizadas, 0 nuevas.
 ```
 
-Le di f5 a la pagina (desde el panel de admin) y me aparecio el puntito rojo en la parte de SEA en el sidebar, pero al darle click ahi me seguian apareciendo 4 registros del 19 (hoy) y 1 de ayer con la etiqueta de nueva y no me aparecia el nuevo registro
-Al cambiar de sesion a una de los usuarios de testeo que tengo si me aparece el nuevo registro, dejandome nuevamente con 5 del 19.
+Si bien es verdad que si hay 37 consultas en total en la pagina, no aparece la nueva del 18 de mayo en la tabla. Eso si me di cuenta que la ultima que aparece en las vigentes en la tabla de bionews ya no existe en la pagina de consultas vigentes del minsal, puede que tenga que ver con eso, sobretodo porque puede haber ocurrido que se haya borrado la del 5 de mayo en la pagina del minsal (No esta tampoco en los resultados de consultas) y que la del 5 de mayo haya tenido la misma ID que la del 18 de mayo, solo que al borrarse la del 5 de mayo no se descarga la nueva ya que se compara con una ID que ya existia. El problema ahora recae en que no existe ninguna otra manera de caracterizarlas ya que en el propio HTML no hay ningun otro valor que sea unico aparte del "e-n-accordion-item-8720"
+La otra opcion que se me ocurre es que todas las veces que se ejecute el scraper de consultas vigentes del minsal se borren todas las que habian y se descarguen todas nuevamente, de esa manera siempre se tendra constancia de lo nuevo que aparecio, ademas no importa TANTO el llevar un historial de las consultas publicas previas en el minsal especificamente.
