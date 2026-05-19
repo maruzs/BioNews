@@ -36,7 +36,11 @@ from src.scrapers.sea_evaluados import SEAEvaluadosScraper
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("bionews.server")
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
 app = FastAPI(title="BioNews API")
+# Instrument API metrics under /api/metrics
+Instrumentator().instrument(app).expose(app, endpoint="/api/metrics", include_in_schema=False)
 
 # ── CORS: permite el frontend Vite (dev) y cualquier origen Tailscale ────────
 app.add_middleware(
