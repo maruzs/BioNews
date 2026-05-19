@@ -234,6 +234,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
@@ -293,15 +295,20 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const effectiveActionField = actionField || (tableName ? TABLE_ACTION_FIELDS[tableName] : 'link') || 'link';
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
       setLoading(true);
+      setBackgroundLoading(true);
+      setTotalRecords(null);
       try {
         const favRes = await fetch('/api/favorites', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const favJson = await favRes.json();
         const favSet = new Set<string>(favJson.map((f: any) => f.id_o_link));
-        setFavorites(favSet);
+        if (active) {
+          setFavorites(favSet);
+        }
 
         if (isFavoritesPage) {
           const favData = favJson.map((f: any) => ({
@@ -311,21 +318,64 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             fecha_agregado: f.fecha_agregado,
             _action: f.accion || (f.id_o_link.startsWith('http') ? f.id_o_link : '')
           }));
-          setData(favData);
+          if (active) {
+            setData(favData);
+            setLoading(false);
+            setBackgroundLoading(false);
+          }
         } else if (tableName) {
-          const res = await fetch(`/api/data/${tableName}?limit=-1`, {
+          // 1. Fetch total count
+          try {
+            const countRes = await fetch(`/api/data/${tableName}/count`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const countJson = await countRes.json();
+            if (active) {
+              setTotalRecords(countJson.count || 0);
+            }
+          } catch (e) {
+            console.error("Error fetching count:", e);
+          }
+
+          // 2. Fetch first 100 records for fast initial load
+          const res = await fetch(`/api/data/${tableName}?limit=100`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
-          setData(Array.isArray(json) ? json : []);
+          if (active) {
+            setData(Array.isArray(json) ? json : []);
+            setLoading(false);
+          }
+
+          // 3. Fetch full dataset in the background
+          fetch(`/api/data/${tableName}?limit=-1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(r => r.json())
+            .then(fullJson => {
+              if (active && Array.isArray(fullJson)) {
+                setData(fullJson);
+                setBackgroundLoading(false);
+              }
+            })
+            .catch(err => {
+              console.error("Error in background fetch:", err);
+              if (active) setBackgroundLoading(false);
+            });
         }
       } catch (err) {
         console.error("Error fetching data:", err);
+        if (active) {
+          setLoading(false);
+          setBackgroundLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     fetchData();
+    return () => {
+      active = false;
+    };
   }, [tableName, isFavoritesPage]);
 
   // Al cargar datos de una categoría, actualizar si tiene ítems nuevos
@@ -744,8 +794,28 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           </button>
         )}
 
-        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
-          {filteredData.length} resultados encontrados
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <style>{`
+            @keyframes spin-mini {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          {backgroundLoading && (
+            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span className="spinner-mini" style={{
+                width: '12px',
+                height: '12px',
+                border: '2px solid var(--primary)',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                display: 'inline-block',
+                animation: 'spin-mini 1s linear infinite'
+              }}></span>
+              Cargando historial completo...
+            </span>
+          )}
+          {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
 

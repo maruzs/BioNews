@@ -82,7 +82,7 @@ class DatabaseManager:
 
     # ── TABLAS ESPECIFICAS ────────────────────────────────────────────────────
 
-    def get_table_data(self, table_name, limit=1000):
+    def get_table_data(self, table_name, limit=1000, offset=0):
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
@@ -98,29 +98,37 @@ class DatabaseManager:
                 # Detectar columnas para ordenar
                 cur.execute("""
                     SELECT column_name FROM information_schema.columns
-                    WHERE table_name = %s AND table_schema = 'public'
+                    WHERE table_name = %s AND table_schema IN ('scrapers', 'users', 'public')
                 """, (table_name,))
                 columns = [r['column_name'] for r in cur.fetchall()]
 
-                order_by = ""
-                if table_name == 'normativas':
-                    order_by = 'ORDER BY fecha DESC'
-                    if 'fecha_scraping' in columns:
-                        order_by += ', fecha_scraping DESC'
-                elif 'ficha_id' in columns:
-                    order_by = 'ORDER BY ficha_id DESC'
-                elif '"Fecha"' in [f'"{c}"' for c in columns] or 'Fecha' in columns:
-                    order_by = 'ORDER BY "Fecha" DESC'
-                elif 'fecha' in columns:
-                    order_by = 'ORDER BY fecha DESC'
+                # Definir orden cronológico por fecha de más nuevo a más antiguo
+                date_sorts = {
+                    'sea_proyectos_evaluados': "to_date(nullif(fecha_presentacion, ''), 'DD/MM/YYYY') DESC",
+                    'mma_abiertas': "to_date(nullif(fecha_inicio, ''), 'MM/DD/YYYY') DESC",
+                    'mma_cerradas': "to_date(nullif(fecha_inicio, ''), 'MM/DD/YYYY') DESC",
+                    'Tribunales': 'to_date(nullif("Fecha", \'\'), \'YYYY-MM-DD\') DESC',
+                    'pertinencias': 'to_date(nullif("Fecha", \'\'), \'YYYY-MM-DD\') DESC',
+                    'minsal_vigentes': "to_date(nullif(fecha_inicio, ''), 'YYYY-MM-DD') DESC",
+                    'normativas': "to_date(nullif(fecha, ''), 'YYYY-MM-DD') DESC",
+                    'noticias': "to_date(nullif(fecha, ''), 'YYYY-MM-DD') DESC",
+                }
 
-                if 'fecha_scraping' in columns and order_by and 'ficha_id' not in columns and table_name != 'normativas':
-                    order_by += ', fecha_scraping DESC'
-                elif 'fecha_scraping' in columns and not order_by:
-                    order_by = 'ORDER BY fecha_scraping DESC'
+                order_by = ""
+                if table_name in date_sorts:
+                    order_by = f"ORDER BY {date_sorts[table_name]} NULLS LAST"
+                    if 'fecha_scraping' in columns:
+                        order_by += ", fecha_scraping DESC"
+                elif 'fecha_scraping' in columns:
+                    order_by = "ORDER BY fecha_scraping DESC"
+                elif 'ficha_id' in columns:
+                    order_by = "ORDER BY ficha_id DESC"
 
                 if limit and limit > 0:
-                    cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s', (limit,))
+                    if offset and offset > 0:
+                        cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s OFFSET %s', (limit, offset))
+                    else:
+                        cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s', (limit,))
                 else:
                     cur.execute(f'SELECT * FROM "{table_name}" {order_by}')
                 rows = cur.fetchall()
@@ -131,7 +139,8 @@ class DatabaseManager:
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
             'requerimientos', 'sancionatorios', 'Tribunales', 'noticias', 'favoritos',
-            'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas', 'dga_consultas'
+            'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas', 'dga_consultas',
+            'sea_proyectos_evaluados'
         }
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")

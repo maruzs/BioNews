@@ -344,30 +344,45 @@ def get_news(user = Depends(get_current_user)):
     cache_key = "news:latest:100"
     cached_dicts = cache.get(cache_key)
     if cached_dicts is not None:
-        news_dicts = cached_dicts
+        # Hacer una copia para evitar mutar el cache compartido
+        news_dicts = [dict(n) for n in cached_dicts]
     else:
         news_rows = db.get_latest_news(limit=100)
         # Convertir a dicts
         news_dicts = [{"link": n[0], "titulo": n[1], "fecha": n[2], "imagen": n[3], "fuente": n[4], "fecha_scraping": n[5]} for n in news_rows]
         cache.set(cache_key, news_dicts, expire_seconds=300)
-    # Agregar flag is_new
-    return db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
+    
+    # 1. Obtener con flag is_new usando last_exit anterior
+    res_items = db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
+    # 2. Actualizar la salida inmediatamente al obtener las noticias
+    db.update_category_exit(user["sub"], "noticias")
+    return res_items
 
 # ─── TABLAS ESPECIFICAS ─────────────────────────────────────────────────────
 @app.get("/api/data/{table_name}")
-def get_table_data(table_name: str, limit: int = 1000, user = Depends(get_current_user)):
+def get_table_data(table_name: str, limit: int = 1000, offset: int = 0, user = Depends(get_current_user)):
     """Endpoint genérico para obtener datos de cualquier tabla permitida."""
     try:
-        cache_key = f"table_data:{table_name}:{limit}"
+        cache_key = f"table_data:{table_name}:{limit}:{offset}"
         cached_data = cache.get(cache_key)
         if cached_data is not None:
-            data = cached_data
+            # Hacer una copia para evitar mutar el cache compartido
+            data = [dict(n) for n in cached_data]
         else:
-            data = db.get_table_data(table_name, limit=limit)
+            data = db.get_table_data(table_name, limit=limit, offset=offset)
             cache.set(cache_key, data, expire_seconds=300)
             
         category_slug = table_name
-        return db.get_items_with_new_flag(user["sub"], category_slug, data)
+        # Mapear table_name a la categoría de notificaciones
+        notif_mapping = {"mma_abiertas": "mma", "mma_cerradas": "mma", "dga_consultas": "dga"}
+        notif_category = notif_mapping.get(category_slug, category_slug)
+        
+        # 1. Obtener con flag is_new usando el last_exit anterior
+        res_items = db.get_items_with_new_flag(user["sub"], category_slug, data)
+        # 2. Actualizar la salida inmediatamente al obtener los datos
+        db.update_category_exit(user["sub"], notif_category)
+        
+        return res_items
     except ValueError as e:
         return {"error": str(e)}
 

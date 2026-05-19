@@ -22,6 +22,8 @@ const MMAConsultasPage = () => {
   const { markItemViewed, refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<MMAConsulta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<MMAConsulta | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -50,25 +52,66 @@ const MMAConsultasPage = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setBackgroundLoading(true);
+    setTotalRecords(null);
     const tableName = filter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
+    const currentFetchFilter = filter;
     try {
-      const res = await fetch(`/api/data/${tableName}?limit=-1`, {
+      // 1. Fetch total count
+      try {
+        const countRes = await fetch(`/api/data/${tableName}/count`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const countJson = await countRes.json();
+        if (filter === currentFetchFilter) {
+          setTotalRecords(countJson.count || 0);
+        }
+      } catch (e) {
+        console.error("Error fetching count:", e);
+      }
+
+      // 2. Fetch first 100 records
+      const res = await fetch(`/api/data/${tableName}?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();
-      setData(Array.isArray(json) ? json : []);
-      refreshCategory(category);
+      if (filter === currentFetchFilter) {
+        setData(Array.isArray(json) ? json : []);
+        setLoading(false);
+      }
+
+      // 3. Fetch full dataset in the background
+      fetch(`/api/data/${tableName}?limit=-1`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(fullJson => {
+          if (filter === currentFetchFilter && Array.isArray(fullJson)) {
+            setData(fullJson);
+            setBackgroundLoading(false);
+          }
+        })
+        .catch(err => {
+          console.error("Error in background fetch:", err);
+          if (filter === currentFetchFilter) setBackgroundLoading(false);
+        });
 
       // Cargar favoritos
       const favRes = await fetch('/api/favorites', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const favJson = await favRes.json();
-      setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
+      if (filter === currentFetchFilter) {
+        setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
+      }
+      refreshCategory(category);
     } catch (err) {
       console.error(err);
+      if (filter === currentFetchFilter) {
+        setLoading(false);
+        setBackgroundLoading(false);
+      }
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -216,8 +259,28 @@ const MMAConsultasPage = () => {
           <option value="Especies">Clasificación de Especies</option>
         </select>
 
-        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto' }}>
-          {filteredData.length} resultados encontrados
+        <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <style>{`
+            @keyframes spin-mini {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          {backgroundLoading && (
+            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span className="spinner-mini" style={{
+                width: '12px',
+                height: '12px',
+                border: '2px solid var(--primary)',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                display: 'inline-block',
+                animation: 'spin-mini 1s linear infinite'
+              }}></span>
+              Cargando completo...
+            </span>
+          )}
+          {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
 
