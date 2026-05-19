@@ -16,7 +16,7 @@ interface NewsItem {
 
 const NewsPage = () => {
   const { token } = useAuth();
-  const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
+  const { refreshCategory, markAllRead, setCategoryActive } = useNotifications();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -224,10 +224,6 @@ const NewsPage = () => {
                         target="_blank"
                         rel="noreferrer"
                         className={styles.cardAction}
-                        onClick={() => {
-                          markItemViewed('noticias', item.link);
-                          setNews(prev => prev.map(n => n.link === item.link ? { ...n, is_new: false } : n));
-                        }}
                       >
                         Leer más
                       </a>

@@ -28,7 +28,7 @@ interface ConsultasPageProps {
 
 const ConsultasPage = ({ title, description, tableName, category, type }: ConsultasPageProps) => {
   const { token } = useAuth();
-  const { markItemViewed, refreshCategory, setCategoryActive } = useNotifications();
+  const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<Consulta[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -92,13 +92,9 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
   const handleOpenModal = (item: Consulta) => {
     setSelectedItem(item);
     fetchDocuments(item.id);
-    if (item.is_new) {
-      markItemViewed(category, item.id);
-      setData(prev => prev.map(n => n.id === item.id ? { ...n, is_new: false } : n));
-    }
   };
 
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.titulo.toLowerCase().includes(appliedSearch.toLowerCase())
   );
 
@@ -110,26 +106,26 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
       </div>
 
       {/* Control Bar */}
-      <div style={{ 
-        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+      <div style={{
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px',
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
         <div style={{ flexGrow: 1, position: 'relative', minWidth: '300px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar consulta..." 
+          <input
+            type="text"
+            placeholder="Buscar consulta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
-            style={{ 
-              width: '100%', padding: '10px 40px', borderRadius: '8px', 
-              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            style={{
+              width: '100%', padding: '10px 40px', borderRadius: '8px',
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px'
             }}
           />
           {search && (
-            <button 
+            <button
               onClick={() => { setSearch(''); setAppliedSearch(''); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
@@ -137,10 +133,10 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
             </button>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setShowFilters(!showFilters)}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
             color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
@@ -154,9 +150,9 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
           {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <button 
+        <button
           onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'var(--primary)',
             color: activeTab === 'dashboard' ? 'var(--primary)' : 'white',
@@ -190,36 +186,36 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
       </div>
       {/* Advanced Filters */}
       {showFilters && (
-        <div style={{ 
-          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+        <div style={{
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px',
           border: '1px solid var(--border)', marginBottom: '25px',
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
         }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Título</label>
-            <input 
-              type="text" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar..."
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}
             />
           </div>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
-            <button 
+            <button
               onClick={resetFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer'
               }}
             >
               LIMPIAR FILTROS
             </button>
-            <button 
+            <button
               onClick={handleApplyFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: 'none',
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer'
               }}
             >
               APLICAR FILTROS
@@ -237,36 +233,36 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
       ) : (
         <div className="content-wrapper" style={{ padding: '0' }}>
           {loading ? (
-          <p>Cargando consultas...</p>
-        ) : (
-          <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-            {filteredData.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
-            ) : (
-              filteredData.map((item) => (
-                <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
-                  {item.is_new && (
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
-                      NUEVO
+            <p>Cargando consultas...</p>
+          ) : (
+            <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {filteredData.length === 0 ? (
+                <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
+              ) : (
+                filteredData.map((item) => (
+                  <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
+                    {item.is_new && (
+                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
+                        NUEVO
+                      </div>
+                    )}
+                    <div className="card-content">
+                      <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px', minHeight: '3em' }}>{item.titulo}</div>
+                      <div className="card-meta">
+                        {item.fecha_inicio && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                            <Calendar size={14} /> {item.fecha_inicio}
+                          </div>
+                        )}
+                      </div>
+                      <div className="card-action" style={{ marginTop: '15px' }}>Ver detalles</div>
                     </div>
-                  )}
-                  <div className="card-content">
-                    <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px', minHeight: '3em' }}>{item.titulo}</div>
-                    <div className="card-meta">
-                      {item.fecha_inicio && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                          <Calendar size={14} /> {item.fecha_inicio}
-                        </div>
-                      )}
-                    </div>
-                    <div className="card-action" style={{ marginTop: '15px' }}>Ver detalles</div>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {selectedItem && (
@@ -275,9 +271,9 @@ const ConsultasPage = ({ title, description, tableName, category, type }: Consul
             <button onClick={() => setSelectedItem(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={24} />
             </button>
-            
+
             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '20px', color: 'var(--primary)' }}>{selectedItem.titulo}</h2>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
               {selectedItem.fecha_inicio && (
                 <div>

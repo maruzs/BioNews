@@ -15,7 +15,7 @@ interface NewsItem {
 
 const NewsPage = () => {
   const { token } = useAuth();
-  const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
+  const { refreshCategory, markAllRead, setCategoryActive } = useNotifications();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -131,17 +131,17 @@ const NewsPage = () => {
       </div>
 
       {/* Control Bar */}
-      <div style={{ 
-        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+      <div style={{
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px',
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '15px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
         <div style={{ position: 'relative', width: '400px', display: 'flex', gap: '10px' }}>
           <div style={{ position: 'relative', flexGrow: 1 }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-            <input 
-              type="text" 
-              placeholder="Buscar por palabras clave..." 
+            <input
+              type="text"
+              placeholder="Buscar por palabras clave..."
               value={searchWord}
               onChange={(e) => {
                 setSearchWord(e.target.value);
@@ -152,13 +152,13 @@ const NewsPage = () => {
                   handleApplyFilters();
                 }
               }}
-              style={{ 
-                width: '100%', padding: '10px 40px', borderRadius: '8px', 
-                border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+              style={{
+                width: '100%', padding: '10px 40px', borderRadius: '8px',
+                border: '1px solid var(--border)', outline: 'none', fontSize: '14px'
               }}
             />
             {searchWord && (
-              <button 
+              <button
                 onClick={() => { setSearchWord(''); setAppliedSearch(''); }}
                 style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
               >
@@ -166,7 +166,7 @@ const NewsPage = () => {
               </button>
             )}
           </div>
-          <button 
+          <button
             onClick={handleApplyFilters}
             style={{
               padding: '10px 20px', borderRadius: '8px', border: 'none',
@@ -177,10 +177,10 @@ const NewsPage = () => {
             Buscar
           </button>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setShowFilters(!showFilters)}
-          style={{ 
+          style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
             backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
             color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
@@ -200,17 +200,17 @@ const NewsPage = () => {
       </div>
 
       {/* Real-time Source Filters */}
-      <div style={{ 
-        display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '25px', 
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '25px',
         padding: '0 5px'
       }}>
         {uniqueSources.map(source => (
-          <label key={source} style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', 
-            background: appliedSources.has(source) ? 'var(--primary-light)' : 'white', 
-            padding: '6px 14px', borderRadius: '20px', 
+          <label key={source} style={{
+            display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+            background: appliedSources.has(source) ? 'var(--primary-light)' : 'white',
+            padding: '6px 14px', borderRadius: '20px',
             border: '1px solid ' + (appliedSources.has(source) ? 'var(--primary)' : 'var(--border)'),
-            fontSize: '13px', transition: 'all 0.2s', 
+            fontSize: '13px', transition: 'all 0.2s',
             color: appliedSources.has(source) ? 'var(--primary)' : 'var(--text-dark)',
             fontWeight: appliedSources.has(source) ? 600 : 400,
             boxShadow: appliedSources.has(source) ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
@@ -234,36 +234,36 @@ const NewsPage = () => {
 
       {/* Advanced Filters */}
       {showFilters && (
-        <div style={{ 
-          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', 
+        <div style={{
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px',
           border: '1px solid var(--border)', marginBottom: '25px',
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px'
         }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Fecha</label>
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={(e) => setFilterDate(e.target.value)} 
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} 
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}
             />
           </div>
-          
+
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
-            <button 
+            <button
               onClick={resetFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', 
-                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                background: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer'
               }}
             >
               LIMPIAR FILTROS
             </button>
-            <button 
+            <button
               onClick={handleApplyFilters}
-              style={{ 
-                padding: '10px 20px', borderRadius: '8px', border: 'none', 
-                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer' 
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: 'none',
+                background: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer'
               }}
             >
               APLICAR FILTROS
@@ -325,10 +325,6 @@ const NewsPage = () => {
                         target="_blank"
                         rel="noreferrer"
                         className="card-action"
-                        onClick={() => {
-                          markItemViewed('noticias', item.link);
-                          setNews(prev => prev.map(n => n.link === item.link ? { ...n, is_new: false } : n));
-                        }}
                       >
                         Leer más
                       </a>

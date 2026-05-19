@@ -114,15 +114,19 @@ class DatabaseManager:
                     'noticias': "to_date(nullif(fecha, ''), 'YYYY-MM-DD') DESC",
                 }
 
+                snifa_tables = {'fiscalizaciones', 'medidas_provisionales', 'programasDeCumplimiento', 'registroSanciones', 'requerimientos', 'sancionatorios'}
+
                 order_by = ""
                 if table_name in date_sorts:
                     order_by = f"ORDER BY {date_sorts[table_name]} NULLS LAST"
                     if 'fecha_scraping' in columns:
                         order_by += ", fecha_scraping DESC"
+                elif table_name in snifa_tables:
+                    order_by = "ORDER BY CAST(SUBSTRING(detalle_link FROM '/([0-9]+)$') AS INTEGER) DESC NULLS LAST"
+                elif 'ficha_id' in columns:
+                    order_by = "ORDER BY ficha_id DESC NULLS LAST"
                 elif 'fecha_scraping' in columns:
                     order_by = "ORDER BY fecha_scraping DESC"
-                elif 'ficha_id' in columns:
-                    order_by = "ORDER BY ficha_id DESC"
 
                 if limit and limit > 0:
                     if offset and offset > 0:
@@ -428,7 +432,6 @@ class DatabaseManager:
 
     def _check_if_category_has_new(self, user_id, category_slug):
         last_exit = self.get_user_category_last_exit(user_id, category_slug)
-        viewed_ids = self.get_viewed_items_ids(user_id, category_slug)
 
         table_mapping = {
             "noticias": "noticias", "normativas": "normativas",
@@ -441,18 +444,6 @@ class DatabaseManager:
             "mma": ["mma_abiertas", "mma_cerradas"],
             "dga": "dga_consultas", "sea_proyectos_evaluados": "sea_proyectos_evaluados"
         }
-        id_col_map = {
-            "noticias": "link", "normativas": "accion",
-            "pertinencias": "Expediente", "Tribunales": "Accion",
-        }
-        snifa_cats = {"fiscalizaciones","medidas_provisionales","programasDeCumplimiento",
-                      "registroSanciones","requerimientos","sancionatorios"}
-        if category_slug in snifa_cats:
-            id_col = "expediente"
-        elif category_slug in id_col_map:
-            id_col = id_col_map[category_slug]
-        else:
-            id_col = "id"
 
         table = table_mapping.get(category_slug)
         if not table:
@@ -464,18 +455,9 @@ class DatabaseManager:
             with conn.cursor() as cur:
                 for t in tables:
                     if last_exit is None:
-                        if viewed_ids:
-                            placeholders = ','.join(['%s'] * len(viewed_ids))
-                            cur.execute(f'SELECT 1 FROM "{t}" WHERE "{id_col}" NOT IN ({placeholders}) LIMIT 1', viewed_ids)
-                        else:
-                            cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
+                        cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        if viewed_ids:
-                            placeholders = ','.join(['%s'] * len(viewed_ids))
-                            cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s AND "{id_col}" NOT IN ({placeholders}) LIMIT 1',
-                                        [last_exit] + viewed_ids)
-                        else:
-                            cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s LIMIT 1', (last_exit,))
+                        cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s LIMIT 1', (last_exit,))
                     if cur.fetchone():
                         return True
         return False
@@ -504,34 +486,25 @@ class DatabaseManager:
         notif_category = notif_mapping.get(category_slug, category_slug)
 
         last_exit = self.get_user_category_last_exit(user_id, notif_category)
-        viewed_ids = set(self.get_viewed_items_ids(user_id, notif_category))
-
-        id_col_map = {"noticias": "link", "normativas": "accion",
-                      "pertinencias": "Expediente", "Tribunales": "Accion"}
-        snifa_cats = {"fiscalizaciones","medidas_provisionales","programasDeCumplimiento",
-                      "registroSanciones","requerimientos","sancionatorios"}
-        if notif_category in snifa_cats:
-            id_col = "expediente"
-        elif notif_category in id_col_map:
-            id_col = id_col_map[notif_category]
+        
+        # Format the last exit appropriately for comparison
+        if last_exit:
+            last_exit_str = str(last_exit)
         else:
-            id_col = "id"
-
-        norm_last_exit = self._normalize_date(last_exit)
+            last_exit_str = None
 
         for item in items:
-            item_id = str(item.get(id_col) or item.get("id_o_link") or "")
-            if item_id in viewed_ids:
-                item['is_new'] = False
-                continue
-            if last_exit is None:
+            if last_exit_str is None:
                 item['is_new'] = True
                 continue
-            item_date = item.get("fecha_scraping") or item.get("Fecha") or item.get("fecha")
+            
+            # Use fecha_scraping directly since it holds the exact datetime the record was found
+            item_date = item.get("fecha_scraping")
             if not item_date:
                 item['is_new'] = False
             else:
-                item['is_new'] = self._normalize_date(item_date) > norm_last_exit
+                # Compare as strings since both are ISO-like 'YYYY-MM-DD HH:MM:SS'
+                item['is_new'] = str(item_date) > last_exit_str
         return items
 
     # ── DOCUMENTOS ────────────────────────────────────────────────────────────

@@ -23,7 +23,7 @@ interface SEAEvaluado {
 
 const SEAEvaluadosPage = () => {
   const { token } = useAuth();
-  const { refreshCategory, setCategoryActive, markItemViewed } = useNotifications();
+  const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<SEAEvaluado[]>([]);
   const [loading, setLoading] = useState(true);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
@@ -218,10 +218,6 @@ const SEAEvaluadosPage = () => {
   const handleOpenModal = (item: SEAEvaluado) => {
     setSelectedItem(item);
     setShowModal(true);
-    if (item.is_new) {
-      markItemViewed('sea_proyectos_evaluados', item.id);
-      setData(prev => prev.map(n => n.id === item.id ? { ...n, is_new: false } : n));
-    }
   };
 
   // Generate filter options

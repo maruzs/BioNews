@@ -230,7 +230,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children
 }) => {
   const { token, user } = useAuth();
-  const { markItemViewed, refreshCategory, markAllRead, setCategoryActive } = useNotifications();
+  const { refreshCategory, markAllRead, setCategoryActive } = useNotifications();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -677,29 +677,12 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         const link = isFavoritesPage ? params.row._action : (params.row[effectiveActionField] || '');
         if (!link) return null;
 
-        const handleActionClick = () => {
-          if (category && !isFavoritesPage) {
-            const itemId = params.row[effectiveIdField] || '';
-            markItemViewed(category, String(itemId));
-
-            // Actualizar estado local para quitar etiqueta "Nuevo" inmediatamente
-            setData(prev => prev.map(item => {
-              const currentId = item[effectiveIdField] || '';
-              if (String(currentId) === String(itemId)) {
-                return { ...item, is_new: false };
-              }
-              return item;
-            }));
-          }
-        };
-
         return (
           <a
             href={link}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', height: '100%' }}
-            onClick={handleActionClick}
           >
             <Eye size={20} />
           </a>

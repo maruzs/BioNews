@@ -19,7 +19,7 @@ interface Documento {
 
 const MINSALConsultasPage = () => {
   const { token } = useAuth();
-  const { markItemViewed, refreshCategory, setCategoryActive } = useNotifications();
+  const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<MINSALConsulta[]>([]);
   const [loading, setLoading] = useState(true);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
@@ -122,12 +122,7 @@ const MINSALConsultasPage = () => {
     setSelectedItem(item);
     setDocuments([]);
     setDocsLoading(true);
-    
-    const activeCategory = filter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
-    if (item.is_new) {
-      markItemViewed(activeCategory, item.id);
-      setData(prev => prev.map(n => n.id === item.id ? { ...n, is_new: false } : n));
-    }
+
 
     try {
       const type = filter === 'vigentes' ? 'vigente' : 'resultado';
@@ -145,7 +140,7 @@ const MINSALConsultasPage = () => {
     }
   };
 
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.titulo.toLowerCase().includes(appliedSearch.toLowerCase())
   );
 
@@ -193,29 +188,29 @@ const MINSALConsultasPage = () => {
       </div>
 
       {/* Control Bar */}
-      <div style={{ 
-        backgroundColor: 'white', padding: '15px', borderRadius: '12px', 
+      <div style={{
+        backgroundColor: 'white', padding: '15px', borderRadius: '12px',
         border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         marginBottom: '25px', display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'
       }}>
         <div style={{ position: 'relative', width: '400px' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar por título..." 
+          <input
+            type="text"
+            placeholder="Buscar por título..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               if (e.target.value === '') setAppliedSearch('');
             }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilters(); }}
-            style={{ 
-              width: '100%', padding: '10px 40px', borderRadius: '8px', 
-              border: '1px solid var(--border)', outline: 'none', fontSize: '14px' 
+            style={{
+              width: '100%', padding: '10px 40px', borderRadius: '8px',
+              border: '1px solid var(--border)', outline: 'none', fontSize: '14px'
             }}
           />
           {search && (
-            <button 
+            <button
               onClick={() => { setSearch(''); setAppliedSearch(''); }}
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
             >
@@ -223,14 +218,14 @@ const MINSALConsultasPage = () => {
             </button>
           )}
         </div>
-        
+
         <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
-          <button 
+          <button
             onClick={() => { setFilter('vigentes'); setAppliedFilter('vigentes'); }}
-            style={{ 
-              padding: '8px 20px', 
-              borderRadius: '8px', 
-              border: 'none', 
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: 'none',
               cursor: 'pointer',
               fontWeight: 600,
               fontSize: '13px',
@@ -242,12 +237,12 @@ const MINSALConsultasPage = () => {
           >
             Vigentes
           </button>
-          <button 
+          <button
             onClick={() => { setFilter('resultados'); setAppliedFilter('resultados'); }}
-            style={{ 
-              padding: '8px 20px', 
-              borderRadius: '8px', 
-              border: 'none', 
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: 'none',
               cursor: 'pointer',
               fontWeight: 600,
               fontSize: '13px',
@@ -287,7 +282,7 @@ const MINSALConsultasPage = () => {
       </div>
 
       <div className="content-wrapper" style={{ padding: '0' }}>
-          {loading ? (
+        {loading ? (
           <p>Cargando consultas...</p>
         ) : (
           <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
@@ -303,33 +298,33 @@ const MINSALConsultasPage = () => {
                   )}
                   <div className="card-content">
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                       <span style={{ fontSize: '0.7rem', background: filter === 'vigentes' ? '#dcfce7' : '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: filter === 'vigentes' ? '#166534' : '#475569' }}>
+                      <span style={{ fontSize: '0.7rem', background: filter === 'vigentes' ? '#dcfce7' : '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: filter === 'vigentes' ? '#166534' : '#475569' }}>
                         {filter === 'vigentes' ? 'VIGENTE' : 'RESULTADO'}
-                       </span>
+                      </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
                       <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.titulo}</div>
-                      <Heart 
-                        size={20} 
+                      <Heart
+                        size={20}
                         onClick={(e) => toggleFavorite(e, item)}
-                        style={{ 
-                          cursor: 'pointer', 
+                        style={{
+                          cursor: 'pointer',
                           flexShrink: 0,
-                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none', 
+                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
                           color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
                           transition: 'all 0.2s'
-                        }} 
+                        }}
                       />
                     </div>
                     <div className="card-meta">
                       {item.fecha_inicio && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '5px' }}>
-                          <Calendar size={14} /> <span style={{fontWeight: 500}}>Inicio:</span> {item.fecha_inicio}
+                          <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Inicio:</span> {item.fecha_inicio}
                         </div>
                       )}
                       {item.periodo_consulta && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                          <Info size={14} /> <span style={{fontWeight: 500}}>Periodo:</span> {item.periodo_consulta}
+                          <Info size={14} /> <span style={{ fontWeight: 500 }}>Periodo:</span> {item.periodo_consulta}
                         </div>
                       )}
                     </div>
@@ -350,24 +345,24 @@ const MINSALConsultasPage = () => {
             <button onClick={() => setSelectedItem(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
               <X size={20} />
             </button>
-            
+
             <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle Consulta MINSAL</span>
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginTop: '5px', lineHeight: '1.3', color: '#1e293b' }}>{selectedItem.titulo}</h2>
               </div>
-              <Heart 
-                size={28} 
+              <Heart
+                size={28}
                 onClick={(e) => toggleFavorite(e, selectedItem)}
-                style={{ 
-                  cursor: 'pointer', 
-                  fill: favorites.has(selectedItem.id) ? 'var(--orange)' : 'none', 
+                style={{
+                  cursor: 'pointer',
+                  fill: favorites.has(selectedItem.id) ? 'var(--orange)' : 'none',
                   color: favorites.has(selectedItem.id) ? 'var(--orange)' : 'var(--text-light)',
                   transition: 'all 0.2s'
-                }} 
+                }}
               />
             </div>
-            
+
             <div style={{ marginBottom: '30px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Download size={20} color="var(--primary)" /> Documentos Adjuntos
@@ -379,19 +374,19 @@ const MINSALConsultasPage = () => {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                   {documents.map((doc, idx) => (
-                    <a 
+                    <a
                       key={idx}
-                      href={doc.link} 
-                      target="_blank" 
+                      href={doc.link}
+                      target="_blank"
                       rel="noopener noreferrer"
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '12px 20px', 
-                        background: '#f8fafc', 
-                        borderRadius: '10px', 
-                        textDecoration: 'none', 
+                        padding: '12px 20px',
+                        background: '#f8fafc',
+                        borderRadius: '10px',
+                        textDecoration: 'none',
                         color: '#1e293b',
                         border: '1px solid #e2e8f0',
                         transition: 'all 0.2s'
