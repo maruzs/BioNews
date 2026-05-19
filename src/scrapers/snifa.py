@@ -2,7 +2,7 @@
 Scraper de Procedimientos Sancionatorios - SNIFA
 https://snifa.sma.gob.cl/Sancionatorio/Resultado
 
-Compara el total de registros y busca por diferencia de expedientes contra la BD.
+Compara el total de registros y busca por diferencia de expedientes contra la BD usando la API JSON.
 """
 import os
 import requests
@@ -35,157 +35,123 @@ def extract_ficha_id(url):
     return None
 
 
-def parse_row(row):
-    """Extrae los datos de una fila de la tabla HTML."""
-    tds = row.find_all('td')
-    if len(tds) < 4:
+def parse_json_row(row):
+    """Parsea una fila del JSON obtenido de la API y extrae los campos estructurados."""
+    if len(row) < 8:
         return None
 
-    data = {
-        'expediente': '',
-        'unidad_fiscalizable': '',
-        'nombre_razon_social': '',
-        'categoria': '',
-        'region': '',
-        'estado': '',
-        'detalle_link': ''
+    expediente = row[1].strip()
+
+    # Unidad Fiscalizable (Index 2)
+    soup_uf = BeautifulSoup(row[2], 'html.parser')
+    items_uf = [li.text.strip() for li in soup_uf.find_all('li')]
+    if not items_uf:
+        items_uf = [soup_uf.get_text(strip=True)]
+    unidad_fiscalizable = ' / '.join(filter(None, items_uf))
+
+    # Nombre Razón Social (Index 3)
+    soup_nrs = BeautifulSoup(row[3], 'html.parser')
+    items_nrs = [li.text.strip() for li in soup_nrs.find_all('li')]
+    if not items_nrs:
+        items_nrs = [soup_nrs.get_text(strip=True)]
+    nombre_razon_social = ' / '.join(filter(None, items_nrs))
+
+    # Categoría (Index 4)
+    soup_cat = BeautifulSoup(row[4], 'html.parser')
+    items_cat = [li.text.strip() for li in soup_cat.find_all('li')]
+    if not items_cat:
+        items_cat = [soup_cat.get_text(strip=True)]
+    categoria = ' / '.join(filter(None, items_cat))
+
+    # Región (Index 5)
+    soup_reg = BeautifulSoup(row[5], 'html.parser')
+    items_reg = [li.text.strip() for li in soup_reg.find_all('li')]
+    if not items_reg:
+        items_reg = [soup_reg.get_text(strip=True)]
+    region = ' / '.join(filter(None, items_reg))
+
+    estado = row[6].strip()
+
+    # Detalle Link (Index 7)
+    soup_det = BeautifulSoup(row[7], 'html.parser')
+    a_tag = soup_det.find('a')
+    detalle_link = ''
+    if a_tag:
+        href = a_tag.get('href', '')
+        if href.startswith('/'):
+            detalle_link = f"https://snifa.sma.gob.cl{href}"
+        else:
+            detalle_link = href
+
+    ficha_id = extract_ficha_id(detalle_link)
+
+    return {
+        'expediente': expediente,
+        'nombre_razon_social': nombre_razon_social,
+        'unidad_fiscalizable': unidad_fiscalizable,
+        'categoria': categoria,
+        'region': region,
+        'estado': estado,
+        'detalle_link': detalle_link,
+        'ficha_id': ficha_id
     }
 
-    for td in tds:
-        label = (td.get('data-label') or '').strip()
-
-        if label == 'Expediente':
-            data['expediente'] = td.get_text(strip=True)
-        elif label in ('Unidad Fiscalizable', 'Unidad fiscalizable'):
-            items = [li.text.strip() for li in td.find_all('li')]
-            if not items:
-                items = [td.get_text(strip=True)]
-            data['unidad_fiscalizable'] = ' / '.join(filter(None, items))
-        elif label in ('Nombre Razón Social', 'Nombre razón social', 'Nombre Razon Social'):
-            items = [li.text.strip() for li in td.find_all('li')]
-            if not items:
-                items = [td.get_text(strip=True)]
-            data['nombre_razon_social'] = ' / '.join(filter(None, items))
-        elif label in ('Categoría', 'Categoria'):
-            items = [li.text.strip() for li in td.find_all('li')]
-            if not items:
-                items = [td.get_text(strip=True)]
-            data['categoria'] = ' / '.join(filter(None, items))
-        elif label in ('Región', 'Region'):
-            items = [li.text.strip() for li in td.find_all('li')]
-            if not items:
-                items = [td.get_text(strip=True)]
-            data['region'] = ' / '.join(filter(None, items))
-        elif label == 'Estado':
-            data['estado'] = td.get_text(strip=True)
-        elif label == 'Detalle':
-            a_tag = td.find('a')
-            if a_tag:
-                href = a_tag.get('href', '')
-                if href.startswith('/'):
-                    data['detalle_link'] = f"https://snifa.sma.gob.cl{href}"
-                else:
-                    data['detalle_link'] = href
-
-    if not data['expediente']:
-        return None
-    
-    data['ficha_id'] = extract_ficha_id(data['detalle_link'])
-    return data
-
-
-from playwright.sync_api import sync_playwright
-import traceback
-
-def wait_for_table(page, max_retries=8):
-    """Espera inteligentemente a que la tabla termine de cargar."""
-    page.wait_for_timeout(3000)
-    for attempt in range(max_retries):
-        soup = BeautifulSoup(page.content(), "html.parser")
-        rows = soup.select("table tbody tr")
-        if rows:
-            tds = rows[0].find_all("td")
-            texto_fila = rows[0].get_text().lower()
-            if len(tds) < 4 and ("procesando" in texto_fila or "cargando" in texto_fila):
-                print(f"  Tabla cargando, reintento {attempt + 1}/{max_retries}...")
-                page.wait_for_timeout(5000)
-            else:
-                return True
-        else:
-            print(f"  Sin filas aun, reintento {attempt + 1}/{max_retries}...")
-            page.wait_for_timeout(5000)
-    return False
 
 class SancionatoriosScraper:
     """Wrapper para integracion con el sistema BioNews."""
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Procedimientos Sancionatorios (via Playwright)...")
-        url = "https://snifa.sma.gob.cl/Sancionatorio/Resultado"
+        print("Iniciando scraper de Procedimientos Sancionatorios (via HTTP POST)...")
+        url = "https://snifa.sma.gob.cl/Sancionatorio/ObtenerResultadosGrid"
 
         db_expedientes, db_count = get_db_info()
         print(f"Registros actuales en BD: {db_count}")
         
-        all_records = []
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': 'https://snifa.sma.gob.cl'
+        }
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
+        # Realizamos el POST con límite de 10
+        payload = {
+            'draw': '1',
+            'start': '0',
+            'length': '10',
+            'order[0][column]': '0',
+            'order[0][dir]': 'asc'
+        }
 
-            try:
-                print(f"Navegando a {url}...")
-                page.goto(url, wait_until="networkidle", timeout=60000)
+        try:
+            r = requests.post(url, headers=headers, data=payload, timeout=60)
+            r.raise_for_status()
+            res = r.json()
+        except Exception as e:
+            print(f"Error al conectar con la API de SNIFA Sancionatorios: {e}")
+            return 0
 
-                print("Esperando resultados iniciales...")
-                wait_for_table(page, max_retries=10)
+        records_total = res.get('recordsTotal', 0)
+        print(f"Total registros reportados por la web (recordsTotal): {records_total}")
 
-                print("Cambiando a mostrar todos los registros...")
-                page.evaluate("""
-                    () => {
-                        const select = document.querySelector('select[name$="_length"]');
-                        if (select) {
-                            const opt = document.createElement('option');
-                            opt.value = '-1';
-                            opt.text = 'Todos';
-                            select.appendChild(opt);
-                            select.value = '-1';
-                            select.dispatchEvent(new Event('change'));
-                        }
-                    }
-                """)
-
-                print("Esperando que se carguen todos los registros...")
-                page.wait_for_timeout(5000)
-                wait_for_table(page, max_retries=15)
-
-                soup = BeautifulSoup(page.content(), 'html.parser')
-                rows = soup.select("table tbody tr")
-                for row in rows:
-                    data = parse_row(row)
-                    if data:
-                        all_records.append(data)
-
-            except Exception as e:
-                print(f"Error en la navegacion: {e}")
-                traceback.print_exc()
-
-            browser.close()
-
-        web_count = len(all_records)
-        print(f"Registros en la web: {web_count}")
-
-        if web_count <= db_count:
+        if records_total <= db_count:
             print("No hay registros nuevos. La BD esta actualizada.")
             return 0
+
+        # Hay registros nuevos, procedemos a parsear los 10 registros obtenidos (los más recientes)
+        all_records = []
+        data_rows = res.get('data', [])
+
+        for row in data_rows:
+            parsed = parse_json_row(row)
+            if parsed:
+                all_records.append(parsed)
 
         nuevos = [r for r in all_records if r['expediente'] not in db_expedientes]
 
         if not nuevos:
-            print("No hay registros nuevos (todos los expedientes ya existen).")
+            print("No hay registros nuevos en el lote de los 10 mas recientes.")
             return 0
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
