@@ -571,7 +571,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     return [];
   }, [columnConfig, tableName, isFavoritesPage]);
 
-  const rows = useMemo(() => filteredData.map((item, index) => {
+  const rows = useMemo(() => filteredData.map((item: any, index: number) => {
     // Generar un ID único y estable para DataGrid
     const baseId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
     // Si el baseId no es suficientemente único (como en normativas), combinamos con otros campos o el índice

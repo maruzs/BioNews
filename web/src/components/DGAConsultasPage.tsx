@@ -115,7 +115,7 @@ const DGAConsultasPage = () => {
       field: 'tipo',
       headerName: 'Tipo',
       width: 250,
-      valueGetter: (value: any, row: any) => {
+      valueGetter: (_: any, row: any) => {
         const name = row.nombre.toLowerCase();
         if (name.includes('condiciones técnicas') && name.includes('obras hidráulicas')) {
           return 'Condiciones Técnicas';
