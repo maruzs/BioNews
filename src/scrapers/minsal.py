@@ -24,6 +24,9 @@ class MINSALScraper:
 
         total_nuevos = 0
         total_procesados = 0
+        
+        found_vigentes_ids = []
+        found_resultados_ids = []
 
         with scrapers_conn() as conn:
             with conn.cursor() as cursor:
@@ -32,11 +35,15 @@ class MINSALScraper:
                     if not id_attr or 'accordion-item-' not in id_attr:
                         continue
 
-                    consulta_id = id_attr.split('-')[-1]
-                    total_procesados += 1
-
                     title_tag = details.find('div', class_='e-n-accordion-item-title-text')
                     titulo = title_tag.get_text(strip=True) if title_tag else ""
+                    if not titulo:
+                        continue
+
+                    # Utilizar un hash del titulo como ID unico para evitar la reutilizacion de IDs en la pagina
+                    import hashlib
+                    consulta_id = "min_" + hashlib.md5(titulo.encode('utf-8')).hexdigest()[:15]
+                    total_procesados += 1
 
                     table = details.find('table')
                     if not table:
@@ -46,6 +53,7 @@ class MINSALScraper:
                     is_resultado = "documento" in headers and "descarga" in headers
 
                     if is_resultado:
+                        found_resultados_ids.append(consulta_id)
                         cursor.execute("SELECT 1 FROM minsal_resultados WHERE id = %s", (consulta_id,))
                         if not cursor.fetchone():
                             print(f"  Nuevo Resultado: {titulo}")
@@ -68,6 +76,7 @@ class MINSALScraper:
                                         """, (consulta_id, 'minsal_resultado', doc_name, href))
                             total_nuevos += 1
                     else:
+                        found_vigentes_ids.append(consulta_id)
                         cursor.execute("SELECT 1 FROM minsal_vigentes WHERE id = %s", (consulta_id,))
                         if not cursor.fetchone():
                             print(f"  Nueva Consulta Vigente: {titulo}")
@@ -109,6 +118,17 @@ class MINSALScraper:
                                 """, (consulta_id, 'minsal_vigente', doc['nombre'], doc['link']))
 
                             total_nuevos += 1
+
+                # Limpieza de registros que ya no existen en la pagina web
+                if found_vigentes_ids:
+                    format_strings = ','.join(['%s'] * len(found_vigentes_ids))
+                    cursor.execute(f"DELETE FROM documentos WHERE tipo_consulta = 'minsal_vigente' AND consulta_id NOT IN ({format_strings})", tuple(found_vigentes_ids))
+                    cursor.execute(f"DELETE FROM minsal_vigentes WHERE id NOT IN ({format_strings})", tuple(found_vigentes_ids))
+                
+                if found_resultados_ids:
+                    format_strings = ','.join(['%s'] * len(found_resultados_ids))
+                    cursor.execute(f"DELETE FROM documentos WHERE tipo_consulta = 'minsal_resultado' AND consulta_id NOT IN ({format_strings})", tuple(found_resultados_ids))
+                    cursor.execute(f"DELETE FROM minsal_resultados WHERE id NOT IN ({format_strings})", tuple(found_resultados_ids))
 
         print(f"  MINSAL: {total_procesados} consultas analizadas, {total_nuevos} nuevas.")
         return total_nuevos

@@ -347,8 +347,7 @@ def get_news(user = Depends(get_current_user)):
     
     # 1. Obtener con flag is_new usando last_exit anterior
     res_items = db.get_items_with_new_flag(user["sub"], "noticias", news_dicts)
-    # 2. Actualizar la salida inmediatamente al obtener las noticias
-    db.update_category_exit(user["sub"], "noticias")
+    
     return res_items
 
 # ─── TABLAS ESPECIFICAS ─────────────────────────────────────────────────────
@@ -365,8 +364,6 @@ def get_table_data(table_name: str, limit: int = 1000, offset: int = 0, user = D
         
         # 1. Obtener con flag is_new usando el last_exit anterior
         res_items = db.get_items_with_new_flag(user["sub"], category_slug, data)
-        # 2. Actualizar la salida inmediatamente al obtener los datos
-        db.update_category_exit(user["sub"], notif_category)
         
         return res_items
     except ValueError as e:
