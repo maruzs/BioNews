@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, X, ExternalLink, Leaf, ShieldAlert, Gavel, 
-  FileText, ArrowRight, Activity, Database, BellRing, 
-  MapPin, Landmark, Droplets
+  ArrowRight, Activity, Database, BellRing, Droplets
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -149,7 +148,7 @@ const Home = () => {
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { type: 'spring', stiffness: 300, damping: 24 }
+      transition: { type: 'spring' as const, stiffness: 300, damping: 24 }
     }
   };
 
