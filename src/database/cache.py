@@ -41,7 +41,15 @@ class RedisCache:
         if not self.client:
             return
         try:
-            self.client.set(key, json.dumps(value), ex=expire_seconds)
+            import datetime
+            from decimal import Decimal
+            def json_serializer(obj):
+                if isinstance(obj, (datetime.datetime, datetime.date)):
+                    return obj.isoformat()
+                if isinstance(obj, Decimal):
+                    return float(obj)
+                raise TypeError(f"Type {type(obj)} not serializable")
+            self.client.set(key, json.dumps(value, default=json_serializer), ex=expire_seconds)
         except Exception as e:
             log.error(f"Error escribiendo en Redis: {e}")
 

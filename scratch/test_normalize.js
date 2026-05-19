@@ -1,20 +1,11 @@
-/**
- * Normaliza los labels de los datos para visualización consistente.
- */
-export const normalizeLabel = (label: any, key?: string): string => {
+// Replicating normalizeLabel from normalizeLabels.ts
+const normalizeLabel = (label, key) => {
   if (label === null || label === undefined || label === '') return 'No especificado';
   
   let cleaned = String(label).trim();
-
-  // 1. Unificación de estados (archivada, archivadas -> Archivada)
   const lower = cleaned.toLowerCase();
-  
-  // Casos especiales que NO deben unificarse
-  if (lower.startsWith('terminado -')) {
-    return cleaned;
-  }
 
-  const stateMappings: Record<string, string> = {
+  const stateMappings = {
     'archivada': 'Archivada',
     'archivadas': 'Archivada',
     'finalizada': 'Finalizada',
@@ -23,22 +14,6 @@ export const normalizeLabel = (label: any, key?: string): string => {
     'suspendidas': 'Suspendida',
     'en tramite': 'En trámite',
     'en trámite': 'En trámite',
-    'aprobado': 'Aprobada',
-    'aprobada': 'Aprobada',
-    'rechazado': 'Rechazada',
-    'rechazada': 'Rechazada',
-    'terminada': 'Terminada',
-    'terminadas': 'Terminada',
-    'en tramitacion': 'En tramitación',
-    'en tramitación': 'En tramitación',
-    'tramitacion': 'En tramitación',
-    'tramitación': 'En tramitación',
-    'reclamación': 'Reclamación',
-    'reclamacion': 'Reclamación',
-    'solicitud': 'Solicitud',
-    'solicitud sma': 'Solicitud',
-    'demanda ejecutiva ': 'Demanda Ejecutiva',
-    'demanda ejecutiva': 'Demanda Ejecutiva',
   };
 
   if (stateMappings[lower]) return stateMappings[lower];
@@ -60,18 +35,23 @@ export const normalizeLabel = (label: any, key?: string): string => {
     }
   }
 
-  // 2. Categorías con "/" (Agroindustrias / Forestal -> Agroindustrias)
   if (cleaned.includes('/')) {
     cleaned = cleaned.split('/')[0].trim();
   }
 
-
-  // Handle SMA expediente years
-  if (key && (key === 'expediente' || key === 'Expediente')) {
-    const parts = cleaned.split('-');
-    const yearPart = parts.find(p => /^(20)\d{2}$/.test(p));
-    if (yearPart) return yearPart;
-  }
-
   return cleaned;
 };
+
+// Test with various date formats and key=undefined
+const testDates = [
+  "23/12/2025",
+  "2025-12-23",
+  "2025-12-23T00:00:00.000Z",
+  "23-12-2025 15:30:00",
+  "23/12/2025 15:30:00"
+];
+
+console.log("=== Running isolated normalizeLabel tests ===");
+testDates.forEach(d => {
+  console.log(`Input: "${d}" (key=undefined) => Output: "${normalizeLabel(d, undefined)}"`);
+});
