@@ -2,7 +2,7 @@
 Scraper de Fiscalizaciones - SNIFA
 https://snifa.sma.gob.cl/Fiscalizacion
 
-Compara el total de registros y busca nuevos por diferencia de expedientes usando la API JSON.
+Compara el total de registros del año actual y busca nuevos por diferencia de expedientes usando la API JSON.
 """
 import os
 import requests
@@ -11,11 +11,12 @@ from datetime import datetime
 from src.database.connection import scrapers_conn
 
 
-def get_db_expedientes():
-    """Obtiene todos los expedientes existentes y el total en la BD."""
+def get_db_expedientes_for_year(year):
+    """Obtiene todos los expedientes de un año específico y su cantidad en la BD."""
+    pattern = f"DFZ-{year}%"
     with scrapers_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT expediente FROM fiscalizaciones")
+            cur.execute("SELECT expediente FROM fiscalizaciones WHERE expediente LIKE %s", (pattern,))
             expedientes = set(row[0] for row in cur.fetchall())
     return expedientes, len(expedientes)
 
@@ -104,11 +105,13 @@ class SnifaFiscalizacionScraper:
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Fiscalizaciones (via HTTP POST)...")
+        current_year = datetime.now().year
+        filter_expediente = f"DFZ-{current_year}"
+        print(f"Iniciando scraper de Fiscalizaciones para el año {current_year} (via HTTP POST)...")
         url = "https://snifa.sma.gob.cl/Fiscalizacion/ObtenerResultadosGrid"
 
-        db_expedientes, db_count = get_db_expedientes()
-        print(f"Registros actuales en BD: {db_count}")
+        db_expedientes, db_count = get_db_expedientes_for_year(current_year)
+        print(f"Registros del año {current_year} en BD: {db_count}")
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
@@ -117,12 +120,12 @@ class SnifaFiscalizacionScraper:
             'Origin': 'https://snifa.sma.gob.cl'
         }
 
-        # 1. Obtener recordsTotal actual con una petición rápida de 1 elemento
+        # 1. Obtener recordsTotal para el año actual con una petición rápida de 1 elemento
         payload_init = {
             'draw': '1',
             'start': '0',
             'length': '1',
-            'expediente': 'DFZ'
+            'expediente': filter_expediente
         }
 
         try:
@@ -134,20 +137,19 @@ class SnifaFiscalizacionScraper:
             return 0
 
         records_total = res_init.get('recordsTotal', 0)
-        print(f"Total registros reportados por la web (recordsTotal): {records_total}")
+        print(f"Total registros del año {current_year} en la web (recordsTotal): {records_total}")
 
         if records_total <= db_count:
-            print("No hay registros nuevos. La BD esta actualizada.")
+            print(f"No hay registros nuevos para el año {current_year}. La BD esta actualizada.")
             return 0
 
-        # 2. Obtener los 10 más nuevos. Al estar ordenado de menor a mayor (antiguos primero),
-        # los registros más nuevos están al final. Usamos start = records_total - 10.
+        # 2. Obtener los 10 más nuevos para el año actual
         start_idx = max(0, records_total - 10)
         payload_data = {
             'draw': '1',
             'start': str(start_idx),
             'length': '10',
-            'expediente': 'DFZ'
+            'expediente': filter_expediente
         }
 
         try:
