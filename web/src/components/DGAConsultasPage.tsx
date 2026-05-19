@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList, Heart } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, ExternalLink, X, HelpCircle, Pencil, ClipboardList, Heart, Table, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
+import { DataGrid } from '@mui/x-data-grid';
+import { esES } from '@mui/x-data-grid/locales';
 
 interface DGAConsulta {
   id: string;
@@ -24,6 +26,7 @@ const DGAConsultasPage = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   const handleApplyFilters = () => {
     setAppliedSearch(search);
@@ -105,6 +108,56 @@ const DGAConsultasPage = () => {
     item.nombre.toLowerCase().includes(appliedSearch.toLowerCase())
   );
 
+  const columns = useMemo(() => [
+    { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
+    { field: 'nombre', headerName: 'Nombre de la Consulta', flex: 1, minWidth: 300 },
+    {
+      field: 'tipo',
+      headerName: 'Tipo',
+      width: 250,
+      valueGetter: (value: any, row: any) => {
+        const name = row.nombre.toLowerCase();
+        if (name.includes('condiciones técnicas') && name.includes('obras hidráulicas')) {
+          return 'Condiciones Técnicas';
+        }
+        if (name.includes('declaración jurada')) {
+          return 'Declaración Jurada';
+        }
+        return 'Consulta General';
+      }
+    },
+    {
+      field: 'accion',
+      headerName: 'Acciones',
+      width: 100,
+      sortable: false,
+      renderCell: (params: any) => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleOpenModal(params.row); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
+            title="Ver detalles"
+          >
+            <ExternalLink size={18} />
+          </button>
+          <button
+            onClick={(e) => toggleFavorite(e, params.row)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: favorites.has(params.row.id) ? 'var(--orange)' : 'var(--text-light)', display: 'flex', alignItems: 'center' }}
+          >
+            <Heart size={18} fill={favorites.has(params.row.id) ? 'var(--orange)' : 'none'} />
+          </button>
+        </div>
+      )
+    }
+  ], [favorites]);
+
+  const rows = useMemo(() => {
+    return filteredData.map((item, index) => ({
+      ...item,
+      rowNumber: index + 1
+    }));
+  }, [filteredData]);
+
   const toggleFavorite = async (e: React.MouseEvent, item: DGAConsulta) => {
     e.stopPropagation();
     const isFav = favorites.has(item.id);
@@ -183,6 +236,50 @@ const DGAConsultasPage = () => {
           )}
         </div>
 
+        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+          <button
+            onClick={() => setViewMode('table')}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: viewMode === 'table' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-dark)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 500,
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+            title="Ver como tabla"
+          >
+            <Table size={18} />
+            <span className="desktop-only">Tabla</span>
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: viewMode === 'cards' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-dark)',
+              border: 'none',
+              borderLeft: '1px solid var(--border)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 500,
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+            title="Ver como tarjetas"
+          >
+            <LayoutGrid size={18} />
+            <span className="desktop-only">Tarjetas</span>
+          </button>
+        </div>
+
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <style>{`
             @keyframes spin-mini {
@@ -211,6 +308,43 @@ const DGAConsultasPage = () => {
       <div className="content-wrapper" style={{ padding: '0' }}>
         {loading ? (
           <p>Cargando consultas...</p>
+        ) : viewMode === 'table' ? (
+          <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              loading={loading}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+              getRowClassName={(params) => {
+                return params.row.is_new ? 'new-record-highlight' : '';
+              }}
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                '& .new-record-highlight': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                  fontWeight: '500',
+                  borderLeft: '5px solid var(--primary)',
+                },
+                '& .MuiDataGrid-row.new-record-highlight:hover': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: '1px solid #f0f0f0',
+                },
+                '& .MuiDataGrid-columnHeaders': {
+                  backgroundColor: '#f8f9fa',
+                  borderBottom: '2px solid #e0e0e0',
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          </div>
         ) : (
           <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
             {filteredData.length === 0 ? (

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Heart, Calendar, FileText, Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, BookOpen, Table, LayoutGrid } from 'lucide-react';
+import { DataGrid } from '@mui/x-data-grid';
+import { Autocomplete, TextField } from '@mui/material';
+import { esES } from '@mui/x-data-grid/locales';
 import DashboardManager from '../dashboard/DashboardManager';
 
 interface SEAEvaluado {
@@ -51,6 +54,7 @@ const SEAEvaluadosPage = () => {
   const itemsPerPage = 12;
 
   const [activeTab, setActiveTab] = useState('reporte');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   const [appliedFilters, setAppliedFilters] = useState({
     titular: 'all',
@@ -259,6 +263,49 @@ const SEAEvaluadosPage = () => {
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
+  const columns = useMemo(() => [
+    { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
+    { field: 'id', headerName: 'Expediente', width: 120 },
+    { field: 'nombre', headerName: 'Nombre del Proyecto', flex: 1, minWidth: 250 },
+    { field: 'titular', headerName: 'Titular', width: 200 },
+    { field: 'via_ingreso', headerName: 'Vía Ingreso', width: 120 },
+    { field: 'estado_proyecto', headerName: 'Estado', width: 140 },
+    { field: 'region', headerName: 'Región', width: 140 },
+    { field: 'fecha_presentacion', headerName: 'Fecha Presentación', width: 140 },
+    { field: 'categoria_economica', headerName: 'Categoría Económica', width: 180 },
+    { field: 'tipo_proyecto', headerName: 'Tipo Proyecto', width: 180 },
+    {
+      field: 'accion',
+      headerName: 'Acciones',
+      width: 100,
+      sortable: false,
+      renderCell: (params: any) => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleOpenModal(params.row); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
+            title="Ver detalles"
+          >
+            <FileText size={18} />
+          </button>
+          <button
+            onClick={(e) => toggleFavorite(e, params.row)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: favorites.has(params.row.id) ? 'var(--orange)' : 'var(--text-light)', display: 'flex', alignItems: 'center' }}
+          >
+            <Heart size={18} fill={favorites.has(params.row.id) ? 'var(--orange)' : 'none'} />
+          </button>
+        </div>
+      )
+    }
+  ], [favorites]);
+
+  const rows = useMemo(() => {
+    return filteredData.map((item, index) => ({
+      ...item,
+      rowNumber: index + 1
+    }));
+  }, [filteredData]);
+
   const getStatusColor = (estado: string) => {
     const estadoLower = estado?.toLowerCase() || '';
     if (estadoLower.includes('aprobado') || estadoLower.includes('calificacion favorable')) return '#10b981';
@@ -333,6 +380,52 @@ const SEAEvaluadosPage = () => {
           {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
+        {activeTab === 'reporte' && (
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: viewMode === 'table' ? 'var(--primary-light)' : 'white',
+                color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-dark)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+              title="Ver como tabla"
+            >
+              <Table size={18} />
+              <span className="desktop-only">Tabla</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: viewMode === 'cards' ? 'var(--primary-light)' : 'white',
+                color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-dark)',
+                border: 'none',
+                borderLeft: '1px solid var(--border)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+              title="Ver como tarjetas"
+            >
+              <LayoutGrid size={18} />
+              <span className="desktop-only">Tarjetas</span>
+            </button>
+          </div>
+        )}
+
         <button
           onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
           style={{
@@ -397,53 +490,107 @@ const SEAEvaluadosPage = () => {
         }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Titular</label>
-            <select value={filterTitular} onChange={e => setFilterTitular(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todos los titulares</option>
-              {options.titulares.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <Autocomplete
+              options={options.titulares}
+              value={filterTitular === 'all' ? null : filterTitular}
+              onChange={(_, newValue) => setFilterTitular(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todos los titulares"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Vía Ingreso</label>
-            <select value={filterVia} onChange={e => setFilterVia(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todas las vías</option>
-              {options.vias.map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
+            <Autocomplete
+              options={options.vias}
+              value={filterVia === 'all' ? null : filterVia}
+              onChange={(_, newValue) => setFilterVia(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todas las vías"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Estado</label>
-            <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todos los estados</option>
-              {options.estados.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
+            <Autocomplete
+              options={options.estados}
+              value={filterEstado === 'all' ? null : filterEstado}
+              onChange={(_, newValue) => setFilterEstado(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todos los estados"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Región</label>
-            <select value={filterRegion} onChange={e => setFilterRegion(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todas las regiones</option>
-              {options.regiones.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <Autocomplete
+              options={options.regiones}
+              value={filterRegion === 'all' ? null : filterRegion}
+              onChange={(_, newValue) => setFilterRegion(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todas las regiones"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Tipo Proyecto</label>
-            <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todos los tipos</option>
-              {options.tipos.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <Autocomplete
+              options={options.tipos}
+              value={filterTipo === 'all' ? null : filterTipo}
+              onChange={(_, newValue) => setFilterTipo(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todos los tipos"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Categoría Económica</label>
-            <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="filter-select" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <option value="all">Todas las categorías</option>
-              {options.categorias.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <Autocomplete
+              options={options.categorias}
+              value={filterCategoria === 'all' ? null : filterCategoria}
+              onChange={(_, newValue) => setFilterCategoria(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todas las categorías"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Desde</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} />
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', height: '40px' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Hasta</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }} />
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', height: '40px' }} />
           </div>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '10px' }}>
             <button
@@ -502,6 +649,43 @@ const SEAEvaluadosPage = () => {
               <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>No se encontraron proyectos</h3>
               <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Intenta ajustando los términos de búsqueda o los filtros.</p>
               <button onClick={resetFilters} style={{ marginTop: '20px', color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Limpiar todos los filtros</button>
+            </div>
+          ) : viewMode === 'table' ? (
+            <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+              <DataGrid
+                rows={rows}
+                columns={columns}
+                loading={loading}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                }}
+                pageSizeOptions={[10, 25, 50]}
+                disableRowSelectionOnClick
+                localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+                getRowClassName={(params) => {
+                  return params.row.is_new ? 'new-record-highlight' : '';
+                }}
+                sx={{
+                  border: 'none',
+                  '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                  '& .new-record-highlight': {
+                    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                    fontWeight: '500',
+                    borderLeft: '5px solid var(--primary)',
+                  },
+                  '& .MuiDataGrid-row.new-record-highlight:hover': {
+                    backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid #f0f0f0',
+                  },
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: '#f8f9fa',
+                    borderBottom: '2px solid #e0e0e0',
+                    fontWeight: 'bold',
+                  },
+                }}
+              />
             </div>
           ) : (
             <>

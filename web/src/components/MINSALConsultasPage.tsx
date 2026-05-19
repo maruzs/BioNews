@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Search, Calendar, FileText, X, Info, Download, Heart } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Calendar, FileText, X, Info, Download, Heart, Table, LayoutGrid, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
+import { DataGrid } from '@mui/x-data-grid';
+import { esES } from '@mui/x-data-grid/locales';
+import { Autocomplete, TextField } from '@mui/material';
 
 interface MINSALConsulta {
   id: string;
@@ -31,12 +34,36 @@ const MINSALConsultasPage = () => {
   const [docsLoading, setDocsLoading] = useState(false);
   const [filter, setFilter] = useState<'vigentes' | 'resultados'>('vigentes');
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterPeriodo, setFilterPeriodo] = useState<string>('all');
+  const [dateDesde, setDateDesde] = useState('');
+  const [dateHasta, setDateHasta] = useState('');
+
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState<'vigentes' | 'resultados'>('vigentes');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+
+  const [appliedPeriodo, setAppliedPeriodo] = useState('all');
+  const [appliedDateDesde, setAppliedDateDesde] = useState('');
+  const [appliedDateHasta, setAppliedDateHasta] = useState('');
 
   const handleApplyFilters = () => {
     setAppliedSearch(search);
     setAppliedFilter(filter);
+    setAppliedPeriodo(filterPeriodo);
+    setAppliedDateDesde(dateDesde);
+    setAppliedDateHasta(dateHasta);
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setFilterPeriodo('all');
+    setDateDesde('');
+    setDateHasta('');
+    setAppliedSearch('');
+    setAppliedPeriodo('all');
+    setAppliedDateDesde('');
+    setAppliedDateHasta('');
   };
 
 
@@ -140,9 +167,88 @@ const MINSALConsultasPage = () => {
     }
   };
 
-  const filteredData = data.filter(item =>
-    item.titulo.toLowerCase().includes(appliedSearch.toLowerCase())
-  );
+  const parseDate = (str: string | undefined): Date | null => {
+    if (!str) return null;
+    let m = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (m) {
+      return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    }
+    m = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+    if (m) {
+      return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const options = useMemo(() => {
+    return {
+      periodos: Array.from(new Set(data.map(i => i.periodo_consulta).filter(Boolean))).sort() as string[],
+    };
+  }, [data]);
+
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      const matchesSearch = item.titulo.toLowerCase().includes(appliedSearch.toLowerCase());
+      const matchesPeriodo = appliedPeriodo === 'all' || item.periodo_consulta === appliedPeriodo;
+
+      let matchesDate = true;
+      if (appliedDateDesde || appliedDateHasta) {
+        const itemDate = parseDate(item.fecha_inicio);
+        if (itemDate) {
+          if (appliedDateDesde) {
+            const desde = new Date(appliedDateDesde + 'T00:00:00');
+            if (itemDate < desde) matchesDate = false;
+          }
+          if (appliedDateHasta) {
+            const hasta = new Date(appliedDateHasta + 'T23:59:59');
+            if (itemDate > hasta) matchesDate = false;
+          }
+        } else {
+          matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesPeriodo && matchesDate;
+    });
+  }, [data, appliedSearch, appliedPeriodo, appliedDateDesde, appliedDateHasta]);
+
+  const columns = useMemo(() => [
+    { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
+    { field: 'titulo', headerName: 'Título de la Consulta', flex: 1, minWidth: 300 },
+    { field: 'fecha_inicio', headerName: 'Fecha Inicio', width: 150 },
+    { field: 'periodo_consulta', headerName: 'Periodo de Consulta', width: 250 },
+    {
+      field: 'accion',
+      headerName: 'Acciones',
+      width: 100,
+      sortable: false,
+      renderCell: (params: any) => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleOpenModal(params.row); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
+            title="Ver detalles y documentos"
+          >
+            <FileText size={18} />
+          </button>
+          <button
+            onClick={(e) => toggleFavorite(e, params.row)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: favorites.has(params.row.id) ? 'var(--orange)' : 'var(--text-light)', display: 'flex', alignItems: 'center' }}
+          >
+            <Heart size={18} fill={favorites.has(params.row.id) ? 'var(--orange)' : 'none'} />
+          </button>
+        </div>
+      )
+    }
+  ], [favorites]);
+
+  const rows = useMemo(() => {
+    return filteredData.map((item, index) => ({
+      ...item,
+      rowNumber: index + 1
+    }));
+  }, [filteredData]);
 
   const toggleFavorite = async (e: React.MouseEvent, item: MINSALConsulta) => {
     e.stopPropagation();
@@ -256,6 +362,65 @@ const MINSALConsultasPage = () => {
           </button>
         </div>
 
+        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+          <button
+            onClick={() => setViewMode('table')}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: viewMode === 'table' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-dark)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 500,
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+            title="Ver como tabla"
+          >
+            <Table size={18} />
+            <span className="desktop-only">Tabla</span>
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: viewMode === 'cards' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-dark)',
+              border: 'none',
+              borderLeft: '1px solid var(--border)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 500,
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+            title="Ver como tarjetas"
+          >
+            <LayoutGrid size={18} />
+            <span className="desktop-only">Tarjetas</span>
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px',
+            backgroundColor: showFilters ? 'var(--primary-light)' : 'white',
+            color: showFilters ? 'var(--primary)' : 'var(--text-dark)',
+            border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer',
+            fontWeight: 500, fontSize: '14px', transition: '0.2s'
+          }}
+        >
+          <Filter size={18} />
+          <span>Filtros Avanzados</span>
+          {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <style>{`
             @keyframes spin-mini {
@@ -281,9 +446,119 @@ const MINSALConsultasPage = () => {
         </div>
       </div>
 
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <div style={{
+          backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px',
+          border: '1px solid var(--border)', marginBottom: '25px',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px',
+          alignItems: 'end'
+        }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Periodo de Consulta</label>
+            <Autocomplete
+              options={options.periodos}
+              value={filterPeriodo === 'all' ? null : filterPeriodo}
+              onChange={(_, newValue) => setFilterPeriodo(newValue || 'all')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Todos los periodos"
+                  size="small"
+                  sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px' } }}
+                />
+              )}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Desde (Fecha Inicio)</label>
+            <input
+              type="date"
+              value={dateDesde}
+              onChange={(e) => setDateDesde(e.target.value)}
+              style={{
+                width: '100%', padding: '8.5px 12px', borderRadius: '6px',
+                border: '1px solid rgba(0, 0, 0, 0.23)', fontSize: '14px', outline: 'none',
+                backgroundColor: 'white'
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Hasta (Fecha Inicio)</label>
+            <input
+              type="date"
+              value={dateHasta}
+              onChange={(e) => setDateHasta(e.target.value)}
+              style={{
+                width: '100%', padding: '8.5px 12px', borderRadius: '6px',
+                border: '1px solid rgba(0, 0, 0, 0.23)', fontSize: '14px', outline: 'none',
+                backgroundColor: 'white'
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={handleApplyFilters}
+              style={{
+                flex: 1, padding: '10px 15px', backgroundColor: 'var(--primary)', color: 'white',
+                border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px'
+              }}
+            >
+              Aplicar
+            </button>
+            <button
+              onClick={handleClearFilters}
+              style={{
+                padding: '10px 15px', backgroundColor: '#e2e8f0', color: 'var(--text-dark)',
+                border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px'
+              }}
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="content-wrapper" style={{ padding: '0' }}>
         {loading ? (
           <p>Cargando consultas...</p>
+        ) : viewMode === 'table' ? (
+          <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              loading={loading}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+              getRowClassName={(params) => {
+                return params.row.is_new ? 'new-record-highlight' : '';
+              }}
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                '& .new-record-highlight': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                  fontWeight: '500',
+                  borderLeft: '5px solid var(--primary)',
+                },
+                '& .MuiDataGrid-row.new-record-highlight:hover': {
+                  backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: '1px solid #f0f0f0',
+                },
+                '& .MuiDataGrid-columnHeaders': {
+                  backgroundColor: '#f8f9fa',
+                  borderBottom: '2px solid #e0e0e0',
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          </div>
         ) : (
           <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
             {filteredData.length === 0 ? (

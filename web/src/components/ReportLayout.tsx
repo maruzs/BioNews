@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, Download, Heart, Eye, BookOpen } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp, LayoutDashboard, Download, Heart, Eye, BookOpen, Table, LayoutGrid } from 'lucide-react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Autocomplete, TextField } from '@mui/material';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
@@ -245,6 +245,14 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const [appliedColumnFilters, setAppliedColumnFilters] = useState<Record<string, string>>({});
   const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
   const [appliedSearch, setAppliedSearch] = useState('');
+
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [cardPage, setCardPage] = useState(1);
+  const cardsPerPage = 12;
+
+  useEffect(() => {
+    setCardPage(1);
+  }, [appliedSearch, appliedColumnFilters, appliedDateRange, activeTab, tableName]);
 
   // Manual favorite form state
   const [manualFav, setManualFav] = useState({ id: '', nombre: '', fuente: '', accion: '' });
@@ -576,6 +584,11 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     };
   }), [filteredData, effectiveIdField, isFavoritesPage]);
 
+  const totalCardPages = Math.ceil(rows.length / cardsPerPage);
+  const paginatedCardRows = useMemo(() => {
+    return rows.slice((cardPage - 1) * cardsPerPage, cardPage * cardsPerPage);
+  }, [rows, cardPage]);
+
   const columns: GridColDef[] = useMemo(() => {
     const cols: GridColDef[] = [
       {
@@ -744,6 +757,52 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           Filtros Avanzados
           {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
+
+        {activeTab === 'reporte' && (
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: viewMode === 'table' ? 'var(--primary-light)' : 'white',
+                color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-dark)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+              title="Ver como tabla"
+            >
+              <Table size={18} />
+              <span className="desktop-only">Tabla</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: viewMode === 'cards' ? 'var(--primary-light)' : 'white',
+                color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-dark)',
+                border: 'none',
+                borderLeft: '1px solid var(--border)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+              title="Ver como tarjetas"
+            >
+              <LayoutGrid size={18} />
+              <span className="desktop-only">Tarjetas</span>
+            </button>
+          </div>
+        )}
 
         {!isFavoritesPage && (
           <button
@@ -1011,42 +1070,199 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             </div>
           </div>
 
-          <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              loading={loading}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              pageSizeOptions={[10, 25, 50]}
-              disableRowSelectionOnClick
-              localeText={esES.components.MuiDataGrid.defaultProps.localeText}
-              getRowClassName={(params) => {
-                return params.row.is_new ? 'new-record-highlight' : '';
-              }}
-              sx={{
-                border: 'none',
-                '& .MuiDataGrid-cell:focus': { outline: 'none' },
-                '& .new-record-highlight': {
-                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                  fontWeight: '500',
-                  borderLeft: '5px solid var(--primary)',
-                },
-                '& .MuiDataGrid-row.new-record-highlight:hover': {
-                  backgroundColor: 'rgba(34, 197, 94, 0.18)',
-                },
-                '& .MuiDataGrid-cell': {
-                  borderBottom: '1px solid #f0f0f0',
-                },
-                '& .MuiDataGrid-columnHeaders': {
-                  backgroundColor: '#f8f9fa',
-                  borderBottom: '2px solid #e0e0e0',
-                  fontWeight: 'bold',
-                },
-              }}
-            />
-          </div>
+          {viewMode === 'table' ? (
+            <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+              <DataGrid
+                rows={rows}
+                columns={columns}
+                loading={loading}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                }}
+                pageSizeOptions={[10, 25, 50]}
+                disableRowSelectionOnClick
+                localeText={esES.components.MuiDataGrid.defaultProps.localeText}
+                getRowClassName={(params) => {
+                  return params.row.is_new ? 'new-record-highlight' : '';
+                }}
+                sx={{
+                  border: 'none',
+                  '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                  '& .new-record-highlight': {
+                    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                    fontWeight: '500',
+                    borderLeft: '5px solid var(--primary)',
+                  },
+                  '& .MuiDataGrid-row.new-record-highlight:hover': {
+                    backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid #f0f0f0',
+                  },
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: '#f8f9fa',
+                    borderBottom: '2px solid #e0e0e0',
+                    fontWeight: 'bold',
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                  <div className="loader" style={{ marginBottom: '20px' }}></div>
+                  <p style={{ color: 'var(--text-light)' }}>Cargando registros...</p>
+                </div>
+              ) : rows.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '100px 0', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                  <Search size={48} color="var(--text-light)" style={{ marginBottom: '20px', opacity: 0.5 }} />
+                  <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-dark)' }}>No se encontraron registros</h3>
+                  <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Intenta ajustando los términos de búsqueda o los filtros.</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: '25px',
+                    marginBottom: '40px',
+                    width: '100%'
+                  }}>
+                    {paginatedCardRows.map((row) => {
+                      const titleField = 
+                        row.Caratula ? 'Caratula' :
+                        row.Nombre_de_Proyecto ? 'Nombre_de_Proyecto' :
+                        row.normativa ? 'normativa' :
+                        row._nombre ? '_nombre' :
+                        row.unidad_fiscalizable ? 'unidad_fiscalizable' :
+                        activeColumns[0]?.field || '';
+
+                      const cardTitle = row[titleField] || '';
+                      const idValue = isFavoritesPage ? row._id : (row[effectiveIdField] || '');
+                      const actionLink = isFavoritesPage ? row._action : (row[effectiveActionField] || '');
+
+                      return (
+                        <div key={row.id} style={{
+                          backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
+                          overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+                          display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative', height: '100%',
+                          borderLeft: row.is_new ? '5px solid var(--primary)' : undefined
+                        }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
+                          }}
+                        >
+                          {/* Card Header */}
+                          <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-dark)' }}>
+                              {idValue}
+                            </span>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                              {row.is_new && <span style={{ fontSize: '10px', backgroundColor: '#22c55e', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
+                              <button
+                                onClick={() => toggleFavorite(row)}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+                              >
+                                <Heart size={18} fill={favorites.has(idValue) ? 'var(--orange)' : 'none'} color={favorites.has(idValue) ? 'var(--orange)' : 'var(--text-light)'} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div style={{ padding: '20px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <h3 style={{
+                              fontSize: '15px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
+                              margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                            }}>
+                              {cardTitle}
+                            </h3>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingTop: '10px' }}>
+                              {activeColumns
+                                .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== titleField && c.field !== effectiveIdField)
+                                .map(col => {
+                                  let val = row[col.field];
+                                  if (!val) return null;
+                                  if (col.field.toLowerCase() === 'fecha' || col.field.toLowerCase() === 'fecha_agregado') {
+                                    val = String(val).split(' ')[0];
+                                  }
+                                  return (
+                                    <div key={col.field} style={{ fontSize: '12px', color: 'var(--text-light)', display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                                      <span style={{ fontWeight: 600, flexShrink: 0 }}>{col.headerName}:</span>
+                                      <span style={{ textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Footer action link */}
+                          {actionLink && (
+                            <a
+                              href={actionLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9',
+                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                                fontSize: '13px', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                            >
+                              <Eye size={16} /> <span>VER DETALLES</span>
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination */}
+                  {totalCardPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', marginTop: '20px' }}>
+                      <button
+                        onClick={() => { setCardPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        disabled={cardPage === 1}
+                        style={{
+                          padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
+                          background: cardPage === 1 ? '#f1f5f9' : 'white',
+                          cursor: cardPage === 1 ? 'not-allowed' : 'pointer',
+                          fontWeight: 600, color: 'var(--text-dark)', fontSize: '13px'
+                        }}
+                      >
+                        Anterior
+                      </button>
+                      <div style={{ display: 'flex', gap: '5px', fontSize: '14px' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{cardPage}</span>
+                        <span style={{ color: 'var(--text-light)' }}>de {totalCardPages}</span>
+                      </div>
+                      <button
+                        onClick={() => { setCardPage(p => Math.min(totalCardPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        disabled={cardPage === totalCardPages}
+                        style={{
+                          padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
+                          background: cardPage === totalCardPages ? '#f1f5f9' : 'white',
+                          cursor: cardPage === totalCardPages ? 'not-allowed' : 'pointer',
+                          fontWeight: 600, color: 'var(--text-dark)', fontSize: '13px'
+                        }}
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </>
       )}
     </div>
