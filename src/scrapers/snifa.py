@@ -2,7 +2,7 @@
 Scraper de Procedimientos Sancionatorios - SNIFA
 https://snifa.sma.gob.cl/Sancionatorio/Resultado
 
-Compara el total de registros y busca por diferencia de expedientes contra la BD usando la API JSON.
+Compara el total de registros del año actual y busca por diferencia de expedientes contra la BD usando la API JSON.
 """
 import os
 import requests
@@ -11,11 +11,12 @@ from datetime import datetime
 from src.database.connection import scrapers_conn
 
 
-def get_db_info():
-    """Obtiene los expedientes existentes y la cantidad total en la BD."""
+def get_db_info_for_year(year):
+    """Obtiene los expedientes de un año específico y la cantidad en la BD."""
+    pattern = f"%-{year}"
     with scrapers_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT expediente FROM sancionatorios")
+            cur.execute("SELECT expediente FROM sancionatorios WHERE expediente LIKE %s", (pattern,))
             expedientes = set(row[0] for row in cur.fetchall())
     return expedientes, len(expedientes)
 
@@ -102,11 +103,13 @@ class SancionatoriosScraper:
     
     def run(self):
         """Ejecuta el scraper y guarda directamente en la BD."""
-        print("Iniciando scraper de Procedimientos Sancionatorios (via HTTP POST)...")
+        current_year = datetime.now().year
+        filter_expediente = str(current_year)
+        print(f"Iniciando scraper de Procedimientos Sancionatorios para el año {current_year} (via HTTP POST)...")
         url = "https://snifa.sma.gob.cl/Sancionatorio/ObtenerResultadosGrid"
 
-        db_expedientes, db_count = get_db_info()
-        print(f"Registros actuales en BD: {db_count}")
+        db_expedientes, db_count = get_db_info_for_year(current_year)
+        print(f"Registros del año {current_year} en BD: {db_count}")
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
@@ -115,13 +118,12 @@ class SancionatoriosScraper:
             'Origin': 'https://snifa.sma.gob.cl'
         }
 
-        # Realizamos el POST con límite de 10
+        # Realizamos el POST con límite de 10 y filtro de año
         payload = {
             'draw': '1',
             'start': '0',
             'length': '10',
-            'order[0][column]': '0',
-            'order[0][dir]': 'asc'
+            'expediente': filter_expediente
         }
 
         try:
@@ -133,10 +135,10 @@ class SancionatoriosScraper:
             return 0
 
         records_total = res.get('recordsTotal', 0)
-        print(f"Total registros reportados por la web (recordsTotal): {records_total}")
+        print(f"Total registros del año {current_year} en la web (recordsTotal): {records_total}")
 
         if records_total <= db_count:
-            print("No hay registros nuevos. La BD esta actualizada.")
+            print(f"No hay registros nuevos para el año {current_year}. La BD esta actualizada.")
             return 0
 
         # Hay registros nuevos, procedemos a parsear los 10 registros obtenidos (los más recientes)
