@@ -265,6 +265,22 @@ const SEAEvaluadosPage = () => {
 
   const columns = useMemo(() => [
     { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
+    {
+      field: 'fav',
+      headerName: 'Fav',
+      width: 70,
+      sortable: false,
+      renderCell: (params: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <button
+            onClick={(e) => toggleFavorite(e, params.row)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: favorites.has(params.row.id) ? 'var(--orange)' : 'var(--text-light)', display: 'flex', alignItems: 'center' }}
+          >
+            <Heart size={18} fill={favorites.has(params.row.id) ? 'var(--orange)' : 'none'} />
+          </button>
+        </div>
+      )
+    },
     { field: 'id', headerName: 'Expediente', width: 120 },
     { field: 'nombre', headerName: 'Nombre del Proyecto', flex: 1, minWidth: 250 },
     { field: 'titular', headerName: 'Titular', width: 200 },
@@ -287,12 +303,6 @@ const SEAEvaluadosPage = () => {
             title="Ver detalles"
           >
             <FileText size={18} />
-          </button>
-          <button
-            onClick={(e) => toggleFavorite(e, params.row)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: favorites.has(params.row.id) ? 'var(--orange)' : 'var(--text-light)', display: 'flex', alignItems: 'center' }}
-          >
-            <Heart size={18} fill={favorites.has(params.row.id) ? 'var(--orange)' : 'none'} />
           </button>
         </div>
       )
@@ -329,7 +339,7 @@ const SEAEvaluadosPage = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+    <div style={{ padding: '20px', width: '100%' }}>
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-dark)' }}>Proyectos Evaluados SEA</h1>
         <p style={{ color: 'var(--text-light)', marginTop: '5px' }}>Visualización y seguimiento de proyectos en el Sistema de Evaluación de Impacto Ambiental.</p>

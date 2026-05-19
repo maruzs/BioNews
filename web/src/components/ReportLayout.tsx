@@ -230,7 +230,8 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   title, description, listTitle, tableName, category, columnConfig, idField, actionField, isFavoritesPage, children
 }) => {
   const { token, user } = useAuth();
-  const { refreshCategory, markAllRead, setCategoryActive } = useNotifications();
+  const { refreshCategory, setCategoryActive } = useNotifications();
+  const [selectedCard, setSelectedCard] = useState<LegalItem | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1043,26 +1044,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           <div className="list-header">
             <h2 className="list-title">Listado de {listTitle}</h2>
             <div className="list-meta" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              {!isFavoritesPage && category && (
-                <button
-                  onClick={async () => {
-                    await markAllRead(category);
-                    setData(prev => prev.map(item => ({ ...item, is_new: false })));
-                  }}
-                  className="btn-mark-read"
-                  style={{
-                    fontSize: '12px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid var(--primary)',
-                    color: 'var(--primary)',
-                    background: 'white',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Marcar todo como leído
-                </button>
-              )}
               <span>Total de registros: {filteredData.length}</span>
               <button onClick={downloadExcel} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
                 <Download size={16} /> Descargar XLSX
@@ -1127,6 +1108,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                     gap: '25px',
                     marginBottom: '40px',
+                    marginTop: '20px',
                     width: '100%'
                   }}>
                     {paginatedCardRows.map((row) => {
@@ -1140,18 +1122,17 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
                       const cardTitle = row[titleField] || '';
                       const idValue = isFavoritesPage ? row._id : (row[effectiveIdField] || '');
-                      const actionLink = isFavoritesPage ? row._action : (row[effectiveActionField] || '');
 
                       return (
                         <div key={row.id} style={{
                           backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
                           overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
                           display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          position: 'relative', height: '100%',
-                          borderLeft: row.is_new ? '5px solid var(--primary)' : undefined
+                          cursor: 'pointer', position: 'relative', height: '100%',
                         }}
+                          onClick={() => setSelectedCard(row)}
                           onMouseOver={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.transform = 'translateY(-6px)';
                             e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
                           }}
                           onMouseOut={(e) => {
@@ -1161,18 +1142,18 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                         >
                           {/* Card Header */}
                           <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-dark)' }}>
-                              {idValue}
-                            </span>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               {row.is_new && <span style={{ fontSize: '10px', backgroundColor: '#22c55e', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
-                              <button
-                                onClick={() => toggleFavorite(row)}
-                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                              >
-                                <Heart size={18} fill={favorites.has(idValue) ? 'var(--orange)' : 'none'} color={favorites.has(idValue) ? 'var(--orange)' : 'var(--text-light)'} />
-                              </button>
+                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-dark)' }}>
+                                {idValue}
+                              </span>
                             </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(row); }}
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+                            >
+                              <Heart size={18} fill={favorites.has(idValue) ? 'var(--orange)' : 'none'} color={favorites.has(idValue) ? 'var(--orange)' : 'var(--text-light)'} />
+                            </button>
                           </div>
 
                           {/* Content */}
@@ -1187,6 +1168,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingTop: '10px' }}>
                               {activeColumns
                                 .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== titleField && c.field !== effectiveIdField)
+                                .slice(0, 4)
                                 .map(col => {
                                   let val = row[col.field];
                                   if (!val) return null;
@@ -1203,24 +1185,15 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                             </div>
                           </div>
 
-                          {/* Footer action link */}
-                          {actionLink && (
-                            <a
-                              href={actionLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9',
-                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
-                                fontSize: '13px', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                            >
-                              <Eye size={16} /> <span>VER DETALLES</span>
-                            </a>
-                          )}
+                          {/* Footer */}
+                          <div style={{
+                            padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                            fontSize: '13px', fontWeight: 700, color: 'var(--primary)'
+                          }}>
+                            <Eye size={15} />
+                            <span>VER DETALLES COMPLETOS</span>
+                          </div>
                         </div>
                       );
                     })}
@@ -1264,6 +1237,83 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             </>
           )}
         </>
+      )}
+
+      {/* Card Detail Modal */}
+      {selectedCard && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 2000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', backdropFilter: 'blur(4px)'
+        }} onClick={() => setSelectedCard(null)}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '20px', padding: '40px',
+            maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative'
+          }} onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedCard(null)}
+              style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dark)' }}
+            >
+              <X size={20} />
+            </button>
+
+            {selectedCard.is_new && (
+              <div style={{ marginBottom: '15px' }}>
+                <span style={{ fontSize: '11px', backgroundColor: '#22c55e', color: 'white', padding: '3px 10px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>
+              </div>
+            )}
+
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.3', marginBottom: '25px', paddingRight: '40px' }}>
+              {selectedCard[
+                selectedCard.Caratula ? 'Caratula' :
+                selectedCard.Nombre_de_Proyecto ? 'Nombre_de_Proyecto' :
+                selectedCard.normativa ? 'normativa' :
+                selectedCard._nombre ? '_nombre' :
+                selectedCard.unidad_fiscalizable ? 'unidad_fiscalizable' :
+                activeColumns[0]?.field || ''
+              ] || '—'}
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+              {activeColumns
+                .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion')
+                .map(col => {
+                  let val = selectedCard[col.field];
+                  if (!val) return null;
+                  if (col.field.toLowerCase() === 'fecha' || col.field.toLowerCase() === 'fecha_agregado') {
+                    val = String(val).split(' ')[0];
+                  }
+                  return (
+                    <div key={col.field}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '4px' }}>{col.headerName}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-dark)', fontWeight: 500, wordBreak: 'break-word' }}>{val}</div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {(isFavoritesPage ? selectedCard._action : selectedCard[effectiveActionField]) && (
+              <div style={{ paddingTop: '25px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                <a
+                  href={isFavoritesPage ? selectedCard._action : selectedCard[effectiveActionField]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '10px',
+                    padding: '12px 25px', backgroundColor: 'var(--primary)', color: 'white',
+                    textDecoration: 'none', borderRadius: '10px', fontWeight: 700,
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <Eye size={18} />
+                  VER FICHA OFICIAL
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
