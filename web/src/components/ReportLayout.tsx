@@ -707,6 +707,73 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     return cols;
   }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage]);
 
+  // ─── Card helper: status color ───────────────────────────────────────────────
+  const getCardStatusColor = (status: string | undefined): string => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('aprobado') || s.includes('favorable') || s.includes('en snifa')) return '#10b981';
+    if (s.includes('rechazado') || s.includes('desistido') || s.includes('sancionado')) return '#ef4444';
+    if (s.includes('calificaci')) return '#f59e0b';
+    if (s.includes('admisi')) return '#3b82f6';
+    if (s.includes('archivado') || s.includes('inadmitido')) return '#94a3b8';
+    if (s.includes('formulado') || s.includes('cargos')) return '#f97316';
+    return '#64748b';
+  };
+
+  // ─── Card helper: extract semantic fields per table ───────────────────────────
+  const getCardFields = (row: LegalItem) => {
+    // STATUS: what to show in the header dot + label
+    const statusVal: string =
+      row.estado || row.Estado || row.Estado_Procesal || row.tipo_normativa || row._fuente || 'Sin estado';
+
+    // META LINE: small coloured subtitle (like "EIA • REGIÓN METROPOLITANA DE SANTIAGO")
+    let metaParts: string[] = [];
+    if (row.via_ingreso)       metaParts.push(row.via_ingreso);
+    if (row.tipo_proyecto)     metaParts.push(row.tipo_proyecto);
+    if (row.Tipo_de_Procedimiento) metaParts.push(row.Tipo_de_Procedimiento);
+    if (row.tipo_normativa)    metaParts.push(row.tipo_normativa);
+    if (row.categoria)         metaParts.push(row.categoria);
+    if (row.categoria_economica) metaParts.push(row.categoria_economica);
+    if (row.Tribunal)          metaParts.push(row.Tribunal);
+    if (row.organismo)         metaParts.push(row.organismo);
+    // region / secondary
+    const regionVal = row.region || row.Region || row.REGION || '';
+    if (regionVal) metaParts.push(regionVal);
+    // deduplicate and take first 2
+    metaParts = Array.from(new Set(metaParts)).slice(0, 2);
+
+    // TITLE: main name
+    const titleVal: string =
+      row.Caratula || row.Nombre_de_Proyecto || row.normativa ||
+      row._nombre || row.unidad_fiscalizable || row.nombre || '';
+
+    // DATE
+    const rawDate: string =
+      row.fecha_presentacion || row.Fecha || row.fecha || row.fecha_inicio || '';
+    const dateVal = rawDate ? String(rawDate).split(' ')[0] : '';
+
+    // ENTITY ("Titular" equivalent): something NOT already shown above
+    const usedFields = new Set(['estado', 'Estado', 'Estado_Procesal', 'tipo_normativa',
+      '_fuente', 'via_ingreso', 'tipo_proyecto', 'Tipo_de_Procedimiento', 'categoria',
+      'categoria_economica', 'Tribunal', 'organismo', 'region', 'fecha_presentacion',
+      'Fecha', 'fecha', 'fecha_inicio', 'Caratula', 'Nombre_de_Proyecto', 'normativa',
+      '_nombre', 'unidad_fiscalizable', 'nombre']);
+    const entityVal: string =
+      row.titular || row.Proponente || row.nombre_razon_social || row.Rol ||
+      row.suborganismo ||
+      // fallback: first column not used yet
+      (activeColumns.find(c => !usedFields.has(c.field) && row[c.field])?.[`field`]
+        ? row[activeColumns.find(c => !usedFields.has(c.field) && row[c.field])!.field] : '') || '';
+
+    const entityLabel: string =
+      row.titular          ? 'Titular' :
+      row.Proponente       ? 'Proponente' :
+      row.nombre_razon_social ? 'Razón Social' :
+      row.Rol              ? 'Rol' :
+      row.suborganismo     ? 'Suborganismo' : 'Entidad';
+
+    return { statusVal, metaParts, titleVal, dateVal, entityVal, entityLabel };
+  };
+
   return (
     <div className="report-container">
       <div style={{ marginBottom: '30px' }}>
@@ -1112,22 +1179,16 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     width: '100%'
                   }}>
                     {paginatedCardRows.map((row) => {
-                      const titleField = 
-                        row.Caratula ? 'Caratula' :
-                        row.Nombre_de_Proyecto ? 'Nombre_de_Proyecto' :
-                        row.normativa ? 'normativa' :
-                        row._nombre ? '_nombre' :
-                        row.unidad_fiscalizable ? 'unidad_fiscalizable' :
-                        activeColumns[0]?.field || '';
-
-                      const cardTitle = row[titleField] || '';
                       const idValue = isFavoritesPage ? row._id : (row[effectiveIdField] || '');
+                      const { statusVal, metaParts, titleVal, dateVal, entityVal, entityLabel } = getCardFields(row);
+                      const dotColor = getCardStatusColor(statusVal);
 
                       return (
                         <div key={row.id} style={{
                           backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)',
                           overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
-                          display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          display: 'flex', flexDirection: 'column',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           cursor: 'pointer', position: 'relative', height: '100%',
                         }}
                           onClick={() => setSelectedCard(row)}
@@ -1140,48 +1201,54 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                             e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
                           }}
                         >
-                          {/* Card Header */}
+                          {/* Header: status dot + label + is_new badge + fav */}
                           <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {row.is_new && <span style={{ fontSize: '10px', backgroundColor: '#22c55e', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>NUEVO</span>}
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-dark)' }}>
-                                {idValue}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: dotColor, flexShrink: 0 }} />
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {statusVal}
                               </span>
+                              {row.is_new && <span style={{ fontSize: '10px', backgroundColor: '#22c55e', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, flexShrink: 0 }}>NUEVO</span>}
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleFavorite(row); }}
-                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0, marginLeft: '10px' }}
                             >
                               <Heart size={18} fill={favorites.has(idValue) ? 'var(--orange)' : 'none'} color={favorites.has(idValue) ? 'var(--orange)' : 'var(--text-light)'} />
                             </button>
                           </div>
 
                           {/* Content */}
-                          <div style={{ padding: '20px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ padding: '20px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                            {/* Meta subtitle (type • region) */}
+                            {metaParts.length > 0 && (
+                              <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {metaParts.join(' • ')}
+                              </div>
+                            )}
+
+                            {/* Title */}
                             <h3 style={{
-                              fontSize: '15px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
-                              margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                              fontSize: '16px', fontWeight: 'bold', color: 'var(--text-dark)', lineHeight: '1.4',
+                              marginBottom: '15px', display: '-webkit-box', WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 15px 0'
                             }}>
-                              {cardTitle}
+                              {titleVal || idValue}
                             </h3>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingTop: '10px' }}>
-                              {activeColumns
-                                .filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion' && c.field !== titleField && c.field !== effectiveIdField)
-                                .slice(0, 4)
-                                .map(col => {
-                                  let val = row[col.field];
-                                  if (!val) return null;
-                                  if (col.field.toLowerCase() === 'fecha' || col.field.toLowerCase() === 'fecha_agregado') {
-                                    val = String(val).split(' ')[0];
-                                  }
-                                  return (
-                                    <div key={col.field} style={{ fontSize: '12px', color: 'var(--text-light)', display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                                      <span style={{ fontWeight: 600, flexShrink: 0 }}>{col.headerName}:</span>
-                                      <span style={{ textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
-                                    </div>
-                                  );
-                                })}
+                            {/* Date and entity at the bottom */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
+                              {dateVal && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '13px' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                  <span>{dateVal}</span>
+                                </div>
+                              )}
+                              {entityVal && (
+                                <div style={{ fontSize: '13px', color: 'var(--text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontWeight: 600 }}>{entityLabel}:</span>{' '}{entityVal}
+                                </div>
+                              )}
                             </div>
                           </div>
 
