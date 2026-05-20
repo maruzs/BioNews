@@ -110,7 +110,7 @@ class SEAEvaluadosScraper:
         except Exception as e:
             print(f"Error en GET inicial: {e}")
 
-        limit = 100
+        limit = 10
         offset = 1
         
         payload_base = {
