@@ -124,7 +124,7 @@ async def notify_new_content(category_slug: str, item_id: str = None):
     })
 
 # ─── AUTHENTICATION SETUP ────────────────────────────────────────────────────────────
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "Memr2026")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")#, "Memr2026")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
