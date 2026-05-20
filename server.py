@@ -1275,7 +1275,53 @@ async def run_with_lock(task_id, coro):
         if task_id in running_scrapers:
             running_scrapers.remove(task_id)
 
+def crear_indices_optimizacion():
+    """Crea los índices críticos de base de datos de forma automática e incondicional al iniciar."""
+    log.info("Iniciando verificación y creación de índices de optimización en PostgreSQL...")
+    conn = None
+    try:
+        conn = db.get_connection()
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            # Habilitar extensión trigram si no está habilitada
+            log.info("Verificando extensión pg_trgm...")
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+            
+            # Índices de fecha_scraping para agilizar badges de notificaciones (2.6)
+            log.info("Creando índices de fecha_scraping en tablas del SEA, Normativas, Tribunales y Medidas...")
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_scraping ON sea_proyectos_evaluados (fecha_scraping DESC);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_normativas_scraping ON normativas (fecha_scraping DESC);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_tribunales_scraping ON "Tribunales" (fecha_scraping DESC);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_medidas_scraping ON medidas_provisionales (fecha_scraping DESC);')
+            
+            # Índices funcionales trigram GIN para búsquedas globales LIKE (2.7)
+            log.info("Creando índices trigram GIN para búsquedas de texto rápido...")
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_fisc_trgm_uf ON fiscalizaciones USING GIN (unidad_fiscalizable gin_trgm_ops);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_fisc_trgm_rs ON fiscalizaciones USING GIN (nombre_razon_social gin_trgm_ops);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_trgm_nom ON sea_proyectos_evaluados USING GIN (nombre gin_trgm_ops);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_trgm_tit ON sea_proyectos_evaluados USING GIN (titular gin_trgm_ops);')
+            
+            # Índice funcional para ordenamiento por to_date (2.8)
+            log.info("Creando índice funcional para ordenamiento de fecha de presentación en Proyectos Evaluados...")
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (to_date(nullif(fecha_presentacion, \'\'), \'DD/MM/YYYY\') DESC);')
+            
+        log.info("✓ Índices del esquema scrapers verificados/creados exitosamente.")
+    except Exception as e:
+        log.error(f"Error creando índices de scrapers: {e}")
+    finally:
+        if conn:
+            try:
+                from src.database.connection import release_scrapers_conn
+                release_scrapers_conn(conn)
+            except Exception:
+                pass
+
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(scheduler_monitor())
-    log.info("BioNews Backend Started. Scheduler monitor active.")
+    # Ejecutar optimización de base de datos e índices
+    crear_indices_optimizacion()
+    
+    # Desactivado a favor de scheduler.py independiente en Docker (evita duplicidad y race conditions)
+    # asyncio.create_task(scheduler_monitor())
+    # log.info("BioNews Backend Started. Scheduler monitor active.")
+    log.info("BioNews Backend Started. External scheduler.py is used as the primary scheduler.")

@@ -249,3 +249,24 @@ CREATE TABLE IF NOT EXISTS scraper_logs (
     error           TEXT,
     nuevos_registros INTEGER
 );
+
+-- ── OPTIMIZACIONES E ÍNDICES CRÍTICOS ─────────────────────────────────────────
+
+-- 1. Habilitar extensión trigram para búsquedas rápidas con LIKE
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- 2. Índices de fecha_scraping para agilizar lectura de notificaciones (badges)
+CREATE INDEX IF NOT EXISTS idx_sea_scraping ON sea_proyectos_evaluados (fecha_scraping DESC);
+CREATE INDEX IF NOT EXISTS idx_normativas_scraping ON normativas (fecha_scraping DESC);
+CREATE INDEX IF NOT EXISTS idx_tribunales_scraping ON "Tribunales" (fecha_scraping DESC);
+CREATE INDEX IF NOT EXISTS idx_medidas_scraping ON medidas_provisionales (fecha_scraping DESC);
+
+-- 3. Índices funcionales trigram GIN para búsquedas globales LIKE (LOWER(campo) LIKE '%...%')
+CREATE INDEX IF NOT EXISTS idx_fisc_trgm_uf ON fiscalizaciones USING GIN (unidad_fiscalizable gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_fisc_trgm_rs ON fiscalizaciones USING GIN (nombre_razon_social gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_sea_trgm_nom ON sea_proyectos_evaluados USING GIN (nombre gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_sea_trgm_tit ON sea_proyectos_evaluados USING GIN (titular gin_trgm_ops);
+
+-- 4. Índice funcional para optimizar el ordenamiento por fecha de presentación en Proyectos Evaluados
+CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (to_date(nullif(fecha_presentacion, ''), 'DD/MM/YYYY') DESC);
+
