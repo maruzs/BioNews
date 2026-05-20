@@ -203,8 +203,8 @@ class SEAEvaluadosScraper:
                         conn.commit()
                 
                 print(f"Offset {offset} procesado. Registros nuevos hasta ahora: {nuevos_registros}")
-                # Siguiente pagina
-                offset += limit
+                # Siguiente pagina: segun analisisPE.md, el incremento de offset es (limit / 10)
+                offset += (limit // 10)
                 
             except Exception as e:
                 print(f"Error en scraping SEA Proyectos Evaluados: {e}")

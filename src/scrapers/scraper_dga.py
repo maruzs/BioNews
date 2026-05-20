@@ -31,7 +31,7 @@ class DGAScraper:
             print(f"Error al obtener el último link de DGA: {e}", flush=True)
             return None
 
-    def get_latest_news(self, pages=5):
+    def get_latest_news(self, pages=1):
         news_list = []
         last_link = self._get_last_scraped_link()
         found_last = False
