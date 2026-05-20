@@ -51,14 +51,54 @@ app.add_exception_handler(RateLimitExceeded, lambda req, exc: __import__('fastap
 ))
 app.add_middleware(SlowAPIMiddleware)
 
-# ── CORS: permite el frontend Vite (dev) y cualquier origen Tailscale ─────────
-# TODO: En producción final restringir allow_origins a los dominios reales
-# (IP Tailscale del cliente + dominio de producción)
+# ── LOGS DE ERRORES DETALLADOS A ARCHIVO LOCAL ─────────────────────────────────
+from pathlib import Path
+API_LOG_DIR = Path("logs")
+API_LOG_DIR.mkdir(exist_ok=True)
+
+error_file_handler = logging.FileHandler(API_LOG_DIR / "api_errors.log", encoding="utf-8")
+error_file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+error_file_logger = logging.getLogger("bionews.errors")
+error_file_logger.addHandler(error_file_handler)
+error_file_logger.setLevel(logging.ERROR)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    error_file_logger.error(
+        f"Excepcion en {request.method} {request.url.path}\n"
+        f"Headers: {dict(request.headers)}\n"
+        f"Detalle: {str(exc)}\n"
+        f"Traceback:\n{tb}\n"
+        f"{'='*80}"
+    )
+    log.error(f"Error 500 en {request.method} {request.url.path}: {str(exc)} (Traceback guardado en logs/api_errors.log)")
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Ha ocurrido un error interno en el servidor."}
+    )
+
+# ── CORS: permite orígenes seguros definidos en entorno o defaults de desarrollo ─
+cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS")
+if cors_origins_env:
+    cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+else:
+    cors_origins = [
+        "http://localhost",
+        "http://localhost:5173",
+        "http://localhost:80",
+        "http://127.0.0.1",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 db = DatabaseManager()
@@ -241,8 +281,22 @@ def get_me(user = Depends(get_current_user)):
 
 @app.put("/api/auth/preferences")
 def update_preferences(req: dict, user = Depends(get_current_user)):
-    # req is expected to be a dict of preferences
+    # 1. Validar el tamaño del payload serializado (máximo 100 KB)
     prefs_str = json.dumps(req)
+    if len(prefs_str) > 102400:
+        raise HTTPException(status_code=400, detail="El payload de preferencias supera el limite de 100 KB.")
+    
+    # 2. Validar estructura dinámica (claves de tipo str y valores booleanos o diccionarios anidados)
+    def _validar_estructura_preferencias(val) -> bool:
+        if isinstance(val, bool):
+            return True
+        if isinstance(val, dict):
+            return all(isinstance(k, str) and _validar_estructura_preferencias(v) for k, v in val.items())
+        return False
+        
+    if not _validar_estructura_preferencias(req):
+        raise HTTPException(status_code=400, detail="Estructura de preferencias invalida. Solo se permiten booleanos y diccionarios.")
+        
     db.update_user_preferences(user["sub"], prefs_str)
     return {"success": True}
 
