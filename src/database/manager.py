@@ -504,13 +504,11 @@ class DatabaseManager:
                     if last_exit is None:
                         cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        # fecha_scraping es TEXT en BD; convertir ambos lados para comparar correctamente
-                        last_exit_str = str(last_exit)[:19]  # 'YYYY-MM-DD HH:MM:SS'
+                        # Comparar como text: funciona tanto si fecha_scraping es TEXT como TIMESTAMP
+                        # TIMESTAMP::text produce 'YYYY-MM-DD HH:MM:SS' que ordena correctamente
+                        last_exit_str = str(last_exit)[:19].replace('T', ' ')
                         cur.execute(
-                            f"""SELECT 1 FROM \"{t}\"
-                            WHERE TO_TIMESTAMP(fecha_scraping, 'YYYY-MM-DD HH24:MI:SS')
-                                  > TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')
-                            LIMIT 1""",
+                            f'SELECT 1 FROM "{t}" WHERE fecha_scraping::text > %s LIMIT 1',
                             (last_exit_str,)
                         )
                     if cur.fetchone():
@@ -545,13 +543,10 @@ class DatabaseManager:
                     if last_exit is None:
                         cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        # fecha_scraping es TEXT en BD; convertir para comparar correctamente
-                        last_exit_str = str(last_exit)[:19]
+                        # Comparar como text: funciona tanto si fecha_scraping es TEXT como TIMESTAMP
+                        last_exit_str = str(last_exit)[:19].replace('T', ' ')
                         cur.execute(
-                            f"""SELECT 1 FROM \"{t}\"
-                            WHERE TO_TIMESTAMP(fecha_scraping, 'YYYY-MM-DD HH24:MI:SS')
-                                  > TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')
-                            LIMIT 1""",
+                            f'SELECT 1 FROM "{t}" WHERE fecha_scraping::text > %s LIMIT 1',
                             (last_exit_str,)
                         )
                     if cur.fetchone():
