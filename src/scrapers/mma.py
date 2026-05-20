@@ -6,7 +6,7 @@ class MMAScraper:
         self.url = "https://mma.gob.cl/noticias/"
         self.engine = ScrapingEngine()
 
-    def get_latest_news(self, pages=3):
+    def get_latest_news(self, pages=1):
         news_list = []
         for p in range(1, pages + 1):
             url = self.url if p == 1 else f"{self.url}page/{p}/"

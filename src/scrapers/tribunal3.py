@@ -7,7 +7,7 @@ class TercerTribunalNewsScraper:
         self.url_base = "https://3ta.cl/category/noticias"
         self.engine = ScrapingEngine()
 
-    def get_latest_news(self, pages=5):
+    def get_latest_news(self, pages=1):
         print("Iniciando scraping en Tercer Tribunal Ambiental", flush=True)
         news_list = []
         

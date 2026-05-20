@@ -7,7 +7,7 @@ class SMAScraper:
         self.url_home = "https://portal.sma.gob.cl/index.php/sala-de-prensa/"
         self.engine = ScrapingEngine()
 
-    def get_latest_news(self, pages=3):
+    def get_latest_news(self, pages=1):
         news_list = []
         for p in range(1, pages + 1):
             url = self.url_home if p == 1 else f"{self.url_home}page/{p}/"

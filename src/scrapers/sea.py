@@ -8,7 +8,7 @@ class SEAScraper:
         self.base_url = "https://www.sea.gob.cl"
         self.engine = ScrapingEngine()
 
-    def get_latest_news(self, pages=3):
+    def get_latest_news(self, pages=1):
         news_list = []
         for p in range(0, pages):
             url = self.url if p == 0 else f"{self.url}?page={p}"
