@@ -23,6 +23,9 @@ from src.database.connection import users_conn, scrapers_conn, get_users_conn, r
 def _now_str():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+# Caché en memoria para el schema de columnas por tabla
+# (las columnas no cambian en runtime, solo al reiniciar el contenedor)
+_column_schema_cache: dict = {}
 
 class DatabaseManager:
     """Fachada única manteniendo la misma API que la versión SQLite."""
@@ -93,14 +96,23 @@ class DatabaseManager:
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
 
+        # Intentar obtener de caché Redis primero
+        from src.database.cache import cache
+        cache_key = f"table_data:{table_name}:{limit}:{offset}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         with scrapers_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Detectar columnas para ordenar
-                cur.execute("""
-                    SELECT column_name FROM information_schema.columns
-                    WHERE table_name = %s AND table_schema IN ('scrapers', 'users', 'public')
-                """, (table_name,))
-                columns = [r['column_name'] for r in cur.fetchall()]
+                # Schema de columnas: usar caché en memoria
+                if table_name not in _column_schema_cache:
+                    cur.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name = %s AND table_schema IN ('scrapers', 'users', 'public')
+                    """, (table_name,))
+                    _column_schema_cache[table_name] = [r['column_name'] for r in cur.fetchall()]
+                columns = _column_schema_cache[table_name]
 
                 # Definir orden cronológico por fecha de más nuevo a más antiguo
                 date_sorts = {
@@ -136,7 +148,16 @@ class DatabaseManager:
                 else:
                     cur.execute(f'SELECT * FROM "{table_name}" {order_by}')
                 rows = cur.fetchall()
-                return [dict(r) for r in rows]
+                result = [dict(r) for r in rows]
+
+        # Guardar en caché Redis: tablas que cambian poco duran 5min, otras 2min
+        static_tables = {'normativas', 'sea_proyectos_evaluados', 'pertinencias',
+                         'mma_abiertas', 'mma_cerradas', 'minsal_vigentes', 'minsal_resultados',
+                         'dga_consultas', 'Tribunales'}
+        ttl = 300 if table_name in static_tables else 120  # 5 min o 2 min
+        cache.set(cache_key, result, expire_seconds=ttl)
+
+        return result
 
     def get_table_count(self, table_name):
         allowed = {
@@ -429,15 +450,67 @@ class DatabaseManager:
                 return [r[0] for r in cur.fetchall()]
 
     def get_notification_status(self, user_id):
+        """Retorna el estado de notificaciones para todas las categorías.
+        Optimizado: batch-fetch de los últimos exits en 1 query + cache Redis 30s.
+        """
+        from src.database.cache import cache
+        cache_key = f"notif_status:{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         categories = [
             "noticias", "normativas", "pertinencias", "fiscalizaciones",
             "sancionatorios", "registroSanciones", "programasDeCumplimiento",
             "medidas_provisionales", "requerimientos", "Tribunales",
             "minsal_vigentes", "minsal_resultados", "mma", "dga", "sea_proyectos_evaluados"
         ]
-        return {cat: self._check_if_category_has_new(user_id, cat) for cat in categories}
+
+        # Batch-fetch TODOS los last_exit_at del usuario en una sola query
+        with users_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT category_slug, last_exit_at FROM user_category_views WHERE user_id = %s",
+                    (int(user_id),)
+                )
+                exits = {row[0]: row[1] for row in cur.fetchall()}
+
+        result = {cat: self._check_if_category_has_new_fast(user_id, cat, exits) for cat in categories}
+        cache.set(cache_key, result, expire_seconds=30)
+        return result
+
+    def _check_if_category_has_new_fast(self, user_id, category_slug, exits_map: dict) -> bool:
+        """Verifica si hay items nuevos usando el mapa de exits pre-cargado."""
+        table_mapping = {
+            "noticias": "noticias", "normativas": "normativas",
+            "pertinencias": "pertinencias", "fiscalizaciones": "fiscalizaciones",
+            "sancionatorios": "sancionatorios", "registroSanciones": "registroSanciones",
+            "programasDeCumplimiento": "programasDeCumplimiento",
+            "medidas_provisionales": "medidas_provisionales", "requerimientos": "requerimientos",
+            "Tribunales": "Tribunales", "minsal_vigentes": "minsal_vigentes",
+            "minsal_resultados": "minsal_resultados",
+            "mma": ["mma_abiertas", "mma_cerradas"],
+            "dga": "dga_consultas", "sea_proyectos_evaluados": "sea_proyectos_evaluados"
+        }
+        table = table_mapping.get(category_slug)
+        if not table:
+            return False
+        tables = table if isinstance(table, list) else [table]
+        last_exit = exits_map.get(category_slug)
+
+        with scrapers_conn() as conn:
+            with conn.cursor() as cur:
+                for t in tables:
+                    if last_exit is None:
+                        cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
+                    else:
+                        cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s LIMIT 1', (last_exit,))
+                    if cur.fetchone():
+                        return True
+        return False
 
     def _check_if_category_has_new(self, user_id, category_slug):
+        """Compatibilidad legacy: sigue funcionando para el endpoint de categoría individual."""
         last_exit = self.get_user_category_last_exit(user_id, category_slug)
 
         table_mapping = {
@@ -464,7 +537,7 @@ class DatabaseManager:
                     if last_exit is None:
                         cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        cur.execute(f'SELECT 1 FROM "{t}" WHERE CAST(fecha_scraping AS TIMESTAMP) > %s LIMIT 1', (last_exit,))
+                        cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s LIMIT 1', (last_exit,))
                     if cur.fetchone():
                         return True
         return False

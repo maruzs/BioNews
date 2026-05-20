@@ -12,6 +12,7 @@ import logging
 import traceback
 import json
 import jwt
+import uuid
 import datetime
 import bcrypt
 import asyncio
@@ -26,6 +27,10 @@ from fastapi.responses import StreamingResponse
 # pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 import shutil
 import os
 from src.database.manager import DatabaseManager
@@ -36,12 +41,22 @@ from src.scrapers.sea_evaluados import SEAEvaluadosScraper
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("bionews.server")
 
-app = FastAPI(title="BioNews API")
+# ── Rate Limiter (slowapi) ─────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
 
-# ── CORS: permite el frontend Vite (dev) y cualquier origen Tailscale ────────
+app = FastAPI(title="BioNews API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, lambda req, exc: __import__('fastapi').responses.JSONResponse(
+    status_code=429, content={"detail": "Demasiados intentos. Intente más tarde."}
+))
+app.add_middleware(SlowAPIMiddleware)
+
+# ── CORS: permite el frontend Vite (dev) y cualquier origen Tailscale ─────────
+# TODO: En producción final restringir allow_origins a los dominios reales
+# (IP Tailscale del cliente + dominio de producción)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # En producción puedes limitar a la IP Tailscale del cliente
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -97,15 +112,21 @@ manager = ConnectionManager()
 
 async def notify_new_content(category_slug: str, item_id: str = None):
     """Notifica a los clientes vía SSE cuando hay contenido nuevo."""
+    # Invalidar caché de notificaciones para que todos los usuarios
+    # vean el badge actualizado inmediatamente (sin esperar TTL de 30s)
+    cache.invalidate_pattern("notif_status:*")
+    # Invalidar también la caché de datos de la tabla correspondiente
+    cache.invalidate_pattern(f"table_data:*")
     await sse_manager.broadcast({
         "type": "new_content",
         "category": category_slug,
         "timestamp": datetime.datetime.now().isoformat()
     })
 
-# ─── AUTHENTICATION SETUP ───────────────────────────────────────────────────
-SECRET_KEY = "bionews_super_secret_key_change_in_prod"
+# ─── AUTHENTICATION SETUP ────────────────────────────────────────────────────────────
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "Memr2026")
 ALGORITHM = "HS256"
+TOKEN_EXPIRE_DAYS = 30
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -130,10 +151,25 @@ def get_current_user(authorization: str = Header(None)):
         user_id_str = payload.get("sub")
         if user_id_str is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        user_id = int(user_id_str)
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        # In a real app we might fetch user from DB here to check if blocked
+        int(user_id_str)  # Validar que es un entero válido
+
+        # Verificar que el token no está revocado (jti blacklist)
+        jti = payload.get("jti")
+        if jti and cache.is_jti_blacklisted(jti):
+            raise HTTPException(status_code=401, detail="Token revocado")
+
+        # Verificar si el usuario está bloqueado (con cache Redis 60s)
+        blocked_cached = cache.get_user_blocked(user_id_str)
+        if blocked_cached is None:
+            # No está en caché: consultar la BD
+            user_db = db.get_user_by_email(payload.get("email", ""))
+            blocked = bool(user_db.get("blocked")) if user_db else True
+            cache.set_user_blocked(user_id_str, blocked, ttl_seconds=60)
+            if blocked:
+                raise HTTPException(status_code=403, detail="Cuenta bloqueada")
+        elif blocked_cached:
+            raise HTTPException(status_code=403, detail="Cuenta bloqueada")
+
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -154,8 +190,23 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
 
+def _build_token(user_id, email, role, name):
+    """Genera un JWT con jti único para poder revocarlo."""
+    jti = str(uuid.uuid4())
+    token_data = {
+        "sub": str(user_id),
+        "email": email,
+        "role": role,
+        "name": name,
+        "jti": jti,
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=TOKEN_EXPIRE_DAYS)
+    }
+    return jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+
+
 @app.post("/api/auth/login")
-def login(req: LoginRequest):
+@limiter.limit("10/minute")
+def login(request: Request, req: LoginRequest):
     user = db.get_user_by_email(req.email)
     if not user or not verify_password(req.password, user['password_hash']):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
@@ -163,8 +214,7 @@ def login(req: LoginRequest):
         raise HTTPException(status_code=403, detail="Cuenta bloqueada")
         
     db.update_user_last_login(user["id"])
-    token_data = {"sub": str(user["id"]), "email": user["email"], "role": user["role"], "name": user["name"], "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30)}
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    token = _build_token(user["id"], user["email"], user["role"], user["name"])
     return {"access_token": token, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"], "preferences": user["preferences"]}}
 
 @app.post("/api/auth/register")
@@ -176,8 +226,7 @@ def register(req: RegisterRequest):
     if not user_id:
         raise HTTPException(status_code=500, detail="Error al crear usuario")
     
-    token_data = {"sub": str(user_id), "email": req.email, "role": "user", "name": req.name, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30)}
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    token = _build_token(user_id, req.email, "user", req.name)
     return {"access_token": token, "user": {"id": user_id, "name": req.name, "email": req.email, "role": "user", "preferences": "{}"}}
 
 @app.get("/api/auth/me")
@@ -205,6 +254,8 @@ def admin_get_users(admin = Depends(get_current_admin)):
 def admin_block_user(user_id: int, req: dict, admin = Depends(get_current_admin)):
     blocked = req.get("blocked", 1)
     db.update_user_status(user_id, blocked)
+    # Invalidar caché de estado de usuario para que el cambio sea inmediato
+    cache.invalidate_user_blocked(str(user_id))
     return {"success": True}
 
 @app.delete("/api/admin/users/{user_id}")
@@ -251,6 +302,30 @@ def get_notifications_config():
     return {"interval": 15}
 
 # ─── BUG REPORTS ────────────────────────────────────────────────────────────
+ALLOWED_UPLOAD_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+# Firmas mágicas: (inicio_bytes, mime_tipo)
+_MAGIC_SIGS = [
+    (b"\x89PNG",  "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+    (b"RIFF",   "image/webp"),  # webp empieza con RIFF....WEBP
+]
+
+def _validate_image_upload(contents: bytes, filename: str) -> str:
+    """Valida extensión y firma mágica del archivo. Retorna extensión segura."""
+    # Validar extensión
+    if "." not in filename:
+        raise HTTPException(status_code=400, detail="El archivo no tiene extensión")
+    raw_ext = filename.rsplit(".", 1)[-1].lower().strip()
+    if raw_ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Extensión '{raw_ext}' no permitida. Use: {', '.join(ALLOWED_UPLOAD_EXTENSIONS)}")
+    # Validar firma mágica (magic bytes)
+    matched = any(contents[:len(sig)] == sig for sig, _ in _MAGIC_SIGS)
+    if not matched:
+        raise HTTPException(status_code=400, detail="El contenido del archivo no corresponde a una imagen válida")
+    return raw_ext
+
 @app.post("/api/bugs")
 async def report_bug(
     titulo: str = Form(...),
@@ -259,19 +334,27 @@ async def report_bug(
     user = Depends(get_current_user)
 ):
     screenshot_path = None
-    if screenshot:
-        # Validar tamaño (5MB)
+    if screenshot and screenshot.filename:
+        # Leer contenido y validar tamaño (5MB)
         contents = await screenshot.read()
         if len(contents) > 5 * 1024 * 1024:
-             raise HTTPException(status_code=400, detail="El archivo es demasiado grande (máximo 5MB)")
-        await screenshot.seek(0)
-        
-        # Guardar archivo
-        file_ext = screenshot.filename.split(".")[-1] if "." in screenshot.filename else "png"
-        filename = f"bug_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{user['sub']}.{file_ext}"
+            raise HTTPException(status_code=400, detail="El archivo es demasiado grande (máximo 5MB)")
+
+        # Validar extensión y firma mágica
+        file_ext = _validate_image_upload(contents, screenshot.filename)
+
+        # Nombre seguro: solo caracteres alfanuméricos + timestamp + user_id
+        safe_uid = str(user['sub']).replace("..", "").replace("/", "").replace("\\", "")
+        filename = f"bug_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{safe_uid}.{file_ext}"
         filepath = os.path.join(UPLOAD_DIR, filename)
+        # Verificar que el path resultante está dentro de UPLOAD_DIR (anti path-traversal)
+        abs_upload = os.path.realpath(UPLOAD_DIR)
+        abs_filepath = os.path.realpath(filepath)
+        if not abs_filepath.startswith(abs_upload + os.sep):
+            raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+
         with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(screenshot.file, buffer)
+            buffer.write(contents)
         screenshot_path = f"/uploads/bugs/{filename}"
 
     db.save_bug_report(user["sub"], titulo, descripcion, screenshot_path)
@@ -497,19 +580,29 @@ def delete_latest_record(category: str, admin = Depends(get_current_admin)):
 
 @app.get("/api/options")
 def get_options(user = Depends(get_current_user)):
+    # Cache de 10 minutos: los valores distintos de organismo/categoria cambian muy poco
+    cache_key = "options:distinct"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
     try:
-        # Fetch a quick sample to get unique options. 
-        # In a real app we would do SELECT DISTINCT.
-        normativas = db.get_table_data("normativas", limit=5000)
-        sma = db.get_table_data("fiscalizaciones", limit=5000)
-        
-        orgs = list(set(n.get("organismo") for n in normativas if n.get("organismo")))
-        cats = list(set(s.get("categoria") for s in sma if s.get("categoria")))
-        
-        return {
-            "normativas_organismos": orgs,
-            "sma_categorias": cats
-        }
+        from src.database.connection import scrapers_conn
+        with scrapers_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT DISTINCT organismo FROM normativas WHERE organismo IS NOT NULL ORDER BY organismo"
+                )
+                orgs = [r[0] for r in cursor.fetchall()]
+
+                cursor.execute(
+                    "SELECT DISTINCT categoria FROM fiscalizaciones WHERE categoria IS NOT NULL ORDER BY categoria"
+                )
+                cats = [r[0] for r in cursor.fetchall()]
+
+        result = {"normativas_organismos": orgs, "sma_categorias": cats}
+        cache.set(cache_key, result, expire_seconds=600)  # 10 minutos
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -626,7 +719,10 @@ def post_notification_exit(req: dict, user = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Category is required")
     log.info(f"POST /api/notifications/exit: User {user['sub']} saliendo de {category}")
     db.update_category_exit(user["sub"], category)
+    # Invalidar caché de notificaciones para que el badge desaparezca inmediatamente
+    cache.delete(f"notif_status:{user['sub']}")
     return {"success": True}
+
 
 @app.delete("/api/notifications/reset")
 def reset_notification_history(user = Depends(get_current_user)):
@@ -799,13 +895,14 @@ async def _run_all_scrapers():
                 db.log_scraper_run(nombre, exito=True, nuevos=0)
                 log.info(f"{nombre}: sin noticias nuevas.")
         except Exception as e:
-            db.log_scraper_run(nombre, exito=False, error=str(e))
-            log.error(f"Error en {nombre}:\n{traceback.format_exc()}")
+            db.log_scraper_run(nombre, exito=False, error=str(e))  # Solo msg, no traceback
+            log.error(f"Error en {nombre}:\n{traceback.format_exc()}")  # Traceback solo en logs
+
 
     log.info("--- SCRAPING FINALIZADO ---")
 
 @app.post("/api/scrape/all")
-def scrape_all(background_tasks: BackgroundTasks):
+def scrape_all(background_tasks: BackgroundTasks, admin = Depends(get_current_admin)):
     background_tasks.add_task(_run_all_scrapers)
     return {"message": "Scraping iniciado en background."}
 

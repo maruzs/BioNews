@@ -93,9 +93,11 @@ def ejecutar_scrapers(scrapers_list, msg_inicio):
             from src.database.cache import cache
             cache.invalidate_pattern("table_data:*")
             cache.invalidate_pattern("news:*")
+            cache.invalidate_pattern("notif_status:*")
             log.info("  ✓ Caché de Redis invalidada.")
         except Exception as e:
             log.warning(f"  ✗ No se pudo invalidar la caché de Redis: {e}")
+
             
 def ejecutar_noticias(scrapers_list, msg_inicio):
     log.info("=" * 40)
