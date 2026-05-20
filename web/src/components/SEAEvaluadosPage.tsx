@@ -54,7 +54,9 @@ const SEAEvaluadosPage = () => {
   const itemsPerPage = 12;
 
   const [activeTab, setActiveTab] = useState('reporte');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
 
   const [appliedFilters, setAppliedFilters] = useState({
     titular: 'all',

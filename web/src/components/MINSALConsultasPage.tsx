@@ -41,7 +41,9 @@ const MINSALConsultasPage = () => {
 
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState<'vigentes' | 'resultados'>('vigentes');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
 
   const [appliedPeriodo, setAppliedPeriodo] = useState('all');
   const [appliedDateDesde, setAppliedDateDesde] = useState('');

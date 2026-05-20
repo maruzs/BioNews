@@ -43,7 +43,9 @@ const MMAConsultasPage = () => {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [appliedTipo, setAppliedTipo] = useState('all');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
 
   const [appliedAmbito, setAppliedAmbito] = useState('all');
   const [appliedTipoProceso, setAppliedTipoProceso] = useState('all');

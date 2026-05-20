@@ -247,7 +247,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const [appliedDateRange, setAppliedDateRange] = useState({ start: '', end: '' });
   const [appliedSearch, setAppliedSearch] = useState('');
 
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
   const [cardPage, setCardPage] = useState(1);
   const cardsPerPage = 12;
 
@@ -708,40 +710,100 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   }, [favorites, activeColumns, effectiveIdField, effectiveActionField, isFavoritesPage]);
 
   // ─── Card helper: status color ───────────────────────────────────────────────
-  const getCardStatusColor = (status: string | undefined): string => {
-    const s = (status || '').toLowerCase();
-    if (s.includes('aprobado') || s.includes('favorable') || s.includes('en snifa')) return '#10b981';
-    if (s.includes('rechazado') || s.includes('desistido') || s.includes('sancionado')) return '#ef4444';
-    if (s.includes('calificaci')) return '#f59e0b';
-    if (s.includes('admisi')) return '#3b82f6';
-    if (s.includes('archivado') || s.includes('inadmitido')) return '#94a3b8';
+  const getCardStatusColor = (status: string | undefined, row?: LegalItem): string => {
+    const s = (status || '').toLowerCase().trim();
+
+    // pago_multa (registroSanciones)
+    if (row && row.pago_multa !== undefined) {
+      const pm = (row.pago_multa || '').toLowerCase();
+      if (pm.includes('pagada')) return '#10b981';
+      if (pm.includes('pendiente')) return '#ef4444';
+      if (pm.includes('no aplica')) return '#94a3b8';
+    }
+
+    // Verdes
+    if (s === 'aprobado' || s.includes('favorable') || s === 'en snifa'
+        || s === 'terminado - absolucion' || s === 'terminado - pdc satisfactorio'
+        || s.includes('con sancionatorio') === false && s === 'sin sancionatorio'
+        || s === 'sin sancionatorio') return '#10b981';
+
+    // Rojos
+    if (s === 'rechazado' || s === 'desistido' || s === 'sancionado'
+        || s === 'en análisis-suspendida' || s === 'en analisis-suspendida'
+        || s === 'terminado - sanción' || s === 'terminado - sancion'
+        || s === 'con sancionatorio'
+        || s.includes('rechazado') || s.includes('desistido')) return '#ef4444';
+
+    // Naranjas
     if (s.includes('formulado') || s.includes('cargos')) return '#f97316';
+
+    // Amarillos
+    if (s === 'resuelta' || s === 'suspendido' || s === 'suspendida'
+        || s === 'suspendidas' || s === 'terminado' || s === 'terminada'
+        || s === 'terminadas' || s === 'terminado - archivado'
+        || s === 'concluido') return '#f59e0b';
+
+    // Azules
+    if (s === 'en análisis' || s === 'en analisis'
+        || s === 'derivada a sma' || s === 'en curso'
+        || s === 'programa de cumplimiento en ejecucion'
+        || s === 'de sentencia' || s === 'en estudio'
+        || s === 'en tramitacion' || s === 'tramitacion'
+        || s.includes('admisi') || s.includes('calificaci')
+        || s.includes('análisis') || s.includes('analisis')
+        || s.includes('tramitaci')) return '#3b82f6';
+
+    // Morado (Boletin Oficial Mineria)
+    if (s.includes('boletin oficial') || s.includes('boletín oficial') || s.includes('mineria') || s.includes('minería')) return '#8b5cf6';
+
+    // Verde lima (Normas Generales)
+    if (s === 'normas generales') return '#84cc16';
+
+    // Celeste (Normas Particulares)
+    if (s === 'normas particulares') return '#06b6d4';
+
+    // Grises
+    if (s === 'archivado' || s === 'inadmitido' || s === 'sin estado'
+        || s === 'sin tramitacion electronica' || s === 'sin tramitación electrónica'
+        || s === 'terminado - archivado') return '#94a3b8';
+
     return '#64748b';
   };
 
   // ─── Card helper: extract semantic fields per table ───────────────────────────
   const getCardFields = (row: LegalItem) => {
-    // STATUS: what to show in the header dot + label
-    const statusVal: string =
-      row.estado || row.Estado || row.Estado_Procesal || row.tipo_normativa || row._fuente || 'Sin estado';
+    const isNormativa = !!(row.normativa || row.tipo_normativa);
+    const isTribunal  = !!(row.Caratula || row.Estado_Procesal);
+    const isPertinencia = !!(row.Nombre_de_Proyecto);
+    const isSMA = !!(row.unidad_fiscalizable || row.expediente);
 
-    // META LINE: small coloured subtitle (like "EIA • REGIÓN METROPOLITANA DE SANTIAGO")
+    // STATUS
+    let statusVal: string;
+    if (isNormativa)         statusVal = row.tipo_normativa || 'Sin tipo';
+    else if (isTribunal)     statusVal = row.Estado_Procesal || 'Sin estado';
+    else if (isPertinencia)  statusVal = row.Estado || 'Sin estado';
+    else if (isSMA)          statusVal = row.estado || 'Sin estado';
+    else                     statusVal = row.estado || row.Estado || row._fuente || 'Sin estado';
+
+    // META LINE
     let metaParts: string[] = [];
-    if (row.via_ingreso)       metaParts.push(row.via_ingreso);
-    if (row.tipo_proyecto)     metaParts.push(row.tipo_proyecto);
-    if (row.Tipo_de_Procedimiento) metaParts.push(row.Tipo_de_Procedimiento);
-    if (row.tipo_normativa)    metaParts.push(row.tipo_normativa);
-    if (row.categoria)         metaParts.push(row.categoria);
-    if (row.categoria_economica) metaParts.push(row.categoria_economica);
-    if (row.Tribunal)          metaParts.push(row.Tribunal);
-    if (row.organismo)         metaParts.push(row.organismo);
-    // region / secondary
-    const regionVal = row.region || row.Region || row.REGION || '';
-    if (regionVal) metaParts.push(regionVal);
-    // deduplicate and take first 2
+    if (isNormativa) {
+      // For normativas: organismo only (tipo_normativa already used as status)
+      if (row.organismo) metaParts.push(row.organismo);
+    } else if (isTribunal) {
+      if (row.Tipo_de_Procedimiento) metaParts.push(row.Tipo_de_Procedimiento);
+      if (row.Tribunal) metaParts.push(row.Tribunal);
+    } else if (isPertinencia) {
+      if (row.tipo_proyecto) metaParts.push(row.tipo_proyecto);
+      if (row.categoria_economica) metaParts.push(row.categoria_economica);
+    } else {
+      if (row.categoria) metaParts.push(row.categoria);
+      const regionVal = row.region || '';
+      if (regionVal) metaParts.push(regionVal);
+    }
     metaParts = Array.from(new Set(metaParts)).slice(0, 2);
 
-    // TITLE: main name
+    // TITLE
     const titleVal: string =
       row.Caratula || row.Nombre_de_Proyecto || row.normativa ||
       row._nombre || row.unidad_fiscalizable || row.nombre || '';
@@ -751,25 +813,25 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
       row.fecha_presentacion || row.Fecha || row.fecha || row.fecha_inicio || '';
     const dateVal = rawDate ? String(rawDate).split(' ')[0] : '';
 
-    // ENTITY ("Titular" equivalent): something NOT already shown above
-    const usedFields = new Set(['estado', 'Estado', 'Estado_Procesal', 'tipo_normativa',
-      '_fuente', 'via_ingreso', 'tipo_proyecto', 'Tipo_de_Procedimiento', 'categoria',
-      'categoria_economica', 'Tribunal', 'organismo', 'region', 'fecha_presentacion',
-      'Fecha', 'fecha', 'fecha_inicio', 'Caratula', 'Nombre_de_Proyecto', 'normativa',
-      '_nombre', 'unidad_fiscalizable', 'nombre']);
-    const entityVal: string =
-      row.titular || row.Proponente || row.nombre_razon_social || row.Rol ||
-      row.suborganismo ||
-      // fallback: first column not used yet
-      (activeColumns.find(c => !usedFields.has(c.field) && row[c.field])?.[`field`]
-        ? row[activeColumns.find(c => !usedFields.has(c.field) && row[c.field])!.field] : '') || '';
-
-    const entityLabel: string =
-      row.titular          ? 'Titular' :
-      row.Proponente       ? 'Proponente' :
-      row.nombre_razon_social ? 'Razón Social' :
-      row.Rol              ? 'Rol' :
-      row.suborganismo     ? 'Suborganismo' : 'Entidad';
+    // ENTITY (Titular equivalent)
+    let entityVal: string;
+    let entityLabel: string;
+    if (isNormativa) {
+      entityVal  = row.suborganismo || 'Sin suborganismo';
+      entityLabel = 'Suborganismo';
+    } else if (isTribunal) {
+      entityVal  = row.Rol || '';
+      entityLabel = 'Rol';
+    } else if (isPertinencia) {
+      entityVal  = row.Proponente || '';
+      entityLabel = 'Proponente';
+    } else if (isSMA) {
+      entityVal  = row.nombre_razon_social || '';
+      entityLabel = 'Razón Social';
+    } else {
+      entityVal  = row.titular || row.Proponente || row.nombre_razon_social || row.Rol || '';
+      entityLabel = row.titular ? 'Titular' : row.Proponente ? 'Proponente' : row.nombre_razon_social ? 'Razón Social' : 'Entidad';
+    }
 
     return { statusVal, metaParts, titleVal, dateVal, entityVal, entityLabel };
   };
@@ -1181,7 +1243,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                     {paginatedCardRows.map((row) => {
                       const idValue = isFavoritesPage ? row._id : (row[effectiveIdField] || '');
                       const { statusVal, metaParts, titleVal, dateVal, entityVal, entityLabel } = getCardFields(row);
-                      const dotColor = getCardStatusColor(statusVal);
+                      const dotColor = getCardStatusColor(statusVal, row);
 
                       return (
                         <div key={row.id} style={{

@@ -26,7 +26,9 @@ const DGAConsultasPage = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
 
   const handleApplyFilters = () => {
     setAppliedSearch(search);
