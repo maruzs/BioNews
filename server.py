@@ -1184,6 +1184,13 @@ def scrape_consultas(background_tasks: BackgroundTasks, admin = Depends(get_curr
     background_tasks.add_task(_run_consultas_scrapers)
     return {"message": "Scraping de Consultas Públicas iniciado en background."}
 
+@app.post("/api/internal/notify-new")
+async def internal_notify_new(req: dict):
+    category = req.get("category")
+    if category:
+        await notify_new_content(category)
+        return {"status": "success", "category": category}
+    return {"status": "ignored"}
 
 # ─── Health check ──────────────────────────────────────────────────────────────
 @app.get("/api/health")
