@@ -104,10 +104,9 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
                 
         causas_procesadas.sort(key=lambda x: x[0], reverse=True)
         
+        nuevos_registros = 0
         with conn.cursor() as cur:
             for dt, fecha_str, causa in causas_procesadas:
-                if ultima_fecha_db and dt < ultima_fecha_db:
-                    break
                 role_number = causa.get('role_number')
                 cause_role_id = causa.get('cause_role_id')
                 court_id = causa.get('court_id')
@@ -125,6 +124,10 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
                 accion = f"https://causas.3ta.cl/causes/{id_causa}"
                 fecha_scraping = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+                # Verificar si es verdaderamente nuevo para contar correctamente
+                cur.execute('SELECT 1 FROM "Tribunales" WHERE "Rol" = %s', (rol,))
+                is_new = cur.fetchone() is None
+
                 cur.execute('''
                     INSERT INTO "Tribunales"
                     ("Rol", "Fecha", "Caratula", "Tribunal", "Tipo_de_Procedimiento", "Estado_Procesal", "Accion", fecha_scraping)
@@ -134,7 +137,10 @@ def actualizar_tercer_tribunal(conn, ultima_fecha_db):
                         "Caratula" = EXCLUDED."Caratula",
                         "Estado_Procesal" = EXCLUDED."Estado_Procesal"
                 ''', (rol, fecha_str, caratula, tribunal, tipo_procedimiento, estado_procesal, accion, fecha_scraping))
-                nuevos_registros += 1
+                
+                if is_new:
+                    nuevos_registros += 1
+                
                 if nuevos_registros >= 10:
                     print("Se alcanzo el limite maximo de 10 nuevos registros.")
                     break

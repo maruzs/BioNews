@@ -2,191 +2,139 @@
 
 ## 1. Descripción del Proyecto
 
-**BioNews** es una plataforma avanzada de monitoreo y vigilancia medioambiental diseñada para centralizar, procesar y analizar información crítica proveniente de diversas fuentes gubernamentales y judiciales en Chile.
+**BioNews** es una plataforma web avanzada de monitoreo, vigilancia e inteligencia medioambiental diseñada para centralizar, procesar y analizar información crítica proveniente de diversas fuentes gubernamentales y judiciales en Chile.
 
-El objetivo principal es transformar el flujo constante de datos públicos en información accionable para la toma de decisiones estratégicas. A diferencia de un sistema de noticias convencional, BioNews actúa como un centro de inteligencia que rastrea cambios normativos, procesos sancionatorios y noticias judiciales en tiempo real, ofreciendo una experiencia personalizada para cada usuario.
-
-## 2. Cómo Funciona
-
-El sistema opera en un ciclo continuo de cuatro etapas:
-
-1.  **Extracción (Scraping):** Un motor automatizado utiliza **Playwright** y **BeautifulSoup** para navegar y extraer datos de fuentes como la SMA (Superintendencia del Medio Ambiente), el SEA (Servicio de Evaluación Ambiental), Tribunales Ambientales y el Diario Oficial.
-2.  **Procesamiento:** Los datos extraídos son normalizados (estandarización de fechas, limpieza de texto y categorización) y se almacenan en una base de datos centralizada.
-3.  **Notificación Inteligente:** El sistema detecta nuevos registros y marca "puntos rojos" en la interfaz del usuario. Gracias a un sistema de seguimiento por usuario, la plataforma sabe qué ítems han sido vistos por quién, manteniendo la sincronización entre diferentes dispositivos (Cross-Device).
-4.  **Visualización:** Los usuarios acceden a un portal web moderno donde pueden filtrar, buscar y analizar la información mediante tablas interactivas (DataGrids) y paneles de control.
-
-## 3. Tecnologías Utilizadas
-
-### Backend
-
-- **Lenguaje:** Python 3.12+
-- **Framework API:** FastAPI (Asíncrono y de alto rendimiento).
-- **Base de Datos:** SQLite con SQLAlchemy (ORM) para la persistencia.
-- **Seguridad:** Autenticación basada en JWT (JSON Web Tokens) y cifrado de contraseñas con Passlib.
-- **Comunicación:** WebSockets para actualizaciones en tiempo real de notificaciones.
-
-### Frontend
-
-- **Framework:** React 18+ con Vite.
-- **Lenguaje:** TypeScript para un desarrollo robusto y tipado.
-- **Interfaz de Usuario:** Material UI (MUI) para componentes premium y responsivos.
-- **Iconografía:** Lucide React.
-- **Estado:** Context API para la gestión de autenticación y notificaciones.
-
-### Scrapers y Automatización
-
-- **Playwright:** Para interactuar con sitios web modernos que requieren ejecución de JavaScript.
-- **BeautifulSoup4 / Requests:** Para scraping eficiente de sitios estáticos.
-- **Scheduler:** Script dedicado para la programación de tareas de extracción periódicas.
-
-### Despliegue e Infraestructura
-
-- **Contenedores:** Docker y Docker Compose para orquestar los servicios de backend, frontend y base de datos.
-- **Servidor Web:** Nginx como proxy inverso y servidor de archivos estáticos.
-
-## 4. Estructura Completa del Proyecto
-
-A continuación se detalla la jerarquía completa de archivos y directorios:
-
-```text
-BioNews/
-├── data/                       # Almacenamiento persistente
-│   ├── scheduler.json          # Configuración del scheduler
-│   └── data.db                 # Base de datos SQLite principal
-├── src/                        # Lógica de Backend y Scrapers
-│   ├── database/               # Gestión de base de datos
-│   │   ├── __init__.py
-│   │   └── manager.py          # Lógica CRUD y conexión
-│   ├── scrapers/               # Motores de extracción de datos
-│   │   ├── __init__.py
-│   │   ├── corteSuprema.py
-│   │   ├── diario_oficial.py
-│   │   ├── engine.py           # Clase base para scrapers
-│   │   ├── fiscalizaciones.py
-│   │   ├── medidas.py
-│   │   ├── mma.py
-│   │   ├── pdc.py
-│   │   ├── primerTribunal.py
-│   │   ├── reqSEIA.py
-│   │   ├── sanciones.py
-│   │   ├── sbap.py
-│   │   ├── scraper_dga.py      # Nuevo scraper (DGA)
-│   │   ├── sea.py
-│   │   ├── sea_legal.py
-│   │   ├── segundoTribunal.py
-│   │   ├── sernageomin.py
-│   │   ├── sma.py
-│   │   ├── snifa.py
-│   │   ├── tercerTribunal.py
-│   │   ├── tribunal2.py
-│   │   └── tribunal3.py
-│   ├── utils/                  # Herramientas de apoyo
-│       └── date_parser.py      # Normalización de formatos de fecha
-├── web/                        # Aplicación Frontend (React)
-│   ├── src/
-│   │   ├── components/         # Componentes y Páginas de la App
-│   │   │   ├── AdminPanel.tsx
-│   │   │   ├── DashboardView.tsx
-│   │   │   ├── Home.tsx
-│   │   │   ├── Landing.tsx
-│   │   │   ├── Login.tsx
-│   │   │   ├── NewsPage.tsx
-│   │   │   ├── Profile.tsx
-│   │   │   ├── Register.tsx
-│   │   │   ├── ReportLayout.tsx
-│   │   │   └── Sidebar.tsx
-│   │   ├── context/
-│   │   │   └── AuthContext.tsx # Manejo de sesión y JWT
-│   │   ├── assets/             # Recursos estáticos del frontend
-│   │   ├── App.css
-│   │   ├── App.tsx
-│   │   ├── index.css           # Estilos globales
-│   │   └── main.tsx            # Punto de entrada de React
-│   ├── public/                 # Archivos estáticos públicos
-│   ├── Dockerfile              # Docker para el frontend
-│   ├── nginx.conf              # Configuración de Nginx
-│   ├── package.json            # Dependencias de Node.js
-│   ├── tsconfig.json           # Configuración de TypeScript
-│   └── vite.config.ts          # Configuración de Vite
-├── .dockerignore
-├── .env                        # Variables de entorno (claves, puertos)
-├── .gitignore
-├── .venv/
-├── __pycache__/                # (Borrar: caché de Python autogenerada)
-├── assets/                     # Recursos estáticos globales
-├── docker-compose.yml          # Orquestación de contenedores
-├── Dockerfile                  # Docker para el backend
-├── prompt.md                   # Instrucciones para el modelo
-├── requirements.docker.txt     # Dependencias para entorno Docker
-├── requirements.txt            # Dependencias de Python local
-├── scheduler.py                # Servicio de tareas programadas
-├── server.py                   # API principal (FastAPI)
-├── startScraping.py            # Ejecución manual de scrapers
-└── proyecto.md                 # Este documento
-```
-
-## 5. Esquema de Base de Datos (SQLite)
-
-A continuación se detallan las tablas principales y su estructura:
-
-### Tabla: `noticias`
-
-Almacena noticias generales de diversas fuentes.
-
-- **link** (TEXT, PK): URL única de la noticia.
-- **titulo** (TEXT): Título de la publicación.
-- **fecha** (TEXT): Fecha de publicación.
-- **imagen** (TEXT): URL de la imagen asociada.
-- **fuente** (TEXT): Origen de la noticia.
-- **fecha_scraping** (TIMESTAMP): Cuándo fue capturada.
-
-### Tabla: `users`
-
-Gestión de usuarios y preferencias.
-
-- **id** (INTEGER, PK): Identificador único.
-- **name** (TEXT): Nombre completo.
-- **email** (TEXT): Correo electrónico (login).
-- **password_hash** (TEXT): Contraseña cifrada.
-- **role** (TEXT): Nivel de acceso (admin/user).
-- **blocked** (INTEGER): Estado de la cuenta.
-- **preferences** (TEXT): Configuración en formato JSON.
-- **last_login** (TIMESTAMP): Último acceso.
-
-### Tabla: `favoritos`
-
-Ítems marcados por los usuarios para seguimiento.
-
-- **user_id** (INTEGER, PK): ID del usuario.
-- **id_o_link** (TEXT, PK): Referencia al ítem o noticia.
-- **fuente** (TEXT): Origen del ítem.
-- **nombre** (TEXT): Título o descripción.
-- **fecha_agregado** (TIMESTAMP): Fecha de marcado.
-- **accion** (TEXT): Tipo de acción realizada.
-
-### Tabla: `scraper_logs`
-
-Monitoreo del estado de los motores de extracción.
-
-- **fuente** (TEXT, PK): Nombre del scraper.
-- **ultimo_intento** (TIMESTAMP): Fecha de última ejecución.
-- **ultimo_exito** (TIMESTAMP): Fecha de último éxito.
-- **estado** (TEXT): Resultado (Exitoso/Error).
-- **error** (TEXT): Detalle del fallo si existe.
-- **nuevos_registros** (INTEGER): Cantidad de datos nuevos encontrados.
-
-### Tabla: `user_item_views`
-
-Seguimiento de "Puntos Rojos" (notificaciones vistas).
-
-- **id** (INTEGER, PK): ID de registro.
-- **user_id** (INTEGER): ID del usuario.
-- **item_id_or_link** (TEXT): Referencia al ítem visto.
-- **category_slug** (TEXT): Categoría a la que pertenece.
-- **viewed_at** (TIMESTAMP): Fecha de visualización.
-
-_(Existen otras tablas técnicas como `user_category_views` para el manejo granular de la interfaz)._
+El sistema actúa como un centro de inteligencia que rastrea cambios normativos, procesos sancionatorios, fiscalizaciones, solicitudes de proyectos del SEIA y noticias judiciales en tiempo real. A través de perfiles de usuario, ofrece notificaciones inteligentes personalizadas ("puntos rojos") que informan de forma granular qué registros son nuevos para cada usuario específico.
 
 ---
 
-**BioNews** - _Transformando el cumplimiento ambiental en una ventaja competitiva._
+## 2. Arquitectura y Funcionamiento
+
+El sistema opera en un ciclo continuo compuesto por:
+
+1.  **Extracción (Scraping):** Procesos automatizados en segundo plano que extraen datos de múltiples fuentes (SMA, SEA, Tribunales Ambientales, DGA, Diario Oficial, etc.) utilizando **BeautifulSoup4**, **Requests** y **Playwright**.
+2.  **Procesamiento y Almacenamiento:** Los registros se normalizan y almacenan en una base de datos centralizada de **PostgreSQL 16**, dividida lógicamente en esquemas (`users` para la gestión interna de cuentas, y `scrapers` para la información recolectada).
+3.  **Notificación en Tiempo Real (SSE):** Utiliza **Server-Sent Events (SSE)** para comunicar instantáneamente al frontend la llegada de nuevos registros. Los usuarios mantienen su estado de lectura sincronizado entre dispositivos (Cross-Device).
+4.  **Caché Avanzada (Redis):** Se implementa una capa de caché en Redis para acelerar las consultas pesadas de tablas dinámicas (2m de TTL) y estáticas (5m de TTL), con invalidación automática basada en patrones cuando ingresa nuevo contenido.
+
+---
+
+## 3. Stack Tecnológico
+
+### Backend
+- **Lenguaje:** Python 3.11+
+- **API Framework:** FastAPI (asíncrono, alto rendimiento)
+- **Base de Datos:** PostgreSQL 16 (organizado por esquemas lógicos)
+- **Caché y Mensajería:** Redis (cache de queries, invalidación por patrones, blacklist de JWTs)
+- **Seguridad:** 
+  - Autenticación JWT con identificadores únicos (`jti`) para soporte de revocación.
+  - Cifrado de contraseñas con `bcrypt`.
+  - Rate limiting en endpoints sensibles (ej. login) mediante `slowapi`.
+
+### Frontend
+- **Framework:** React 18+ (Vite)
+- **Lenguaje:** TypeScript (código robusto y tipado)
+- **Biblioteca UI:** Material UI (MUI) con diseño premium adaptado (Glassmorphism, Dark/Light modes)
+- **Iconografía:** Lucide React
+
+---
+
+## 4. Estructura del Proyecto
+
+```text
+BioNews/
+├── src/                        # Lógica Backend (FastAPI + Scrapers)
+│   ├── database/               # Conectores y gestor de DB
+│   │   ├── connection.py       # Pool de conexiones (PostgreSQL)
+│   │   ├── manager.py          # Consultas, inserciones y lógica de lectura/vista
+│   │   ├── schema_users.sql    # Inicialización del esquema de usuarios
+│   │   └── schema_scrapers.sql # Inicialización del esquema de scrapers
+│   ├── scrapers/               # Scripts individuales de scraping
+│   │   ├── engine.py           # Clase base (ScrapingEngine) con soporte para Playwright
+│   │   ├── sea_evaluados.py    # Proyectos evaluados del SEA (Paginación optimizada)
+│   │   ├── scraper_dga.py      # Scraper DGA (Página de inicio y noticias recientes)
+│   │   ├── tercerTribunal.py   # Scraper del Tercer Tribunal Ambiental
+│   │   └── ...                 # Otros scrapers (SMA, MMA, Tribunales, etc.)
+│   └── utils/                  # Utilidades comunes (date parser, normalizadores)
+├── web/                        # Aplicación Frontend (React + TS)
+│   ├── src/
+│   │   ├── components/         # Vistas de la aplicación (Dashboard, Sidebar, etc.)
+│   │   ├── context/            # AuthContext y notificaciones
+│   │   ├── App.tsx             # Enrutamiento y estructura global
+│   │   └── index.css           # Configuración del diseño visual
+│   ├── public/                 # Archivos estáticos del cliente
+│   └── Dockerfile              # Dockerfile para servir el build del frontend con Nginx
+├── docker-compose.yml          # Orquestación de toda la infraestructura
+├── Dockerfile                  # Dockerfile del Backend API
+├── scheduler.py                # Servicio para la ejecución periódica de scrapers
+├── server.py                   # Servidor de API (FastAPI)
+├── requirements.txt            # Dependencias de Python locales
+└── requirements.docker.txt     # Dependencias de Python optimizadas para el contenedor
+```
+
+---
+
+## 5. Esquema de Base de Datos Principal (PostgreSQL 16)
+
+La base de datos se estructura en dos esquemas principales para garantizar el aislamiento y la organización del almacenamiento:
+
+### Esquema `users`
+- **`users`**: Almacena información de cuentas, contraseña cifrada, rol (admin/user), estado de bloqueo (`blocked`) y preferencias en JSON.
+- **`favoritos`**: Guarda los ítems guardados por los usuarios para rápido acceso.
+- **`user_item_views`**: Registra qué ítems individuales han sido vistos por cada usuario.
+- **`user_category_views`**: Registra la marca de tiempo de la última vez que un usuario visitó una sección para calcular la presencia de "puntos rojos" (notificaciones).
+- **`bug_reports`**: Almacena reportes de fallos enviados por los usuarios y la ruta física a su captura de pantalla.
+
+### Esquema `scrapers`
+- **`noticias`**: Noticias generales de fuentes del sector.
+- **`pertinencias`**: Consultas de pertinencia al SEA.
+- **`sea_proyectos_evaluados`**: Proyectos evaluados ingresados al SEIA.
+- **`normativas`**: Leyes, decretos y normativas publicadas en el Diario Oficial.
+- **`fiscalizaciones`**: Registros de fiscalizaciones ambientales del SNIFA.
+- **`medidas_provisionales`**: Medidas de corrección provisionales del SNIFA.
+- **`Tribunales`**: Causas presentadas en los distintos tribunales ambientales.
+- **`scraper_logs`**: Tiempos de ejecución, registros obtenidos y errores ocurridos en las ejecuciones de scrapers.
+
+---
+
+## 6. Despliegue y Configuración
+
+El proyecto está completamente preparado para desplegarse mediante Docker Compose en cualquier servidor Linux (compatible con proxies inversos como Nginx Proxy Manager).
+
+### Paso 1: Configurar variables de entorno
+Crea un archivo `.env` en la raíz del proyecto basado en las siguientes variables obligatorias:
+```env
+# Configuración Base de Datos
+DB_NAME=bionews
+DB_USER=bionews
+DB_PASS=tu_password_segura
+
+# Configuración Redis
+REDIS_PASSWORD=RedisPasswordSegura
+
+# Backend API
+JWT_SECRET_KEY=ClaveSecretaSuperSeguraJWT
+```
+
+### Paso 2: Levantar la Infraestructura
+Ejecuta el siguiente comando para compilar las imágenes e iniciar todos los contenedores en segundo plano:
+```bash
+docker compose up -d --build
+```
+
+Esto desplegará los siguientes servicios:
+1.  `postgres-db` (`bionews-db`): Servidor PostgreSQL (Puerto 5432 expuesto únicamente a localhost).
+2.  `redis` (`bionews-redis`): Caché de datos y blacklist de JWTs.
+3.  `api` (`bionews-api`): API FastAPI corriendo en el puerto interno 8000.
+4.  `scheduler` (`bionews-scheduler`): Servicio ejecutor de scrapings programados.
+5.  `web` (`bionews-web`): Frontend React compilado y servido a través de Nginx.
+
+### Paso 3: Aplicar Cambios en Caliente
+Si realizas modificaciones en los archivos de la API o del Scheduler, puedes reiniciar los servicios correspondientes para que tomen los cambios:
+```bash
+docker compose restart api scheduler
+```
+
+---
+
+**BioNews** - _Inteligencia y cumplimiento ambiental consolidado._
