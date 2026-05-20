@@ -78,7 +78,7 @@ class SEAEvaluadosScraper:
             except Exception as e:
                 print(f"Error parsing dates: {e}")
         else:
-            # Verificar si la tabla esta vacia para decidir si hacer scraping completo o solo de hoy
+            # Verificar si la tabla esta vacia para decidir si hacer scraping completo o de los ultimos dias
             try:
                 with scrapers_conn() as conn:
                     with conn.cursor() as cur:
@@ -86,25 +86,14 @@ class SEAEvaluadosScraper:
                         count = cur.fetchone()[0]
                         if count > 0:
                             is_empty = False
-                            cur.execute("""
-                                SELECT DISTINCT DATE(fecha_scraping)
-                                FROM sea_proyectos_evaluados
-                                WHERE fecha_scraping IS NOT NULL
-                                ORDER BY DATE(fecha_scraping) DESC
-                                LIMIT 2
-                            """)
-                            scrape_dates = cur.fetchall()
-                            if len(scrape_dates) > 0:
-                                last_date_str = scrape_dates[0][0]
-                                if str(last_date_str) == fecha_hoy_iso and len(scrape_dates) > 1:
-                                    prev_date_str = str(scrape_dates[1][0])
-                                    prev_date_obj = datetime.strptime(prev_date_str, '%Y-%m-%d')
-                                    fecha_desde = prev_date_obj.strftime('%d/%m/%Y')
-                                else:
-                                    last_date_obj = datetime.strptime(str(last_date_str), '%Y-%m-%d')
-                                    fecha_desde = last_date_obj.strftime('%d/%m/%Y')
+                            # En modo diario: siempre buscar desde hace 2 días para no perder registros
+                            # que pueden haberse publicado después del último scraping
+                            from datetime import timedelta
+                            fecha_desde_obj = datetime.now() - timedelta(days=2)
+                            fecha_desde = fecha_desde_obj.strftime('%d/%m/%Y')
             except Exception as e:
                 print(f"Error verificando DB: {e}")
+
 
         session = requests.Session()
         session.headers.update({

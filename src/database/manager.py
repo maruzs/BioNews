@@ -504,7 +504,15 @@ class DatabaseManager:
                     if last_exit is None:
                         cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s LIMIT 1', (last_exit,))
+                        # fecha_scraping es TEXT en BD; convertir ambos lados para comparar correctamente
+                        last_exit_str = str(last_exit)[:19]  # 'YYYY-MM-DD HH:MM:SS'
+                        cur.execute(
+                            f"""SELECT 1 FROM \"{t}\"
+                            WHERE TO_TIMESTAMP(fecha_scraping, 'YYYY-MM-DD HH24:MI:SS')
+                                  > TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')
+                            LIMIT 1""",
+                            (last_exit_str,)
+                        )
                     if cur.fetchone():
                         return True
         return False
@@ -537,7 +545,15 @@ class DatabaseManager:
                     if last_exit is None:
                         cur.execute(f'SELECT 1 FROM "{t}" LIMIT 1')
                     else:
-                        cur.execute(f'SELECT 1 FROM "{t}" WHERE fecha_scraping > %s LIMIT 1', (last_exit,))
+                        # fecha_scraping es TEXT en BD; convertir para comparar correctamente
+                        last_exit_str = str(last_exit)[:19]
+                        cur.execute(
+                            f"""SELECT 1 FROM \"{t}\"
+                            WHERE TO_TIMESTAMP(fecha_scraping, 'YYYY-MM-DD HH24:MI:SS')
+                                  > TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')
+                            LIMIT 1""",
+                            (last_exit_str,)
+                        )
                     if cur.fetchone():
                         return True
         return False
@@ -562,30 +578,34 @@ class DatabaseManager:
         return s
 
     def get_items_with_new_flag(self, user_id, category_slug, items):
+        """Marca cada item con is_new=True si fue scrapeado DESPUÉS del último exit del usuario.
+        Si no hay last_exit (nunca visitó), todos son nuevos.
+        Si hay last_exit, solo son nuevos los scrapeados después de ese momento.
+        """
         notif_mapping = {"mma_abiertas": "mma", "mma_cerradas": "mma", "dga_consultas": "dga"}
         notif_category = notif_mapping.get(category_slug, category_slug)
 
         last_exit = self.get_user_category_last_exit(user_id, notif_category)
-        
-        # Format the last exit appropriately for comparison
-        if last_exit:
-            last_exit_str = str(last_exit)[:19] # Keep only YYYY-MM-DD HH:MM:SS
-        else:
-            last_exit_str = None
+
+        if last_exit is None:
+            # Nunca visitó → todos son nuevos
+            for item in items:
+                item['is_new'] = True
+            return items
+
+        # Normalizar last_exit a string comparable 'YYYY-MM-DD HH:MM:SS'
+        last_exit_str = str(last_exit)[:19].replace('T', ' ')
 
         for item in items:
-            if last_exit_str is None:
-                item['is_new'] = True
-                continue
-            
-            # Use fecha_scraping directly since it holds the exact datetime the record was found
             item_date = item.get("fecha_scraping")
             if not item_date:
                 item['is_new'] = False
             else:
-                item_date_str = str(item_date)[:19] # Normalize to YYYY-MM-DD HH:MM:SS
-                # Compare as strings since both are ISO-like 'YYYY-MM-DD HH:MM:SS'
+                # Normalizar fecha_scraping del item igual que last_exit
+                item_date_str = str(item_date)[:19].replace('T', ' ')
+                # Ambos son 'YYYY-MM-DD HH:MM:SS' → comparación lexicográfica válida
                 item['is_new'] = item_date_str > last_exit_str
+
         return items
 
     # ── DOCUMENTOS ────────────────────────────────────────────────────────────
