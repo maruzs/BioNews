@@ -3,8 +3,9 @@ Scraper de Fiscalizaciones - SNIFA
 https://snifa.sma.gob.cl/Fiscalizacion
 
 Compara el total de registros del año actual y busca nuevos por diferencia de expedientes usando la API JSON.
+Nota: SNIFA ordena del más nuevo al más viejo, por lo que siempre pedimos start=0.
 """
-import os
+import math
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -36,57 +37,68 @@ def extract_ficha_id(url):
     return None
 
 
+def parse_html_field(html):
+    """Extrae texto limpio de un campo HTML de la API de SNIFA."""
+    if not html or not html.strip():
+        return ''
+    soup = BeautifulSoup(html, 'html.parser')
+    items = [li.text.strip() for li in soup.find_all('li')]
+    if items:
+        return ' / '.join(filter(None, items))
+    return soup.get_text(strip=True)
+
+
+def extract_ficha_id_from_html(html):
+    """Extrae el ficha_id desde el HTML del campo de detalle."""
+    if not html:
+        return None
+    soup = BeautifulSoup(html, 'html.parser')
+    a_tag = soup.find('a')
+    if not a_tag:
+        return None
+    href = a_tag.get('href', '')
+    try:
+        parts = href.rstrip('/').split('/')
+        if parts and parts[-1].isdigit():
+            return int(parts[-1])
+    except:
+        pass
+    return None
+
+
 def parse_json_row(row):
-    """Parsea una fila del JSON obtenido de la API y extrae los campos estructurados."""
+    """
+    Parsea una fila del JSON de Fiscalizaciones SNIFA.
+    Estructura del array (9 columnas):
+      [0] nro, [1] expediente, [2] nombre_razon_social (fa-user),
+      [3] categoria (fa-angle-right), [4] unidad_fiscalizable (fa-building),
+      [5] region, [6] comuna (ignorada), [7] estado, [8] detalle_link
+    """
     if len(row) < 9:
         return None
 
     expediente = row[1].strip()
+    nombre_razon_social = parse_html_field(row[2])
+    categoria           = parse_html_field(row[3])
+    unidad_fiscalizable = parse_html_field(row[4])
+    region              = parse_html_field(row[5])
+    estado              = row[7].strip() if len(row) > 7 else ''
 
-    # Nombre Razón Social (Index 2)
-    soup_nrs = BeautifulSoup(row[2], 'html.parser')
-    items_nrs = [li.text.strip() for li in soup_nrs.find_all('li')]
-    if not items_nrs:
-        items_nrs = [soup_nrs.get_text(strip=True)]
-    nombre_razon_social = ' / '.join(filter(None, items_nrs))
-
-    # Categoría (Index 3)
-    soup_cat = BeautifulSoup(row[3], 'html.parser')
-    items_cat = [li.text.strip() for li in soup_cat.find_all('li')]
-    if not items_cat:
-        items_cat = [soup_cat.get_text(strip=True)]
-    categoria = ' / '.join(filter(None, items_cat))
-
-    # Unidad Fiscalizable (Index 4)
-    soup_uf = BeautifulSoup(row[4], 'html.parser')
-    items_uf = [li.text.strip() for li in soup_uf.find_all('li')]
-    if not items_uf:
-        items_uf = [soup_uf.get_text(strip=True)]
-    unidad_fiscalizable = ' / '.join(filter(None, items_uf))
-
-    # Región (Index 5)
-    soup_reg = BeautifulSoup(row[5], 'html.parser')
-    items_reg = [li.text.strip() for li in soup_reg.find_all('li')]
-    if not items_reg:
-        items_reg = [soup_reg.get_text(strip=True)]
-    region = ' / '.join(filter(None, items_reg))
-
-    # Index 6 is Comuna, we ignore it as it is not in the DB schema
-
-    estado = row[7].strip()
-
-    # Detalle Link (Index 8)
-    soup_det = BeautifulSoup(row[8], 'html.parser')
-    a_tag = soup_det.find('a')
+    # Detalle link y ficha_id desde el HTML del índice 8
     detalle_link = ''
-    if a_tag:
-        href = a_tag.get('href', '')
-        if href.startswith('/'):
-            detalle_link = f"https://snifa.sma.gob.cl{href}"
-        else:
-            detalle_link = href
-
-    ficha_id = extract_ficha_id(detalle_link)
+    ficha_id = None
+    if len(row) > 8:
+        soup_det = BeautifulSoup(row[8], 'html.parser')
+        a_tag = soup_det.find('a')
+        if a_tag:
+            href = a_tag.get('href', '')
+            detalle_link = f"https://snifa.sma.gob.cl{href}" if href.startswith('/') else href
+            try:
+                parts = href.rstrip('/').split('/')
+                if parts and parts[-1].isdigit():
+                    ficha_id = int(parts[-1])
+            except:
+                pass
 
     return {
         'expediente': expediente,
@@ -143,12 +155,16 @@ class SnifaFiscalizacionScraper:
             print(f"No hay registros nuevos para el año {current_year}. La BD esta actualizada.")
             return 0
 
-        # 2. Obtener los 10 más nuevos para el año actual
-        start_idx = max(0, records_total - 10)
+        # 2. SNIFA ordena del más nuevo al más viejo → start=0 siempre captura los más recientes.
+        #    Calculamos el length como la diferencia redondeada a la decena superior (mínimo 20).
+        diff = records_total - db_count
+        fetch_length = max(20, math.ceil(diff / 10) * 10)
+        print(f"Diferencia: {diff} registros. Solicitando los primeros {fetch_length} (start=0)...")
+
         payload_data = {
-            'draw': '1',
-            'start': str(start_idx),
-            'length': '10',
+            'draw': '2',
+            'start': '0',
+            'length': str(fetch_length),
             'expediente': filter_expediente
         }
 
@@ -161,17 +177,15 @@ class SnifaFiscalizacionScraper:
             return 0
 
         all_records = []
-        data_rows = res_data.get('data', [])
-
-        for row in data_rows:
+        for row in res_data.get('data', []):
             parsed = parse_json_row(row)
             if parsed:
                 all_records.append(parsed)
 
-        nuevos = [r for r in all_records if r['expediente'] not in db_expedientes]
+        nuevos = [rec for rec in all_records if rec['expediente'] not in db_expedientes]
 
         if not nuevos:
-            print("No hay registros nuevos en el lote de los 10 mas recientes.")
+            print("No hay registros nuevos en el lote obtenido.")
             return 0
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")

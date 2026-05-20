@@ -18,6 +18,7 @@ services:
       POSTGRES_DB:       ${DB_NAME:-bionews}
       POSTGRES_USER:     ${DB_USER:-bionews}
       POSTGRES_PASSWORD: ${DB_PASS:-changeme}
+      TZ:                America/Santiago
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./src/database/schema_users.sql:/docker-entrypoint-initdb.d/01_schema_users.sql:ro

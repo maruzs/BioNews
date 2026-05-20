@@ -3,8 +3,9 @@ Scraper de Procedimientos Sancionatorios - SNIFA
 https://snifa.sma.gob.cl/Sancionatorio/Resultado
 
 Compara el total de registros del año actual y busca por diferencia de expedientes contra la BD usando la API JSON.
+Nota: SNIFA ordena del más nuevo al más viejo, por lo que siempre pedimos start=0.
 """
-import os
+import math
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -36,55 +37,54 @@ def extract_ficha_id(url):
     return None
 
 
+def parse_html_field(html):
+    """Extrae texto limpio de un campo HTML de la API de SNIFA."""
+    if not html or not html.strip():
+        return ''
+    soup = BeautifulSoup(html, 'html.parser')
+    items = [li.text.strip() for li in soup.find_all('li')]
+    if items:
+        return ' / '.join(filter(None, items))
+    return soup.get_text(strip=True)
+
+
 def parse_json_row(row):
-    """Parsea una fila del JSON obtenido de la API y extrae los campos estructurados."""
+    """
+    Parsea una fila del JSON de Sancionatorios SNIFA.
+    Estructura del array (8 columnas):
+      [0] nro, [1] expediente,
+      [2] unidad_fiscalizable (fa-building),
+      [3] nombre_razon_social (fa-user),
+      [4] categoria (fa-angle-right),
+      [5] region,
+      [6] estado,
+      [7] detalle_link
+    """
     if len(row) < 8:
         return None
 
-    expediente = row[1].strip()
+    expediente          = row[1].strip()
+    unidad_fiscalizable = parse_html_field(row[2])
+    nombre_razon_social = parse_html_field(row[3])
+    categoria           = parse_html_field(row[4])
+    region              = parse_html_field(row[5])
+    estado              = row[6].strip() if len(row) > 6 else ''
 
-    # Unidad Fiscalizable (Index 2)
-    soup_uf = BeautifulSoup(row[2], 'html.parser')
-    items_uf = [li.text.strip() for li in soup_uf.find_all('li')]
-    if not items_uf:
-        items_uf = [soup_uf.get_text(strip=True)]
-    unidad_fiscalizable = ' / '.join(filter(None, items_uf))
-
-    # Nombre Razón Social (Index 3)
-    soup_nrs = BeautifulSoup(row[3], 'html.parser')
-    items_nrs = [li.text.strip() for li in soup_nrs.find_all('li')]
-    if not items_nrs:
-        items_nrs = [soup_nrs.get_text(strip=True)]
-    nombre_razon_social = ' / '.join(filter(None, items_nrs))
-
-    # Categoría (Index 4)
-    soup_cat = BeautifulSoup(row[4], 'html.parser')
-    items_cat = [li.text.strip() for li in soup_cat.find_all('li')]
-    if not items_cat:
-        items_cat = [soup_cat.get_text(strip=True)]
-    categoria = ' / '.join(filter(None, items_cat))
-
-    # Región (Index 5)
-    soup_reg = BeautifulSoup(row[5], 'html.parser')
-    items_reg = [li.text.strip() for li in soup_reg.find_all('li')]
-    if not items_reg:
-        items_reg = [soup_reg.get_text(strip=True)]
-    region = ' / '.join(filter(None, items_reg))
-
-    estado = row[6].strip()
-
-    # Detalle Link (Index 7)
-    soup_det = BeautifulSoup(row[7], 'html.parser')
-    a_tag = soup_det.find('a')
+    # Detalle link y ficha_id
     detalle_link = ''
-    if a_tag:
-        href = a_tag.get('href', '')
-        if href.startswith('/'):
-            detalle_link = f"https://snifa.sma.gob.cl{href}"
-        else:
-            detalle_link = href
-
-    ficha_id = extract_ficha_id(detalle_link)
+    ficha_id = None
+    if len(row) > 7:
+        soup_det = BeautifulSoup(row[7], 'html.parser')
+        a_tag = soup_det.find('a')
+        if a_tag:
+            href = a_tag.get('href', '')
+            detalle_link = f"https://snifa.sma.gob.cl{href}" if href.startswith('/') else href
+            try:
+                parts = href.rstrip('/').split('/')
+                if parts and parts[-1].isdigit():
+                    ficha_id = int(parts[-1])
+            except:
+                pass
 
     return {
         'expediente': expediente,
@@ -110,7 +110,7 @@ class SancionatoriosScraper:
 
         db_expedientes, db_count = get_db_info_for_year(current_year)
         print(f"Registros del año {current_year} en BD: {db_count}")
-        
+
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -118,16 +118,16 @@ class SancionatoriosScraper:
             'Origin': 'https://snifa.sma.gob.cl'
         }
 
-        # Realizamos el POST con límite de 10 y filtro de año
-        payload = {
+        # 1. Petición rápida para obtener recordsTotal
+        payload_init = {
             'draw': '1',
             'start': '0',
-            'length': '10',
+            'length': '1',
             'expediente': filter_expediente
         }
 
         try:
-            r = requests.post(url, headers=headers, data=payload, timeout=60)
+            r = requests.post(url, headers=headers, data=payload_init, timeout=60)
             r.raise_for_status()
             res = r.json()
         except Exception as e:
@@ -141,19 +141,36 @@ class SancionatoriosScraper:
             print(f"No hay registros nuevos para el año {current_year}. La BD esta actualizada.")
             return 0
 
-        # Hay registros nuevos, procedemos a parsear los 10 registros obtenidos (los más recientes)
-        all_records = []
-        data_rows = res.get('data', [])
+        # 2. SNIFA ordena del más nuevo al más viejo → start=0 captura los más recientes.
+        diff = records_total - db_count
+        fetch_length = max(20, math.ceil(diff / 10) * 10)
+        print(f"Diferencia: {diff} registros. Solicitando los primeros {fetch_length} (start=0)...")
 
-        for row in data_rows:
+        payload_data = {
+            'draw': '2',
+            'start': '0',
+            'length': str(fetch_length),
+            'expediente': filter_expediente
+        }
+
+        try:
+            r = requests.post(url, headers=headers, data=payload_data, timeout=60)
+            r.raise_for_status()
+            res_data = r.json()
+        except Exception as e:
+            print(f"Error al obtener registros de Sancionatorios: {e}")
+            return 0
+
+        all_records = []
+        for row in res_data.get('data', []):
             parsed = parse_json_row(row)
             if parsed:
                 all_records.append(parsed)
 
-        nuevos = [r for r in all_records if r['expediente'] not in db_expedientes]
+        nuevos = [rec for rec in all_records if rec['expediente'] not in db_expedientes]
 
         if not nuevos:
-            print("No hay registros nuevos en el lote de los 10 mas recientes.")
+            print("No hay registros nuevos en el lote obtenido.")
             return 0
 
         print(f"Encontrados {len(nuevos)} registros nuevos.")
