@@ -1310,7 +1310,16 @@ def crear_indices_optimizacion():
             
             # Índice funcional para ordenamiento por to_date (2.8)
             log.info("Creando índice funcional para ordenamiento de fecha de presentación en Proyectos Evaluados...")
-            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (to_date(nullif(fecha_presentacion, \'\'), \'DD/MM/YYYY\') DESC);')
+            cur.execute("""
+                CREATE OR REPLACE FUNCTION f_parse_fecha_sea(text) RETURNS date AS $$
+                BEGIN
+                    RETURN to_date(nullif($1, ''), 'DD/MM/YYYY');
+                EXCEPTION WHEN OTHERS THEN
+                    RETURN NULL;
+                END;
+                $$ LANGUAGE plpgsql IMMUTABLE;
+            """)
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (f_parse_fecha_sea(fecha_presentacion) DESC);')
             
         log.info("✓ Índices del esquema scrapers verificados/creados exitosamente.")
     except Exception as e:

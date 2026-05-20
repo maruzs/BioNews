@@ -287,7 +287,8 @@ def setup_schedule():
     log.info(f"Configurando scheduler con parametros: {config}")
     
     # Diario Oficial: cada hora
-    schedule.every().hour.at(":05").do(check_diario_oficial)
+    #schedule.every().hour.at(":05").do(check_diario_oficial)
+    schedule.every().day.at("07:00").do(check_diario_oficial)
     
     # SNIFA (Horarios fijos)
     schedule.every().day.at(config.get("snifa_time_1", "07:00")).do(run_snifa)

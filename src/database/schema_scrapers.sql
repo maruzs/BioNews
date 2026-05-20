@@ -267,6 +267,14 @@ CREATE INDEX IF NOT EXISTS idx_fisc_trgm_rs ON fiscalizaciones USING GIN (nombre
 CREATE INDEX IF NOT EXISTS idx_sea_trgm_nom ON sea_proyectos_evaluados USING GIN (nombre gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_sea_trgm_tit ON sea_proyectos_evaluados USING GIN (titular gin_trgm_ops);
 
--- 4. Índice funcional para optimizar el ordenamiento por fecha de presentación en Proyectos Evaluados
-CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (to_date(nullif(fecha_presentacion, ''), 'DD/MM/YYYY') DESC);
+-- 4. Función immutable para parseo de fecha y su respectivo índice funcional de ordenamiento
+CREATE OR REPLACE FUNCTION f_parse_fecha_sea(text) RETURNS date AS $$
+BEGIN
+    RETURN to_date(nullif($1, ''), 'DD/MM/YYYY');
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE INDEX IF NOT EXISTS idx_sea_fecha_presentacion_date ON sea_proyectos_evaluados (f_parse_fecha_sea(fecha_presentacion) DESC);
 
