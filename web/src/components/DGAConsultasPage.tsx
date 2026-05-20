@@ -19,7 +19,6 @@ const DGAConsultasPage = () => {
   const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<DGAConsulta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<DGAConsulta | null>(null);
@@ -30,10 +29,16 @@ const DGAConsultasPage = () => {
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
   );
 
+  // Paginación server-side
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
   const handleApplyFilters = () => {
     setAppliedSearch(search);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setCurrentPage(1);
   };
-
 
   const category = 'dga';
 
@@ -44,14 +49,27 @@ const DGAConsultasPage = () => {
     };
   }, [setCategoryActive]);
 
+  // Sincronizar currentPage con paginationModel
+  useEffect(() => {
+    if (viewMode === 'cards') {
+      setPaginationModel(prev => ({ ...prev, page: currentPage - 1 }));
+    }
+  }, [currentPage, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(paginationModel.page + 1);
+  }, [paginationModel.page]);
+
   const fetchData = async () => {
+    if (!token) return;
     setLoading(true);
-    setBackgroundLoading(true);
-    setTotalRecords(null);
     try {
-      // 1. Fetch total count
+      // 1. Obtener count con filtros
+      const countParams = new URLSearchParams();
+      if (appliedSearch) countParams.append('search', appliedSearch);
+
       try {
-        const countRes = await fetch('/api/data/dga_consultas/count', {
+        const countRes = await fetch(`/api/data/dga_consultas/count?${countParams.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const countJson = await countRes.json();
@@ -60,29 +78,17 @@ const DGAConsultasPage = () => {
         console.error("Error fetching count:", e);
       }
 
-      // 2. Fetch first 100 records
-      const res = await fetch('/api/data/dga_consultas?limit=100', {
+      // 2. Obtener datos de la página
+      const dataParams = new URLSearchParams(countParams);
+      dataParams.append('limit', String(paginationModel.pageSize));
+      dataParams.append('offset', String(paginationModel.page * paginationModel.pageSize));
+
+      const response = await fetch(`/api/data/dga_consultas?${dataParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const json = await res.json();
-      setData(Array.isArray(json) ? json : []);
-      setLoading(false);
-
-      // 3. Fetch full dataset in the background
-      fetch('/api/data/dga_consultas?limit=-1', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(r => r.json())
-        .then(fullJson => {
-          if (Array.isArray(fullJson)) {
-            setData(fullJson);
-            setBackgroundLoading(false);
-          }
-        })
-        .catch(err => {
-          console.error("Error in background fetch:", err);
-          setBackgroundLoading(false);
-        });
+      if (!response.ok) throw new Error('Error al obtener los datos');
+      const result = await response.json();
+      setData(Array.isArray(result) ? result : []);
 
       // Cargar favoritos
       const favRes = await fetch('/api/favorites', {
@@ -93,22 +99,22 @@ const DGAConsultasPage = () => {
       refreshCategory(category);
     } catch (err) {
       console.error(err);
+    } finally {
       setLoading(false);
-      setBackgroundLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [token, paginationModel.page, paginationModel.pageSize, appliedSearch]);
 
   const handleOpenModal = (item: DGAConsulta) => {
     setSelectedItem(item);
   };
 
-  const filteredData = data.filter(item =>
-    item.nombre.toLowerCase().includes(appliedSearch.toLowerCase())
-  );
+  const filteredData = data;
+
+  const totalPages = Math.ceil((totalRecords || 0) / itemsPerPage);
 
   const columns = useMemo(() => [
     { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
@@ -154,11 +160,12 @@ const DGAConsultasPage = () => {
   ], [favorites]);
 
   const rows = useMemo(() => {
+    const offsetNumber = paginationModel.page * paginationModel.pageSize;
     return filteredData.map((item, index) => ({
       ...item,
-      rowNumber: index + 1
+      rowNumber: offsetNumber + index + 1
     }));
-  }, [filteredData]);
+  }, [filteredData, paginationModel.page, paginationModel.pageSize]);
 
   const toggleFavorite = async (e: React.MouseEvent, item: DGAConsulta) => {
     e.stopPropagation();
@@ -283,43 +290,27 @@ const DGAConsultasPage = () => {
         </div>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <style>{`
-            @keyframes spin-mini {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          {backgroundLoading && (
-            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span className="spinner-mini" style={{
-                width: '12px',
-                height: '12px',
-                border: '2px solid var(--primary)',
-                borderTopColor: 'transparent',
-                borderRadius: '50%',
-                display: 'inline-block',
-                animation: 'spin-mini 1s linear infinite'
-              }}></span>
-              Cargando completo...
-            </span>
-          )}
           {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
 
       <div className="content-wrapper" style={{ padding: '0' }}>
         {loading ? (
-          <p>Cargando consultas...</p>
+          <div style={{ textAlign: 'center', padding: '100px 0' }}>
+            <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
+            <p style={{ color: 'var(--text-light)' }}>Cargando consultas...</p>
+          </div>
         ) : viewMode === 'table' ? (
           <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
             <DataGrid
               rows={rows}
               columns={columns}
               loading={loading}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              pageSizeOptions={[10, 25, 50]}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={setPaginationModel}
+              rowCount={totalRecords || 0}
+              pageSizeOptions={[10, 25, 50, 100]}
               disableRowSelectionOnClick
               localeText={esES.components.MuiDataGrid.defaultProps.localeText}
               getRowClassName={(params) => {
@@ -348,64 +339,100 @@ const DGAConsultasPage = () => {
             />
           </div>
         ) : (
-          <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
-            {filteredData.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
-            ) : (
-              filteredData.map((item) => (
-                <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }} onClick={() => handleOpenModal(item)}>
-                  {item.is_new && (
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
-                      NUEVO
-                    </div>
-                  )}
-                  <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{
-                      width: '100%',
-                      height: '160px',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '15px',
-                      fontSize: '4rem',
-                      color: 'var(--primary)',
-                      fontFamily: 'etmodules'
-                    }}>
-                      {(() => {
-                        const nombre = item.nombre.toLowerCase();
-                        if (nombre.includes('condiciones técnicas') && nombre.includes('obras hidráulicas')) {
-                          return <Pencil size={64} />;
-                        }
-                        if (nombre.includes('declaración jurada') && (nombre.includes('bocatomas') || nombre.includes('cauces naturales'))) {
-                          return <ClipboardList size={64} />;
-                        }
-                        return item.imagen && item.imagen.length === 1 ? item.imagen : <HelpCircle size={64} />;
-                      })()}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px', flex: 1 }}>
-                      <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{item.nombre}</div>
-                      <Heart
-                        size={20}
-                        onClick={(e) => toggleFavorite(e, item)}
-                        style={{
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
-                          color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
-                          transition: 'all 0.2s'
-                        }}
-                      />
-                    </div>
-                    <div className="card-action" style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
-                      <ExternalLink size={16} /> Ver detalles
+          <>
+            <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px', marginBottom: '40px' }}>
+              {filteredData.length === 0 ? (
+                <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
+              ) : (
+                filteredData.map((item) => (
+                  <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }} onClick={() => handleOpenModal(item)}>
+                    {item.is_new && (
+                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
+                        NUEVO
+                      </div>
+                    )}
+                    <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{
+                        width: '100%',
+                        height: '160px',
+                        background: '#f8fafc',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '15px',
+                        fontSize: '4rem',
+                        color: 'var(--primary)',
+                        fontFamily: 'etmodules'
+                      }}>
+                        {(() => {
+                          const nombre = item.nombre.toLowerCase();
+                          if (nombre.includes('condiciones técnicas') && nombre.includes('obras hidráulicas')) {
+                            return <Pencil size={64} />;
+                          }
+                          if (nombre.includes('declaración jurada') && (nombre.includes('bocatomas') || nombre.includes('cauces naturales'))) {
+                            return <ClipboardList size={64} />;
+                          }
+                          return item.imagen && item.imagen.length === 1 ? item.imagen : <HelpCircle size={64} />;
+                        })()}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px', flex: 1 }}>
+                        <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{item.nombre}</div>
+                        <Heart
+                          size={20}
+                          onClick={(e) => toggleFavorite(e, item)}
+                          style={{
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
+                            color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
+                            transition: 'all 0.2s'
+                          }}
+                        />
+                      </div>
+                      <div className="card-action" style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
+                        <ExternalLink size={16} /> Ver detalles
+                      </div>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination control for card layout */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', marginTop: '20px' }}>
+                <button
+                  onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    background: currentPage === 1 ? '#f1f5f9' : 'white',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, color: 'var(--text-dark)'
+                  }}
+                >
+                  Anterior
+                </button>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
+                  <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
                 </div>
-              ))
+                <button
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    background: currentPage === totalPages ? '#f1f5f9' : 'white',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, color: 'var(--text-dark)'
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
 

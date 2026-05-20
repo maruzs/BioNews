@@ -25,7 +25,6 @@ const MINSALConsultasPage = () => {
   const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<MINSALConsulta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<MINSALConsulta | null>(null);
@@ -49,12 +48,22 @@ const MINSALConsultasPage = () => {
   const [appliedDateDesde, setAppliedDateDesde] = useState('');
   const [appliedDateHasta, setAppliedDateHasta] = useState('');
 
+  // States for dynamic filter options from API
+  const [optionsPeriodo, setOptionsPeriodo] = useState<string[]>([]);
+
+  // Paginación server-side
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
   const handleApplyFilters = () => {
     setAppliedSearch(search);
     setAppliedFilter(filter);
     setAppliedPeriodo(filterPeriodo);
     setAppliedDateDesde(dateDesde);
     setAppliedDateHasta(dateHasta);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
@@ -66,12 +75,11 @@ const MINSALConsultasPage = () => {
     setAppliedPeriodo('all');
     setAppliedDateDesde('');
     setAppliedDateHasta('');
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setCurrentPage(1);
   };
 
-
   useEffect(() => {
-    // Para notificaciones, MINSAL usa dos slugs actualmente en manager.py
-    // Pero el usuario quiere unificar la vista.
     const activeCategory = filter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
     setCategoryActive(activeCategory, true);
     return () => {
@@ -79,82 +87,108 @@ const MINSALConsultasPage = () => {
     };
   }, [setCategoryActive, filter]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setBackgroundLoading(true);
-    setTotalRecords(null);
-    const tableName = filter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
-    const currentFetchFilter = filter;
-    try {
-      // 1. Fetch total count
+  // Sincronizar currentPage con paginationModel
+  useEffect(() => {
+    if (viewMode === 'cards') {
+      setPaginationModel(prev => ({ ...prev, page: currentPage - 1 }));
+    }
+  }, [currentPage, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(paginationModel.page + 1);
+  }, [paginationModel.page]);
+
+  // Cargar las opciones únicas dinámicas para periodos
+  useEffect(() => {
+    if (!token) return;
+    const loadOptions = async () => {
+      const tableName = appliedFilter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
       try {
-        const countRes = await fetch(`/api/data/${tableName}/count`, {
+        const res = await fetch(`/api/options/${tableName}/periodo_consulta`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const vals = await res.json();
+          if (Array.isArray(vals)) {
+            setOptionsPeriodo(vals);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading options for periodo_consulta:", e);
+      }
+    };
+    loadOptions();
+  }, [token, appliedFilter]);
+
+  const fetchData = async () => {
+    if (!token) return;
+    setLoading(true);
+    const tableName = appliedFilter === 'vigentes' ? 'minsal_vigentes' : 'minsal_resultados';
+    const currentFetchFilter = appliedFilter;
+    try {
+      // 1. Obtener count con filtros
+      const countParams = new URLSearchParams();
+      if (appliedSearch) countParams.append('search', appliedSearch);
+      if (appliedDateDesde) countParams.append('date_start', appliedDateDesde);
+      if (appliedDateHasta) countParams.append('date_end', appliedDateHasta);
+
+      if (appliedPeriodo && appliedPeriodo !== 'all') countParams.append('periodo_consulta', appliedPeriodo);
+
+      try {
+        const countRes = await fetch(`/api/data/${tableName}/count?${countParams.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const countJson = await countRes.json();
-        if (filter === currentFetchFilter) {
+        if (appliedFilter === currentFetchFilter) {
           setTotalRecords(countJson.count || 0);
         }
       } catch (e) {
         console.error("Error fetching count:", e);
       }
 
-      // 2. Fetch first 100 records
-      const res = await fetch(`/api/data/${tableName}?limit=100`, {
+      // 2. Obtener datos de la página
+      const dataParams = new URLSearchParams(countParams);
+      dataParams.append('limit', String(paginationModel.pageSize));
+      dataParams.append('offset', String(paginationModel.page * paginationModel.pageSize));
+
+      const response = await fetch(`/api/data/${tableName}?${dataParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const json = await res.json();
-      if (filter === currentFetchFilter) {
-        setData(Array.isArray(json) ? json : []);
-        setLoading(false);
+      if (!response.ok) throw new Error('Error al obtener los datos');
+      const result = await response.json();
+      if (appliedFilter === currentFetchFilter) {
+        setData(Array.isArray(result) ? result : []);
       }
-
-      // 3. Fetch full dataset in the background
-      fetch(`/api/data/${tableName}?limit=-1`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(r => r.json())
-        .then(fullJson => {
-          if (filter === currentFetchFilter && Array.isArray(fullJson)) {
-            setData(fullJson);
-            setBackgroundLoading(false);
-          }
-        })
-        .catch(err => {
-          console.error("Error in background fetch:", err);
-          if (filter === currentFetchFilter) setBackgroundLoading(false);
-        });
 
       // Cargar favoritos
       const favRes = await fetch('/api/favorites', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const favJson = await favRes.json();
-      if (filter === currentFetchFilter) {
+      if (appliedFilter === currentFetchFilter) {
         setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
       }
       refreshCategory(tableName);
     } catch (err) {
       console.error(err);
-      if (filter === currentFetchFilter) {
+    } finally {
+      if (appliedFilter === currentFetchFilter) {
         setLoading(false);
-        setBackgroundLoading(false);
       }
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [appliedFilter]);
+  }, [token, appliedFilter, paginationModel.page, paginationModel.pageSize, appliedSearch, appliedPeriodo, appliedDateDesde, appliedDateHasta]);
 
   const handleOpenModal = async (item: MINSALConsulta) => {
     setSelectedItem(item);
     setDocuments([]);
     setDocsLoading(true);
 
-
     try {
-      const type = filter === 'vigentes' ? 'vigente' : 'resultado';
+      const type = appliedFilter === 'vigentes' ? 'vigente' : 'resultado';
       const res = await fetch(`/api/minsal/documents/${item.id}?type=${type}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -169,51 +203,9 @@ const MINSALConsultasPage = () => {
     }
   };
 
-  const parseDate = (str: string | undefined): Date | null => {
-    if (!str) return null;
-    let m = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-    if (m) {
-      return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
-    }
-    m = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-    if (m) {
-      return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-    }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
-  };
+  const filteredData = data;
 
-  const options = useMemo(() => {
-    return {
-      periodos: Array.from(new Set(data.map(i => i.periodo_consulta).filter(Boolean))).sort() as string[],
-    };
-  }, [data]);
-
-  const filteredData = useMemo(() => {
-    return data.filter(item => {
-      const matchesSearch = item.titulo.toLowerCase().includes(appliedSearch.toLowerCase());
-      const matchesPeriodo = appliedPeriodo === 'all' || item.periodo_consulta === appliedPeriodo;
-
-      let matchesDate = true;
-      if (appliedDateDesde || appliedDateHasta) {
-        const itemDate = parseDate(item.fecha_inicio);
-        if (itemDate) {
-          if (appliedDateDesde) {
-            const desde = new Date(appliedDateDesde + 'T00:00:00');
-            if (itemDate < desde) matchesDate = false;
-          }
-          if (appliedDateHasta) {
-            const hasta = new Date(appliedDateHasta + 'T23:59:59');
-            if (itemDate > hasta) matchesDate = false;
-          }
-        } else {
-          matchesDate = false;
-        }
-      }
-
-      return matchesSearch && matchesPeriodo && matchesDate;
-    });
-  }, [data, appliedSearch, appliedPeriodo, appliedDateDesde, appliedDateHasta]);
+  const totalPages = Math.ceil((totalRecords || 0) / itemsPerPage);
 
   const columns = useMemo(() => [
     { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
@@ -246,11 +238,12 @@ const MINSALConsultasPage = () => {
   ], [favorites]);
 
   const rows = useMemo(() => {
+    const offsetNumber = paginationModel.page * paginationModel.pageSize;
     return filteredData.map((item, index) => ({
       ...item,
-      rowNumber: index + 1
+      rowNumber: offsetNumber + index + 1
     }));
-  }, [filteredData]);
+  }, [filteredData, paginationModel.page, paginationModel.pageSize]);
 
   const toggleFavorite = async (e: React.MouseEvent, item: MINSALConsulta) => {
     e.stopPropagation();
@@ -424,26 +417,6 @@ const MINSALConsultasPage = () => {
         </button>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <style>{`
-            @keyframes spin-mini {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          {backgroundLoading && (
-            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span className="spinner-mini" style={{
-                width: '12px',
-                height: '12px',
-                border: '2px solid var(--primary)',
-                borderTopColor: 'transparent',
-                borderRadius: '50%',
-                display: 'inline-block',
-                animation: 'spin-mini 1s linear infinite'
-              }}></span>
-              Cargando completo...
-            </span>
-          )}
           {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
@@ -459,7 +432,7 @@ const MINSALConsultasPage = () => {
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Periodo de Consulta</label>
             <Autocomplete
-              options={options.periodos}
+              options={optionsPeriodo}
               value={filterPeriodo === 'all' ? null : filterPeriodo}
               onChange={(_, newValue) => setFilterPeriodo(newValue || 'all')}
               renderInput={(params) => (
@@ -523,17 +496,21 @@ const MINSALConsultasPage = () => {
 
       <div className="content-wrapper" style={{ padding: '0' }}>
         {loading ? (
-          <p>Cargando consultas...</p>
+          <div style={{ textAlign: 'center', padding: '100px 0' }}>
+            <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
+            <p style={{ color: 'var(--text-light)' }}>Cargando consultas...</p>
+          </div>
         ) : viewMode === 'table' ? (
           <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
             <DataGrid
               rows={rows}
               columns={columns}
               loading={loading}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              pageSizeOptions={[10, 25, 50]}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={setPaginationModel}
+              rowCount={totalRecords || 0}
+              pageSizeOptions={[10, 25, 50, 100]}
               disableRowSelectionOnClick
               localeText={esES.components.MuiDataGrid.defaultProps.localeText}
               getRowClassName={(params) => {
@@ -562,57 +539,93 @@ const MINSALConsultasPage = () => {
             />
           </div>
         ) : (
-          <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-            {filteredData.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
-            ) : (
-              filteredData.map((item) => (
-                <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
-                  {item.is_new && (
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
-                      NUEVO
-                    </div>
-                  )}
-                  <div className="card-content">
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '0.7rem', background: filter === 'vigentes' ? '#dcfce7' : '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: filter === 'vigentes' ? '#166534' : '#475569' }}>
-                        {filter === 'vigentes' ? 'VIGENTE' : 'RESULTADO'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
-                      <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.titulo}</div>
-                      <Heart
-                        size={20}
-                        onClick={(e) => toggleFavorite(e, item)}
-                        style={{
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
-                          color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
-                          transition: 'all 0.2s'
-                        }}
-                      />
-                    </div>
-                    <div className="card-meta">
-                      {item.fecha_inicio && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '5px' }}>
-                          <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Inicio:</span> {item.fecha_inicio}
-                        </div>
-                      )}
-                      {item.periodo_consulta && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                          <Info size={14} /> <span style={{ fontWeight: 500 }}>Periodo:</span> {item.periodo_consulta}
-                        </div>
-                      )}
-                    </div>
-                    <div className="card-action" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
-                      <FileText size={16} /> Ver detalles y documentos
+          <>
+            <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+              {filteredData.length === 0 ? (
+                <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
+              ) : (
+                filteredData.map((item) => (
+                  <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
+                    {item.is_new && (
+                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
+                        NUEVO
+                      </div>
+                    )}
+                    <div className="card-content">
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', background: appliedFilter === 'vigentes' ? '#dcfce7' : '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: appliedFilter === 'vigentes' ? '#166534' : '#475569' }}>
+                          {appliedFilter === 'vigentes' ? 'VIGENTE' : 'RESULTADO'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                        <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.titulo}</div>
+                        <Heart
+                          size={20}
+                          onClick={(e) => toggleFavorite(e, item)}
+                          style={{
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
+                            color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
+                            transition: 'all 0.2s'
+                          }}
+                        />
+                      </div>
+                      <div className="card-meta">
+                        {item.fecha_inicio && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '5px' }}>
+                            <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Inicio:</span> {item.fecha_inicio}
+                          </div>
+                        )}
+                        {item.periodo_consulta && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                            <Info size={14} /> <span style={{ fontWeight: 500 }}>Periodo:</span> {item.periodo_consulta}
+                          </div>
+                        )}
+                      </div>
+                      <div className="card-action" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
+                        <FileText size={16} /> Ver detalles y documentos
+                      </div>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination control for card layout */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', marginTop: '20px' }}>
+                <button
+                  onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    background: currentPage === 1 ? '#f1f5f9' : 'white',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, color: 'var(--text-dark)'
+                  }}
+                >
+                  Anterior
+                </button>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
+                  <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
                 </div>
-              ))
+                <button
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    background: currentPage === totalPages ? '#f1f5f9' : 'white',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, color: 'var(--text-dark)'
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
 

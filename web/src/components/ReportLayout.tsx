@@ -235,7 +235,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [data, setData] = useState<LegalItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
@@ -250,12 +249,23 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
   );
+  
+  // Paginación server-side (y cliente en favoritos)
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
   const [cardPage, setCardPage] = useState(1);
   const cardsPerPage = 12;
 
+  // Estado para guardar datos históricos del dashboard cargados bajo demanda
+  const [dashboardData, setDashboardData] = useState<LegalItem[]>([]);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+
+  // Al cambiar filtros, reiniciar página a 0
   useEffect(() => {
     setCardPage(1);
-  }, [appliedSearch, appliedColumnFilters, appliedDateRange, activeTab, tableName]);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    // Resetear datos de dashboard anteriores para que se vuelvan a cargar con filtros correctos si se requiere
+    setDashboardData([]);
+  }, [appliedSearch, appliedColumnFilters, appliedDateRange, tableName]);
 
   // Manual favorite form state
   const [manualFav, setManualFav] = useState({ id: '', nombre: '', fuente: '', accion: '' });
@@ -305,13 +315,13 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   const effectiveIdField = idField || (tableName ? TABLE_ID_FIELDS[tableName] : 'link') || 'link';
   const effectiveActionField = actionField || (tableName ? TABLE_ACTION_FIELDS[tableName] : 'link') || 'link';
 
+  // 1. Fetch de datos paginados/filtrados para la tabla
   useEffect(() => {
     let active = true;
     const fetchData = async () => {
       setLoading(true);
-      setBackgroundLoading(true);
-      setTotalRecords(null);
       try {
+        // Cargar favoritos del usuario (siempre se necesita para el icono de corazón)
         const favRes = await fetch('/api/favorites', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -331,13 +341,22 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           }));
           if (active) {
             setData(favData);
-            setLoading(false);
-            setBackgroundLoading(false);
+            setTotalRecords(favData.length);
           }
         } else if (tableName) {
-          // 1. Fetch total count
+          // Obtener totalRecords con filtros aplicados
+          const countParams = new URLSearchParams();
+          if (appliedSearch) countParams.append('search', appliedSearch);
+          if (appliedDateRange.start) countParams.append('date_start', appliedDateRange.start);
+          if (appliedDateRange.end) countParams.append('date_end', appliedDateRange.end);
+          Object.entries(appliedColumnFilters).forEach(([key, val]) => {
+            if (val && val !== 'all') {
+              countParams.append(key, val);
+            }
+          });
+
           try {
-            const countRes = await fetch(`/api/data/${tableName}/count`, {
+            const countRes = await fetch(`/api/data/${tableName}/count?${countParams.toString()}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             const countJson = await countRes.json();
@@ -348,37 +367,24 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
             console.error("Error fetching count:", e);
           }
 
-          // 2. Fetch first 100 records for fast initial load
-          const res = await fetch(`/api/data/${tableName}?limit=100`, {
+          // Obtener datos paginados
+          const dataParams = new URLSearchParams(countParams);
+          dataParams.append('limit', String(paginationModel.pageSize));
+          dataParams.append('offset', String(paginationModel.page * paginationModel.pageSize));
+
+          const res = await fetch(`/api/data/${tableName}?${dataParams.toString()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
           if (active) {
             setData(Array.isArray(json) ? json : []);
-            setLoading(false);
           }
-
-          // 3. Fetch full dataset in the background
-          fetch(`/api/data/${tableName}?limit=-1`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-            .then(r => r.json())
-            .then(fullJson => {
-              if (active && Array.isArray(fullJson)) {
-                setData(fullJson);
-                setBackgroundLoading(false);
-              }
-            })
-            .catch(err => {
-              console.error("Error in background fetch:", err);
-              if (active) setBackgroundLoading(false);
-            });
         }
       } catch (err) {
         console.error("Error fetching data:", err);
+      } finally {
         if (active) {
           setLoading(false);
-          setBackgroundLoading(false);
         }
       }
     };
@@ -387,7 +393,43 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     return () => {
       active = false;
     };
-  }, [tableName, isFavoritesPage]);
+  }, [tableName, isFavoritesPage, paginationModel.page, paginationModel.pageSize, appliedSearch, appliedColumnFilters, appliedDateRange, token]);
+
+  // 2. Fetch de datos completos de dashboard bajo demanda
+  useEffect(() => {
+    let active = true;
+    if (activeTab === 'dashboard' && tableName && dashboardData.length === 0 && !isFavoritesPage) {
+      setLoadingDashboard(true);
+      
+      const dashboardParams = new URLSearchParams();
+      if (appliedSearch) dashboardParams.append('search', appliedSearch);
+      if (appliedDateRange.start) dashboardParams.append('date_start', appliedDateRange.start);
+      if (appliedDateRange.end) dashboardParams.append('date_end', appliedDateRange.end);
+      Object.entries(appliedColumnFilters).forEach(([key, val]) => {
+        if (val && val !== 'all') {
+          dashboardParams.append(key, val);
+        }
+      });
+      dashboardParams.append('limit', '-1'); // Traer todos los datos históricos filtrados
+
+      fetch(`/api/data/${tableName}?${dashboardParams.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(fullJson => {
+          if (active && Array.isArray(fullJson)) {
+            setDashboardData(fullJson);
+          }
+        })
+        .catch(err => console.error("Error loading dashboard data:", err))
+        .finally(() => {
+          if (active) setLoadingDashboard(false);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [activeTab, tableName, dashboardData.length, isFavoritesPage, appliedSearch, appliedColumnFilters, appliedDateRange, token]);
 
   // Al cargar datos de una categoría, actualizar si tiene ítems nuevos
   // Esto actualiza el punto rojo en la sidebar sin necesidad de F5
@@ -445,6 +487,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   };
 
   const filteredData = useMemo(() => {
+    if (!isFavoritesPage) {
+      return data;
+    }
     let result = data;
     if (appliedSearch) {
       const lowerSearch = appliedSearch.toLowerCase();
@@ -540,12 +585,43 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     setAppliedSearch('');
   };
 
-  const downloadExcel = () => {
-    if (filteredData.length === 0) return;
+  const downloadExcel = async () => {
+    let exportData = filteredData;
+
+    // Si es paginado por servidor, obtenemos el set completo con los filtros aplicados
+    if (!isFavoritesPage && tableName) {
+      setLoading(true);
+      try {
+        const dataParams = new URLSearchParams();
+        if (appliedSearch) dataParams.append('search', appliedSearch);
+        if (appliedDateRange.start) dataParams.append('date_start', appliedDateRange.start);
+        if (appliedDateRange.end) dataParams.append('date_end', appliedDateRange.end);
+        Object.entries(appliedColumnFilters).forEach(([key, val]) => {
+          if (val && val !== 'all') {
+            dataParams.append(key, val);
+          }
+        });
+        dataParams.append('limit', '-1'); // Traer todo
+
+        const res = await fetch(`/api/data/${tableName}?${dataParams.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          exportData = json;
+        }
+      } catch (err) {
+        console.error("Error exporting excel:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (exportData.length === 0) return;
 
     const colFields = activeColumns.filter(c => c.field !== 'rowNumber' && c.field !== 'fav' && c.field !== 'accion');
 
-    const excelData = filteredData.map((row) => {
+    const excelData = exportData.map((row) => {
       const rowData: Record<string, any> = {};
       colFields.forEach(c => {
         rowData[c.headerName] = row[c.field] || '';
@@ -579,18 +655,28 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     const baseId = isFavoritesPage ? item._id : (item[effectiveIdField] || '');
     // Si el baseId no es suficientemente único (como en normativas), combinamos con otros campos o el índice
     const uniqueId = baseId ? `${baseId}-${item.fecha || item.Fecha || ''}-${index}` : `row-${index}`;
+    const offsetNumber = isFavoritesPage ? 0 : (paginationModel.page * paginationModel.pageSize);
 
     return {
       ...item,
       id: uniqueId,
-      rowNumber: index + 1
+      rowNumber: offsetNumber + index + 1
     };
-  }), [filteredData, effectiveIdField, isFavoritesPage]);
+  }), [filteredData, effectiveIdField, isFavoritesPage, paginationModel.page, paginationModel.pageSize]);
 
-  const totalCardPages = Math.ceil(rows.length / cardsPerPage);
+  const totalCardPages = isFavoritesPage
+    ? Math.ceil(rows.length / cardsPerPage)
+    : Math.ceil((totalRecords || 0) / paginationModel.pageSize);
+
+  const currentCardPage = isFavoritesPage ? cardPage : (paginationModel.page + 1);
+
   const paginatedCardRows = useMemo(() => {
-    return rows.slice((cardPage - 1) * cardsPerPage, cardPage * cardsPerPage);
-  }, [rows, cardPage]);
+    if (isFavoritesPage) {
+      return rows.slice((cardPage - 1) * cardsPerPage, cardPage * cardsPerPage);
+    }
+    // En paginación server-side, rows ya contiene solo la página actual
+    return rows;
+  }, [rows, cardPage, isFavoritesPage]);
 
   const columns: GridColDef[] = useMemo(() => {
     const cols: GridColDef[] = [
@@ -973,30 +1059,23 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
               100% { transform: rotate(360deg); }
             }
           `}</style>
-          {backgroundLoading && (
-            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span className="spinner-mini" style={{
-                width: '12px',
-                height: '12px',
-                border: '2px solid var(--primary)',
-                borderTopColor: 'transparent',
-                borderRadius: '50%',
-                display: 'inline-block',
-                animation: 'spin-mini 1s linear infinite'
-              }}></span>
-              Cargando historial completo...
-            </span>
-          )}
           {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
 
       {activeTab === 'dashboard' && !isFavoritesPage ? (
         <div style={{ marginTop: '20px' }}>
-          <DashboardManager
-            data={data}
-            config={getDashboardConfig(tableName, title)}
-          />
+          {loadingDashboard ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
+              <p style={{ color: 'var(--text-light)', fontWeight: 600 }}>Cargando datos históricos del dashboard...</p>
+            </div>
+          ) : (
+            <DashboardManager
+              data={dashboardData}
+              config={getDashboardConfig(tableName, title)}
+            />
+          )}
         </div>
       ) : (
         <>
@@ -1173,7 +1252,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           <div className="list-header">
             <h2 className="list-title">Listado de {listTitle}</h2>
             <div className="list-meta" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <span>Total de registros: {filteredData.length}</span>
+              <span>Total de registros: {isFavoritesPage ? filteredData.length : (totalRecords || 0)}</span>
               <button onClick={downloadExcel} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
                 <Download size={16} /> Descargar XLSX
               </button>
@@ -1186,10 +1265,11 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                 rows={rows}
                 columns={columns}
                 loading={loading}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 10 } },
-                }}
-                pageSizeOptions={[10, 25, 50]}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                paginationMode={isFavoritesPage ? "client" : "server"}
+                rowCount={isFavoritesPage ? rows.length : (totalRecords || 0)}
+                pageSizeOptions={[10, 25, 50, 100]}
                 disableRowSelectionOnClick
                 localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                 getRowClassName={(params) => {
@@ -1332,28 +1412,42 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
                   {totalCardPages > 1 && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', marginTop: '20px' }}>
                       <button
-                        onClick={() => { setCardPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        disabled={cardPage === 1}
+                        onClick={() => {
+                          if (isFavoritesPage) {
+                            setCardPage(p => Math.max(1, p - 1));
+                          } else {
+                            setPaginationModel(prev => ({ ...prev, page: Math.max(0, prev.page - 1) }));
+                          }
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={currentCardPage === 1}
                         style={{
                           padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
-                          background: cardPage === 1 ? '#f1f5f9' : 'white',
-                          cursor: cardPage === 1 ? 'not-allowed' : 'pointer',
+                          background: currentCardPage === 1 ? '#f1f5f9' : 'white',
+                          cursor: currentCardPage === 1 ? 'not-allowed' : 'pointer',
                           fontWeight: 600, color: 'var(--text-dark)', fontSize: '13px'
                         }}
                       >
                         Anterior
                       </button>
                       <div style={{ display: 'flex', gap: '5px', fontSize: '14px' }}>
-                        <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{cardPage}</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentCardPage}</span>
                         <span style={{ color: 'var(--text-light)' }}>de {totalCardPages}</span>
                       </div>
                       <button
-                        onClick={() => { setCardPage(p => Math.min(totalCardPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        disabled={cardPage === totalCardPages}
+                        onClick={() => {
+                          if (isFavoritesPage) {
+                            setCardPage(p => Math.min(totalCardPages, p + 1));
+                          } else {
+                            setPaginationModel(prev => ({ ...prev, page: Math.min(totalCardPages - 1, prev.page + 1) }));
+                          }
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={currentCardPage === totalCardPages}
                         style={{
                           padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
-                          background: cardPage === totalCardPages ? '#f1f5f9' : 'white',
-                          cursor: cardPage === totalCardPages ? 'not-allowed' : 'pointer',
+                          background: currentCardPage === totalCardPages ? '#f1f5f9' : 'white',
+                          cursor: currentCardPage === totalCardPages ? 'not-allowed' : 'pointer',
                           fontWeight: 600, color: 'var(--text-dark)', fontSize: '13px'
                         }}
                       >

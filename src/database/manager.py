@@ -15,6 +15,8 @@ Convenciones:
 """
 
 from datetime import datetime
+import json
+import hashlib
 from psycopg2.extras import RealDictCursor
 
 from src.database.connection import users_conn, scrapers_conn, get_users_conn, release_users_conn, get_scrapers_conn, release_scrapers_conn
@@ -26,6 +28,38 @@ def _now_str():
 # Caché en memoria para el schema de columnas por tabla
 # (las columnas no cambian en runtime, solo al reiniciar el contenedor)
 _column_schema_cache: dict = {}
+
+# Mapeo de columnas para búsquedas globales por texto (ILIKE) en cada tabla
+SEARCH_COLUMNS = {
+    'sea_proyectos_evaluados': ['nombre', 'titular', 'id'],
+    'fiscalizaciones': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'sancionatorios': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'normativas': ['detalle', 'organismo', 'materia', 'numero'],
+    'medidas_provisionales': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'programasDeCumplimiento': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'registroSanciones': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'requerimientos': ['expediente', 'nombre_razon_social', 'unidad_fiscalizable', 'categoria'],
+    'Tribunales': ['Caratula', 'Rol', 'Tribunal'],
+    'minsal_vigentes': ['titulo', 'periodo_consulta'],
+    'minsal_resultados': ['titulo', 'periodo_consulta'],
+    'mma_abiertas': ['nombre_instrumento', 'ambito_territorial', 'tipo_proceso', 'tipo_instrumento'],
+    'mma_cerradas': ['nombre_instrumento', 'ambito_territorial', 'tipo_proceso', 'tipo_instrumento'],
+    'dga_consultas': ['nombre'],
+    'noticias': ['titulo', 'resumen', 'url'],
+}
+
+# Mapeo de expresiones SQL para obtener la fecha formateada/parseada como DATE por tabla
+TABLE_DATE_EXPRESSIONS = {
+    'sea_proyectos_evaluados': 'f_parse_fecha_sea(fecha_presentacion)',
+    'mma_abiertas': "to_date(nullif(fecha_inicio, ''), 'MM/DD/YYYY')",
+    'mma_cerradas': "to_date(nullif(fecha_inicio, ''), 'MM/DD/YYYY')",
+    'Tribunales': 'to_date(nullif("Fecha", \'\'), \'YYYY-MM-DD\')',
+    'pertinencias': 'to_date(nullif("Fecha", \'\'), \'YYYY-MM-DD\')',
+    'minsal_vigentes': "to_date(nullif(fecha_inicio, ''), 'YYYY-MM-DD')",
+    'minsal_resultados': "to_date(nullif(fecha_inicio, ''), 'YYYY-MM-DD')",
+    'normativas': "to_date(nullif(fecha, ''), 'YYYY-MM-DD')",
+    'noticias': "to_date(nullif(fecha, ''), 'YYYY-MM-DD')"
+}
 
 class DatabaseManager:
     """Fachada única manteniendo la misma API que la versión SQLite."""
@@ -85,7 +119,61 @@ class DatabaseManager:
 
     # ── TABLAS ESPECIFICAS ────────────────────────────────────────────────────
 
-    def get_table_data(self, table_name, limit=1000, offset=0):
+    def _build_where_clause(self, table_name, columns, search, date_start, date_end, filters):
+        where_clauses = []
+        params = []
+
+        # 1. Búsqueda de palabra clave global
+        if search:
+            search_cols = SEARCH_COLUMNS.get(table_name, [])
+            if search_cols:
+                clauses = []
+                for col in search_cols:
+                    col_name = col if col.startswith('"') else f'"{col}"'
+                    clauses.append(f"{col_name}::text ILIKE %s")
+                    params.append(f"%{search}%")
+                if clauses:
+                    where_clauses.append("(" + " OR ".join(clauses) + ")")
+
+        # 2. Filtros de fecha (Desde / Hasta)
+        if date_start and table_name in TABLE_DATE_EXPRESSIONS:
+            expr = TABLE_DATE_EXPRESSIONS[table_name]
+            where_clauses.append(f"{expr} >= to_date(%s, 'YYYY-MM-DD')")
+            params.append(date_start)
+        if date_end and table_name in TABLE_DATE_EXPRESSIONS:
+            expr = TABLE_DATE_EXPRESSIONS[table_name]
+            where_clauses.append(f"{expr} <= to_date(%s, 'YYYY-MM-DD')")
+            params.append(date_end)
+
+        # 3. Filtros específicos por columnas
+        if filters:
+            for col, val in filters.items():
+                if val is None or val == '' or val == 'all':
+                    continue
+                # Filtro especial de año para expedientes
+                if col == 'expediente_year':
+                    if 'expediente' in columns:
+                        where_clauses.append('expediente ILIKE %s')
+                        params.append(f"%{val}%")
+                    elif 'expediente_id' in columns:
+                        where_clauses.append('expediente_id ILIKE %s')
+                        params.append(f"%{val}%")
+                    continue
+
+                # Buscar la columna en las columnas reales de la tabla de forma case-insensitive
+                matching_cols = [c for c in columns if c.lower() == col.lower()]
+                if matching_cols:
+                    real_col = matching_cols[0]
+                    where_clauses.append(f'"{real_col}" = %s')
+                    params.append(val)
+
+        where_sql = ""
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+
+        return where_sql, params
+
+    def get_table_data(self, table_name, limit=1000, offset=0, search=None, date_start=None, date_end=None, filters=None):
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
@@ -98,7 +186,16 @@ class DatabaseManager:
 
         # Intentar obtener de caché Redis primero
         from src.database.cache import cache
-        cache_key = f"table_data:{table_name}:{limit}:{offset}"
+        filter_data = {
+            'search': search,
+            'date_start': date_start,
+            'date_end': date_end,
+            'filters': filters
+        }
+        filter_str = json.dumps(filter_data, sort_keys=True)
+        filter_hash = hashlib.md5(filter_str.encode('utf-8')).hexdigest()
+        cache_key = f"table_data:{table_name}:{limit}:{offset}:{filter_hash}"
+        
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
@@ -113,6 +210,9 @@ class DatabaseManager:
                     """, (table_name,))
                     _column_schema_cache[table_name] = [r['column_name'] for r in cur.fetchall()]
                 columns = _column_schema_cache[table_name]
+
+                # Construir Cláusulas WHERE
+                where_sql, params = self._build_where_clause(table_name, columns, search, date_start, date_end, filters)
 
                 # Definir orden cronológico por fecha de más nuevo a más antiguo
                 date_sorts = {
@@ -140,13 +240,17 @@ class DatabaseManager:
                 elif 'fecha_scraping' in columns:
                     order_by = "ORDER BY fecha_scraping DESC"
 
+                query_params = list(params)
+                sql = f'SELECT * FROM "{table_name}" {where_sql} {order_by}'
+
                 if limit and limit > 0:
+                    sql += " LIMIT %s"
+                    query_params.append(limit)
                     if offset and offset > 0:
-                        cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s OFFSET %s', (limit, offset))
-                    else:
-                        cur.execute(f'SELECT * FROM "{table_name}" {order_by} LIMIT %s', (limit,))
-                else:
-                    cur.execute(f'SELECT * FROM "{table_name}" {order_by}')
+                        sql += " OFFSET %s"
+                        query_params.append(offset)
+
+                cur.execute(sql, query_params)
                 rows = cur.fetchall()
                 result = [dict(r) for r in rows]
 
@@ -159,7 +263,7 @@ class DatabaseManager:
 
         return result
 
-    def get_table_count(self, table_name):
+    def get_table_count(self, table_name, search=None, date_start=None, date_end=None, filters=None):
         allowed = {
             'fiscalizaciones', 'medidas_provisionales', 'normativas',
             'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
@@ -170,6 +274,22 @@ class DatabaseManager:
         if table_name not in allowed:
             raise ValueError(f"Tabla no permitida: {table_name}")
 
+        # Intentar obtener de caché Redis primero
+        from src.database.cache import cache
+        filter_data = {
+            'search': search,
+            'date_start': date_start,
+            'date_end': date_end,
+            'filters': filters
+        }
+        filter_str = json.dumps(filter_data, sort_keys=True)
+        filter_hash = hashlib.md5(filter_str.encode('utf-8')).hexdigest()
+        cache_key = f"table_count:{table_name}:{filter_hash}"
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         # favoritos y noticias están en users y scrapers respectivamente
         if table_name == 'favoritos':
             ctx = users_conn
@@ -178,8 +298,72 @@ class DatabaseManager:
 
         with ctx() as conn:
             with conn.cursor() as cur:
-                cur.execute(f'SELECT COUNT(*) FROM "{table_name}"')
-                return cur.fetchone()[0]
+                # Schema de columnas
+                if table_name not in _column_schema_cache:
+                    cur.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name = %s AND table_schema IN ('scrapers', 'users', 'public')
+                    """, (table_name,))
+                    _column_schema_cache[table_name] = [r[0] for r in cur.fetchall()]
+                columns = _column_schema_cache[table_name]
+
+                # Construir Cláusulas WHERE
+                where_sql, params = self._build_where_clause(table_name, columns, search, date_start, date_end, filters)
+
+                sql = f'SELECT COUNT(*) FROM "{table_name}" {where_sql}'
+                cur.execute(sql, params)
+                count = cur.fetchone()[0]
+
+        cache.set(cache_key, count, expire_seconds=120)
+        return count
+
+    def get_distinct_column_options(self, table_name, column_name):
+        allowed_tables = {
+            'fiscalizaciones', 'medidas_provisionales', 'normativas',
+            'pertinencias', 'programasDeCumplimiento', 'registroSanciones',
+            'requerimientos', 'sancionatorios', 'Tribunales',
+            'minsal_vigentes', 'minsal_resultados', 'mma_abiertas', 'mma_cerradas',
+            'dga_consultas', 'sea_proyectos_evaluados'
+        }
+        if table_name not in allowed_tables:
+            raise ValueError(f"Tabla no permitida: {table_name}")
+
+        # Intentar obtener de caché Redis primero
+        from src.database.cache import cache
+        cache_key = f"options:{table_name}:{column_name}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Obtener columnas
+        if table_name not in _column_schema_cache:
+            with scrapers_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name = %s AND table_schema IN ('scrapers', 'users', 'public')
+                    """, (table_name,))
+                    _column_schema_cache[table_name] = [r[0] for r in cur.fetchall()]
+        columns = _column_schema_cache[table_name]
+
+        # Validar case-insensitive de la columna
+        matching = [c for c in columns if c.lower() == column_name.lower()]
+        if not matching:
+            raise ValueError(f"Columna no válida para tabla {table_name}: {column_name}")
+        real_col = matching[0]
+
+        with scrapers_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"""
+                    SELECT DISTINCT "{real_col}"
+                    FROM "{table_name}"
+                    WHERE "{real_col}" IS NOT NULL AND "{real_col}" != ''
+                    ORDER BY "{real_col}"
+                """)
+                res = [r[0] for r in cur.fetchall()]
+
+        cache.set(cache_key, res, expire_seconds=600)  # 10 minutos
+        return res
 
     # ── FAVORITOS ─────────────────────────────────────────────────────────────
 

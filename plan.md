@@ -19,3 +19,17 @@ La contrasena debe ser de 8 caracteres minimo
 El administrador es el usuario con el correo marianoemunozr@gmail.com asignado (puedes crear un nuevo usuario si lo deseas, pero si lo haces hay que borrar administrador@bionews.cl)
 Cada cierto tiempo de inactividad se debe cerrar la sesion de cualquier usuario.
 Se puede tener la sesion abierta en mas de un dispositivo.
+
+
+## Para implementar el server side rendering (con excepcion de los dashboards)
+Esta pagina en general es una recreacion de una que ya existe, y estuve analizandola y esto es lo que note:
+1. Las tablas las hacen con server side rendering y limits y paginacion
+2. Cuando voy al apartado de Dashboards en la pestana Network de las herramientas de desarrollador se genera un GET que devuelve un archivo bastante pesado, por ejemplo https://beta.ecosinfoambiental.com/api-reports/vw-rca-dashboard/? devuelve un json de 17.07mb. Ellos logran hacer que su dashboard sea con cross filtering y el total de datos 
+3. Para buscar por palabra clave ellos tambien lo hacen server side como el siguiente ejemplo:
+   - Si yo pongo 'ampli' en el buscador por palabra clave (de una categoria, no el general ya que no tienen) se genera en semi tiempo real (se demora unos segundos cuando no estoy escribiendo) o al dar enter el siguiente GET -> `/api-reports/vw-rca-resumen/?__palabraclave=ampli^&page=1^&page_size=20`
+   - Y luego despues de eso la tabla muestra los resultados 
+4. Para los filtros avanzados ellos tambien lo hicieron server side de la siguiente manera:
+   - Los filtros son dropdowns con todos los posibles registros (por ejemplo Titular es un dropdown con todos los titulares), pero en ese dropdown puede uno escribir y se va filtrando el dropdown a medida que vas escribiendo (no se si se entiende pero se empiezan a mostrar solo los que coinciden con lo que escribo)
+   - Una vez seleccionados los respectivos filtros se le da a 'Aplicar filtros' y se construye una peticion GET con multiples parametros -> `api-reports/vw-rca-resumen/?categoria_economica=Agroindustrias^&razon_social=8i+S.A.^&page=1^&page_size=20`
+
+   Eso lo tienen implementado para todas las categorias y los filtros avanzados son basados en las columnas que se muestran en las tablas (Aunque por ejemplo yo tengo para filtrar por anio los de SNIFA y el anio esta dentro del expediente). Todos los filtros que tengo actualmente deben mantenerse pero implementarse de esta manera

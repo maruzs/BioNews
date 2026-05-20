@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Calendar, ExternalLink, X, Info, Heart, Table, LayoutGrid, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Calendar, ExternalLink, X, Info, Heart, Table, LayoutGrid, LayoutDashboard, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { DataGrid } from '@mui/x-data-grid';
@@ -25,14 +25,13 @@ const MMAConsultasPage = () => {
   const { refreshCategory, setCategoryActive } = useNotifications();
   const [data, setData] = useState<MMAConsulta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<MMAConsulta | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [tipoFilter, setTipoFilter] = useState<string>('all');
-  const [activeTab] = useState('reporte');
+  const [activeTab, setActiveTab] = useState('reporte');
 
   const [showFilters, setShowFilters] = useState(false);
   const [filterAmbito, setFilterAmbito] = useState<string>('all');
@@ -52,6 +51,20 @@ const MMAConsultasPage = () => {
   const [appliedDateDesde, setAppliedDateDesde] = useState('');
   const [appliedDateHasta, setAppliedDateHasta] = useState('');
 
+  // States for dynamic filter options from API
+  const [optionsTipo, setOptionsTipo] = useState<string[]>([]);
+  const [optionsAmbito, setOptionsAmbito] = useState<string[]>([]);
+  const [optionsTipoProceso, setOptionsTipoProceso] = useState<string[]>([]);
+
+  // Paginación server-side
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
+  // Estado de dashboard bajo demanda
+  const [dashboardData, setDashboardData] = useState<MMAConsulta[]>([]);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+
   const handleApplyFilters = () => {
     setAppliedSearch(search);
     setAppliedFilter(filter);
@@ -60,6 +73,8 @@ const MMAConsultasPage = () => {
     setAppliedTipoProceso(filterTipoProceso);
     setAppliedDateDesde(dateDesde);
     setAppliedDateHasta(dateHasta);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
@@ -75,6 +90,8 @@ const MMAConsultasPage = () => {
     setAppliedTipoProceso('all');
     setAppliedDateDesde('');
     setAppliedDateHasta('');
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setCurrentPage(1);
   };
 
   const category = 'mma';
@@ -86,127 +103,159 @@ const MMAConsultasPage = () => {
     };
   }, [setCategoryActive]);
 
+  // Resetear dashboardData y cardPage cuando cambian los filtros
+  useEffect(() => {
+    setDashboardData([]);
+  }, [appliedFilter, appliedSearch, appliedTipo, appliedAmbito, appliedTipoProceso, appliedDateDesde, appliedDateHasta]);
+
+  // Sincronizar currentPage con paginationModel
+  useEffect(() => {
+    if (viewMode === 'cards') {
+      setPaginationModel(prev => ({ ...prev, page: currentPage - 1 }));
+    }
+  }, [currentPage, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(paginationModel.page + 1);
+  }, [paginationModel.page]);
+
+  // Cargar las opciones únicas dinámicas al montar o cuando token o appliedFilter cambie
+  useEffect(() => {
+    if (!token) return;
+    const loadOptions = async () => {
+      const tableName = appliedFilter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
+      const columns = ['tipo_instrumento', 'ambito_territorial', 'tipo_proceso'];
+      const setters: Record<string, (vals: string[]) => void> = {
+        tipo_instrumento: setOptionsTipo,
+        ambito_territorial: setOptionsAmbito,
+        tipo_proceso: setOptionsTipoProceso
+      };
+
+      columns.forEach(async (col) => {
+        try {
+          const res = await fetch(`/api/options/${tableName}/${col}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const vals = await res.json();
+            if (Array.isArray(vals)) {
+              setters[col](vals);
+            }
+          }
+        } catch (e) {
+          console.error(`Error loading options for ${col}:`, e);
+        }
+      });
+    };
+    loadOptions();
+  }, [token, appliedFilter]);
+
   const fetchData = async () => {
+    if (!token) return;
     setLoading(true);
-    setBackgroundLoading(true);
-    setTotalRecords(null);
-    const tableName = filter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
-    const currentFetchFilter = filter;
+    const tableName = appliedFilter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
+    const currentFetchFilter = appliedFilter;
     try {
-      // 1. Fetch total count
+      // 1. Obtener count con filtros
+      const countParams = new URLSearchParams();
+      if (appliedSearch) countParams.append('search', appliedSearch);
+      if (appliedDateDesde) countParams.append('date_start', appliedDateDesde);
+      if (appliedDateHasta) countParams.append('date_end', appliedDateHasta);
+
+      if (appliedTipo && appliedTipo !== 'all') countParams.append('tipo_instrumento', appliedTipo);
+      if (appliedAmbito && appliedAmbito !== 'all') countParams.append('ambito_territorial', appliedAmbito);
+      if (appliedTipoProceso && appliedTipoProceso !== 'all') countParams.append('tipo_proceso', appliedTipoProceso);
+
       try {
-        const countRes = await fetch(`/api/data/${tableName}/count`, {
+        const countRes = await fetch(`/api/data/${tableName}/count?${countParams.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const countJson = await countRes.json();
-        if (filter === currentFetchFilter) {
+        if (appliedFilter === currentFetchFilter) {
           setTotalRecords(countJson.count || 0);
         }
       } catch (e) {
         console.error("Error fetching count:", e);
       }
 
-      // 2. Fetch first 100 records
-      const res = await fetch(`/api/data/${tableName}?limit=100`, {
+      // 2. Obtener datos de la página
+      const dataParams = new URLSearchParams(countParams);
+      dataParams.append('limit', String(paginationModel.pageSize));
+      dataParams.append('offset', String(paginationModel.page * paginationModel.pageSize));
+
+      const response = await fetch(`/api/data/${tableName}?${dataParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const json = await res.json();
-      if (filter === currentFetchFilter) {
-        setData(Array.isArray(json) ? json : []);
-        setLoading(false);
+      if (!response.ok) throw new Error('Error al obtener los datos');
+      const result = await response.json();
+      if (appliedFilter === currentFetchFilter) {
+        setData(Array.isArray(result) ? result : []);
       }
-
-      // 3. Fetch full dataset in the background
-      fetch(`/api/data/${tableName}?limit=-1`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(r => r.json())
-        .then(fullJson => {
-          if (filter === currentFetchFilter && Array.isArray(fullJson)) {
-            setData(fullJson);
-            setBackgroundLoading(false);
-          }
-        })
-        .catch(err => {
-          console.error("Error in background fetch:", err);
-          if (filter === currentFetchFilter) setBackgroundLoading(false);
-        });
 
       // Cargar favoritos
       const favRes = await fetch('/api/favorites', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const favJson = await favRes.json();
-      if (filter === currentFetchFilter) {
+      if (appliedFilter === currentFetchFilter) {
         setFavorites(new Set(favJson.map((f: any) => f.id_o_link)));
       }
       refreshCategory(category);
     } catch (err) {
       console.error(err);
-      if (filter === currentFetchFilter) {
+    } finally {
+      if (appliedFilter === currentFetchFilter) {
         setLoading(false);
-        setBackgroundLoading(false);
       }
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [appliedFilter]);
+  }, [token, appliedFilter, paginationModel.page, paginationModel.pageSize, appliedSearch, appliedTipo, appliedAmbito, appliedTipoProceso, appliedDateDesde, appliedDateHasta]);
+
+  // Cargar datos históricos para el dashboard bajo demanda
+  useEffect(() => {
+    let active = true;
+    if (activeTab === 'dashboard' && token && dashboardData.length === 0) {
+      setLoadingDashboard(true);
+      const tableName = appliedFilter === 'abiertas' ? 'mma_abiertas' : 'mma_cerradas';
+      const dashboardParams = new URLSearchParams();
+      if (appliedSearch) dashboardParams.append('search', appliedSearch);
+      if (appliedDateDesde) dashboardParams.append('date_start', appliedDateDesde);
+      if (appliedDateHasta) dashboardParams.append('date_end', appliedDateHasta);
+
+      if (appliedTipo && appliedTipo !== 'all') dashboardParams.append('tipo_instrumento', appliedTipo);
+      if (appliedAmbito && appliedAmbito !== 'all') dashboardParams.append('ambito_territorial', appliedAmbito);
+      if (appliedTipoProceso && appliedTipoProceso !== 'all') dashboardParams.append('tipo_proceso', appliedTipoProceso);
+      dashboardParams.append('limit', '-1');
+
+      fetch(`/api/data/${tableName}?${dashboardParams.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(fullJson => {
+          if (active && Array.isArray(fullJson)) {
+            setDashboardData(fullJson);
+          }
+        })
+        .catch(err => console.error("Error loading dashboard data:", err))
+        .finally(() => {
+          if (active) setLoadingDashboard(false);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [activeTab, token, dashboardData.length, appliedFilter, appliedSearch, appliedTipo, appliedAmbito, appliedTipoProceso, appliedDateDesde, appliedDateHasta]);
 
   const handleOpenModal = (item: MMAConsulta) => {
     setSelectedItem(item);
   };
 
-  const parseDate = (str: string | undefined): Date | null => {
-    if (!str) return null;
-    let m = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-    if (m) {
-      return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
-    }
-    m = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-    if (m) {
-      return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-    }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
-  };
+  const filteredData = data;
 
-  const options = useMemo(() => {
-    return {
-      tipos: Array.from(new Set(data.map(i => i.tipo_instrumento).filter(Boolean))).sort() as string[],
-      ambitos: Array.from(new Set(data.map(i => i.ambito_territorial).filter(Boolean))).sort() as string[],
-      procesos: Array.from(new Set(data.map(i => i.tipo_proceso).filter(Boolean))).sort() as string[],
-    };
-  }, [data]);
-
-  const filteredData = useMemo(() => {
-    return data.filter(item => {
-      const matchesSearch = item.nombre_instrumento.toLowerCase().includes(appliedSearch.toLowerCase());
-      const matchesTipo = appliedTipo === 'all' || item.tipo_instrumento.toLowerCase().includes(appliedTipo.toLowerCase());
-      const matchesAmbito = appliedAmbito === 'all' || item.ambito_territorial === appliedAmbito;
-      const matchesProceso = appliedTipoProceso === 'all' || item.tipo_proceso === appliedTipoProceso;
-
-      let matchesDate = true;
-      if (appliedDateDesde || appliedDateHasta) {
-        const itemDate = parseDate(item.fecha_inicio);
-        if (itemDate) {
-          if (appliedDateDesde) {
-            const desde = new Date(appliedDateDesde + 'T00:00:00');
-            if (itemDate < desde) matchesDate = false;
-          }
-          if (appliedDateHasta) {
-            const hasta = new Date(appliedDateHasta + 'T23:59:59');
-            if (itemDate > hasta) matchesDate = false;
-          }
-        } else {
-          matchesDate = false;
-        }
-      }
-
-      return matchesSearch && matchesTipo && matchesAmbito && matchesProceso && matchesDate;
-    });
-  }, [data, appliedSearch, appliedTipo, appliedAmbito, appliedTipoProceso, appliedDateDesde, appliedDateHasta]);
+  const totalPages = Math.ceil((totalRecords || 0) / itemsPerPage);
 
   const columns = useMemo(() => [
     { field: 'rowNumber', headerName: 'N°', width: 60, sortable: false },
@@ -242,11 +291,12 @@ const MMAConsultasPage = () => {
   ], [favorites]);
 
   const rows = useMemo(() => {
+    const offsetNumber = paginationModel.page * paginationModel.pageSize;
     return filteredData.map((item, index) => ({
       ...item,
-      rowNumber: index + 1
+      rowNumber: offsetNumber + index + 1
     }));
-  }, [filteredData]);
+  }, [filteredData, paginationModel.page, paginationModel.pageSize]);
 
   const toggleFavorite = async (e: React.MouseEvent, item: MMAConsulta) => {
     e.stopPropagation();
@@ -377,11 +427,11 @@ const MMAConsultasPage = () => {
 
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
           <button
-            onClick={() => setViewMode('table')}
+            onClick={() => { setViewMode('table'); setActiveTab('reporte'); }}
             style={{
               padding: '10px 15px',
-              backgroundColor: viewMode === 'table' ? 'var(--primary-light)' : 'white',
-              color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-dark)',
+              backgroundColor: viewMode === 'table' && activeTab !== 'dashboard' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'table' && activeTab !== 'dashboard' ? 'var(--primary)' : 'var(--text-dark)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -397,11 +447,11 @@ const MMAConsultasPage = () => {
             <span className="desktop-only">Tabla</span>
           </button>
           <button
-            onClick={() => setViewMode('cards')}
+            onClick={() => { setViewMode('cards'); setActiveTab('reporte'); }}
             style={{
               padding: '10px 15px',
-              backgroundColor: viewMode === 'cards' ? 'var(--primary-light)' : 'white',
-              color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-dark)',
+              backgroundColor: viewMode === 'cards' && activeTab !== 'dashboard' ? 'var(--primary-light)' : 'white',
+              color: viewMode === 'cards' && activeTab !== 'dashboard' ? 'var(--primary)' : 'var(--text-dark)',
               border: 'none',
               borderLeft: '1px solid var(--border)',
               cursor: 'pointer',
@@ -417,29 +467,30 @@ const MMAConsultasPage = () => {
             <LayoutGrid size={18} />
             <span className="desktop-only">Tarjetas</span>
           </button>
+          <button
+            onClick={() => setActiveTab(activeTab === 'dashboard' ? 'reporte' : 'dashboard')}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: activeTab === 'dashboard' ? 'var(--primary-light)' : 'white',
+              color: activeTab === 'dashboard' ? 'var(--primary)' : 'var(--text-dark)',
+              border: 'none',
+              borderLeft: '1px solid var(--border)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 500,
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+            title="Ver Dashboard"
+          >
+            <LayoutDashboard size={18} />
+            <span className="desktop-only">Dashboard</span>
+          </button>
         </div>
 
         <div style={{ color: 'var(--text-light)', fontSize: '14px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <style>{`
-            @keyframes spin-mini {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          {backgroundLoading && (
-            <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span className="spinner-mini" style={{
-                width: '12px',
-                height: '12px',
-                border: '2px solid var(--primary)',
-                borderTopColor: 'transparent',
-                borderRadius: '50%',
-                display: 'inline-block',
-                animation: 'spin-mini 1s linear infinite'
-              }}></span>
-              Cargando completo...
-            </span>
-          )}
           {totalRecords !== null ? `${totalRecords} resultados` : `${filteredData.length} resultados`}
         </div>
       </div>
@@ -455,7 +506,7 @@ const MMAConsultasPage = () => {
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Tipo Instrumento</label>
             <Autocomplete
-              options={options.tipos}
+              options={optionsTipo}
               value={tipoFilter === 'all' ? null : tipoFilter}
               onChange={(_, newValue) => setTipoFilter(newValue || 'all')}
               renderInput={(params) => (
@@ -471,7 +522,7 @@ const MMAConsultasPage = () => {
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Ámbito Territorial</label>
             <Autocomplete
-              options={options.ambitos}
+              options={optionsAmbito}
               value={filterAmbito === 'all' ? null : filterAmbito}
               onChange={(_, newValue) => setFilterAmbito(newValue || 'all')}
               renderInput={(params) => (
@@ -487,7 +538,7 @@ const MMAConsultasPage = () => {
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '5px' }}>Tipo de Proceso</label>
             <Autocomplete
-              options={options.procesos}
+              options={optionsTipoProceso}
               value={filterTipoProceso === 'all' ? null : filterTipoProceso}
               onChange={(_, newValue) => setFilterTipoProceso(newValue || 'all')}
               renderInput={(params) => (
@@ -550,33 +601,46 @@ const MMAConsultasPage = () => {
       )}
 
       {activeTab === 'dashboard' ? (
-        <DashboardManager
-          data={data.map(d => ({ ...d, estado: filter === 'abiertas' ? 'Abierta' : 'Cerrada' }))}
-          config={{
-            title: 'Consultas Ciudadanas MMA',
-            tableName: 'ConsultasMMA',
-            dimensions: [
-              { key: 'tipo_instrumento', label: 'Consultas por Tipo de Instrumento', type: 'bar-horizontal' as const },
-              { key: 'ambito_territorial', label: 'Consultas por Ámbito Territorial', type: 'bar-horizontal' as const },
-              { key: 'estado', label: 'Consultas por Estado', type: 'pie' as const },
-              { key: 'fecha_inicio', label: 'Consultas por Año', type: 'grouped-vertical' as const, groupField: 'tipo_instrumento' }
-            ]
-          }}
-        />
+        <div style={{ marginTop: '20px' }}>
+          {loadingDashboard ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
+              <p style={{ color: 'var(--text-light)', fontWeight: 600 }}>Cargando datos del dashboard...</p>
+            </div>
+          ) : (
+            <DashboardManager
+              data={dashboardData.map(d => ({ ...d, estado: appliedFilter === 'abiertas' ? 'Abierta' : 'Cerrada' }))}
+              config={{
+                title: 'Consultas Ciudadanas MMA',
+                tableName: 'ConsultasMMA',
+                dimensions: [
+                  { key: 'tipo_instrumento', label: 'Consultas por Tipo de Instrumento', type: 'bar-horizontal' as const },
+                  { key: 'ambito_territorial', label: 'Consultas por Ámbito Territorial', type: 'bar-horizontal' as const },
+                  { key: 'estado', label: 'Consultas por Estado', type: 'pie' as const },
+                  { key: 'fecha_inicio', label: 'Consultas por Año', type: 'grouped-vertical' as const, groupField: 'tipo_instrumento' }
+                ]
+              }}
+            />
+          )}
+        </div>
       ) : (
         <div className="content-wrapper" style={{ padding: '0' }}>
           {loading ? (
-            <p>Cargando consultas...</p>
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
+              <p style={{ color: 'var(--text-light)' }}>Cargando consultas...</p>
+            </div>
           ) : viewMode === 'table' ? (
             <div className="table-container" style={{ height: 600, width: '100%', backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
               <DataGrid
                 rows={rows}
                 columns={columns}
                 loading={loading}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 10 } },
-                }}
-                pageSizeOptions={[10, 25, 50]}
+                paginationMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                rowCount={totalRecords || 0}
+                pageSizeOptions={[10, 25, 50, 100]}
                 disableRowSelectionOnClick
                 localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                 getRowClassName={(params) => {
@@ -605,63 +669,99 @@ const MMAConsultasPage = () => {
               />
             </div>
           ) : (
-            <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-              {filteredData.length === 0 ? (
-                <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
-              ) : (
-                filteredData.map((item) => (
-                  <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
-                    {item.is_new && (
-                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
-                        NUEVO
-                      </div>
-                    )}
-                    <div className="card-content">
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '0.7rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#475569' }}>
-                          {item.tipo_instrumento}
-                        </span>
-                        {filter === 'abiertas' && (
-                          <span style={{ fontSize: '0.7rem', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#166534' }}>
-                            ACTIVA
-                          </span>
-                        )}
-                        {filter === 'cerradas' && (
-                          <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#991b1b' }}>
-                            CERRADA
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
-                        <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.nombre_instrumento}</div>
-                        <Heart
-                          size={20}
-                          onClick={(e) => toggleFavorite(e, item)}
-                          style={{
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
-                            color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
-                            transition: 'all 0.2s'
-                          }}
-                        />
-                      </div>
-                      <div className="card-meta" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                          <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Inicio:</span> {item.fecha_inicio}
+            <>
+              <div className="news-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                {filteredData.length === 0 ? (
+                  <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No hay consultas para mostrar.</p>
+                ) : (
+                  filteredData.map((item) => (
+                    <div key={item.id} className={`card ${item.is_new ? 'new-highlight' : ''}`} style={{ cursor: 'pointer', position: 'relative' }} onClick={() => handleOpenModal(item)}>
+                      {item.is_new && (
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 5 }}>
+                          NUEVO
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                          <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Fin:</span> {item.fecha_termino}
+                      )}
+                      <div className="card-content">
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '0.7rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#475569' }}>
+                            {item.tipo_instrumento}
+                          </span>
+                          {appliedFilter === 'abiertas' && (
+                            <span style={{ fontSize: '0.7rem', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#166534' }}>
+                              ACTIVA
+                            </span>
+                          )}
+                          {appliedFilter === 'cerradas' && (
+                            <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, color: '#991b1b' }}>
+                              CERRADA
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="card-action" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
-                        <Info size={16} /> Ver detalles y expediente
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                          <div className="card-title" style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.nombre_instrumento}</div>
+                          <Heart
+                            size={20}
+                            onClick={(e) => toggleFavorite(e, item)}
+                            style={{
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              fill: favorites.has(item.id) ? 'var(--orange)' : 'none',
+                              color: favorites.has(item.id) ? 'var(--orange)' : 'var(--text-light)',
+                              transition: 'all 0.2s'
+                            }}
+                          />
+                        </div>
+                        <div className="card-meta" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                            <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Inicio:</span> {item.fecha_inicio}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                            <Calendar size={14} /> <span style={{ fontWeight: 500 }}>Fin:</span> {item.fecha_termino}
+                          </div>
+                        </div>
+                        <div className="card-action" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 600 }}>
+                          <Info size={16} /> Ver detalles y expediente
+                        </div>
                       </div>
                     </div>
+                  ))
+                )}
+              </div>
+
+              {/* Pagination control for card layout */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', marginTop: '20px' }}>
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: currentPage === 1 ? '#f1f5f9' : 'white',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, color: 'var(--text-dark)'
+                    }}
+                  >
+                    Anterior
+                  </button>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{currentPage}</span>
+                    <span style={{ color: 'var(--text-light)' }}>de {totalPages}</span>
                   </div>
-                ))
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: currentPage === totalPages ? '#f1f5f9' : 'white',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, color: 'var(--text-dark)'
+                    }}
+                  >
+                    Siguiente
+                  </button>
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
       )}

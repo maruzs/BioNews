@@ -490,10 +490,34 @@ def get_news(user = Depends(get_current_user)):
 
 # ─── TABLAS ESPECIFICAS ─────────────────────────────────────────────────────
 @app.get("/api/data/{table_name}")
-def get_table_data(table_name: str, limit: int = 1000, offset: int = 0, user = Depends(get_current_user)):
-    """Endpoint genérico para obtener datos de cualquier tabla permitida."""
+def get_table_data(
+    table_name: str,
+    request: Request,
+    limit: int = 1000,
+    offset: int = 0,
+    search: str = None,
+    date_start: str = None,
+    date_end: str = None,
+    user = Depends(get_current_user)
+):
+    """Endpoint genérico para obtener datos de cualquier tabla permitida con filtros y búsquedas."""
     try:
-        data = db.get_table_data(table_name, limit=limit, offset=offset)
+        # Extraer filtros adicionales dinámicos (que no correspondan a parámetros estándar)
+        standard_params = {'limit', 'offset', 'search', 'date_start', 'date_end'}
+        filters = {}
+        for key, val in request.query_params.items():
+            if key not in standard_params:
+                filters[key] = val
+
+        data = db.get_table_data(
+            table_name,
+            limit=limit,
+            offset=offset,
+            search=search,
+            date_start=date_start,
+            date_end=date_end,
+            filters=filters
+        )
             
         category_slug = table_name
         # Mapear table_name a la categoría de notificaciones
@@ -508,10 +532,29 @@ def get_table_data(table_name: str, limit: int = 1000, offset: int = 0, user = D
         return {"error": str(e)}
 
 @app.get("/api/data/{table_name}/count")
-def get_table_count(table_name: str, user = Depends(get_current_user)):
-    """Obtiene la cantidad de registros en una tabla."""
+def get_table_count(
+    table_name: str,
+    request: Request,
+    search: str = None,
+    date_start: str = None,
+    date_end: str = None,
+    user = Depends(get_current_user)
+):
+    """Obtiene la cantidad de registros en una tabla aplicando filtros."""
     try:
-        count = db.get_table_count(table_name)
+        standard_params = {'search', 'date_start', 'date_end'}
+        filters = {}
+        for key, val in request.query_params.items():
+            if key not in standard_params:
+                filters[key] = val
+
+        count = db.get_table_count(
+            table_name,
+            search=search,
+            date_start=date_start,
+            date_end=date_end,
+            filters=filters
+        )
         return {"count": count}
     except ValueError as e:
         return {"error": str(e)}
@@ -660,6 +703,17 @@ def get_options(user = Depends(get_current_user)):
         return result
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/api/options/{table_name}/{column_name}")
+def get_distinct_column_options(table_name: str, column_name: str, user = Depends(get_current_user)):
+    """Obtiene las opciones distintas de una columna para autocompletado en el frontend."""
+    try:
+        options = db.get_distinct_column_options(table_name, column_name)
+        return options
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/search")
 def global_search(q: str = "", user = Depends(get_current_user)):
